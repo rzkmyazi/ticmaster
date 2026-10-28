@@ -8,15 +8,18 @@ import string
 from datetime import timedelta
 
 from flask import (
-    Blueprint, abort, current_app, flash, g, jsonify, redirect, render_template, request, url_for,
+    Blueprint, abort, current_app, flash, g, jsonify, redirect, render_template, request,
+    send_from_directory, url_for,
 )
 from sqlalchemy import func, or_
 
 from ..extensions import db
 from ..models import (
-    BattleMember, BattleRoom, Exercise, Message, Option, Question, User, utcnow, STATUS_ACTIVE,
+    BattleMember, BattleRoom, Exercise, Message, Option, Post, PostComment, PostReaction,
+    Question, REACTION_KINDS, User, utcnow, STATUS_ACTIVE,
 )
 from ..security.core import login_required, log_audit
+from ..utils import save_upload
 
 bp = Blueprint("social", __name__)
 
@@ -302,7 +305,11 @@ def battle_home():
         .limit(12)
         .all()
     )
-    return render_template("user/battle.html", my_rooms=my_rooms, open_rooms=open_rooms)
+    pending = [room for room in my_rooms if room.status == "pending"]
+    refused = [room for room in my_rooms if room.status == "refused"]
+    return render_template("user/battle.html", my_rooms=my_rooms, open_rooms=open_rooms,
+                           pending=pending, refused=refused,
+                           can_approve=bool(g.user.is_admin))
 
 
 @bp.route("/battle/<code>")
@@ -325,7 +332,8 @@ def api_create_battle():
     # Un seul battle actif à la fois par utilisateur
     active = (
         BattleRoom.query.join(BattleMember, BattleMember.room_id == BattleRoom.id)
-        .filter(BattleMember.user_id == g.user.id, BattleRoom.status.in_(["lobby", "running"]))
+        .filter(BattleMember.user_id == g.user.id,
+                BattleRoom.status.in_(["pending", "lobby", "running"]))
         .first()
     )
     if active:
@@ -342,12 +350,15 @@ def api_create_battle():
     elif not name:
         name = f"Groupe de {g.user.full_name or g.user.username}"
 
+    # Un apprenant dépose une demande : seuls un administrateur ou le super
+    # administrateur peuvent l'accepter. Le personnel lance directement.
+    status = "lobby" if g.user.is_admin else "pending"
     room = BattleRoom(
         name=name[:120],
         mode=mode,
         code=_new_code(),
         owner_id=g.user.id,
-        status="lobby",
+        status=status,
         question_count=len(picked),
         question_ids=",".join(str(q.id) for q in picked),
     )
@@ -355,8 +366,9 @@ def api_create_battle():
     db.session.flush()
     db.session.add(BattleMember(room_id=room.id, user_id=g.user.id))
     db.session.commit()
-    log_audit("battle.created", target=room.code, details=f"mode={mode}")
-    return jsonify({"ok": True, "code": room.code}), 201
+    log_audit("battle.created", target=room.code, details=f"mode={mode} statut={status}")
+    return jsonify({"ok": True, "code": room.code, "status": room.status,
+                    "pending": room.status == "pending"}), 201
 
 
 @bp.route("/api/battle/join", methods=["POST"])
@@ -369,6 +381,11 @@ def api_join_battle():
         return jsonify({"ok": False, "error": "Aucune battle ne correspond à ce code."}), 404
     if room.status == "finished":
         return jsonify({"ok": False, "error": "Cette battle est déjà terminée."}), 400
+    if room.status == "refused":
+        return jsonify({"ok": False, "error": "Cette battle a été refusée par l'administration."}), 403
+    if room.status == "pending":
+        return jsonify({"ok": False,
+                        "error": "Cette battle attend la validation de l'administration."}), 403
     if room.mode == "solo" and room.owner_id != g.user.id:
         return jsonify({"ok": False, "error": "Une battle solo est strictement personnelle."}), 403
 
@@ -412,6 +429,12 @@ def api_start_battle():
     room = BattleRoom.query.filter_by(code=(payload.get("code") or "").strip().upper()).first_or_404()
     if room.owner_id != g.user.id:
         return jsonify({"ok": False, "error": "Seul le créateur peut lancer la battle."}), 403
+    if room.status == "pending":
+        return jsonify({"ok": False,
+                        "error": "Votre demande de battle doit d'abord être acceptée par "
+                                 "l'administration."}), 403
+    if room.status == "refused":
+        return jsonify({"ok": False, "error": "Cette battle a été refusée par l'administration."}), 403
     if room.status != "lobby":
         return jsonify({"ok": False, "error": "La battle a déjà démarré."}), 400
 
@@ -470,3 +493,152 @@ def api_battle_answer():
     db.session.commit()
 
     return jsonify({"ok": True, "correct": correct, "score": member.score})
+
+
+# ---------------------------------------------------------------------------
+# Fil d'actualité : publications, réactions emoji, commentaires
+# ---------------------------------------------------------------------------
+IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+IMAGE_MAGIC = {
+    b"\x89PNG\r\n\x1a\n": "png",
+    b"\xff\xd8\xff": "jpg",
+    b"GIF87a": "gif",
+    b"GIF89a": "gif",
+}
+
+
+def _is_real_image(stream) -> bool:
+    """Vérifie la signature binaire (un .jpg renommé en .php est refusé)."""
+    head = stream.read(12)
+    stream.seek(0)
+    if any(head.startswith(sig) for sig in IMAGE_MAGIC):
+        return True
+    return head[:4] == b"RIFF" and head[8:12] == b"WEBP"
+
+
+def _feed_posts(limit: int = 30):
+    return (
+        Post.query.filter_by(deleted=False)
+        .order_by(Post.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+@bp.route("/api/posts")
+@login_required
+def api_posts_list():
+    """Renvoie le fil rendu en HTML (rafraîchissement sans recharger la page)."""
+    posts = _feed_posts()
+    return jsonify({
+        "ok": True,
+        "count": len(posts),
+        "html": render_template("partials/feed.html", posts=posts, reaction_kinds=REACTION_KINDS),
+    })
+
+
+@bp.route("/api/posts", methods=["POST"])
+@login_required
+def api_post_create():
+    body = (request.form.get("body") or "").strip()[:2000]
+    upload = request.files.get("image")
+
+    stored = ""
+    original, size = "", 0
+    if upload and upload.filename:
+        name = upload.filename
+        ext = (name.rsplit(".", 1)[-1] if "." in name else "").lower()
+        if ext not in IMAGE_EXTENSIONS:
+            return jsonify({"ok": False, "error": "Format d'image non pris en charge (PNG, JPG, GIF, WEBP)."}), 400
+        if not _is_real_image(upload.stream):
+            return jsonify({"ok": False, "error": "Ce fichier n'est pas une image valide."}), 400
+        stored, original, size = save_upload(upload)
+        if not stored:
+            return jsonify({"ok": False, "error": "L'envoi de l'image a échoué."}), 400
+
+    if not body and not stored:
+        return jsonify({"ok": False, "error": "Écrivez un message ou ajoutez une photo."}), 400
+
+    post = Post(author_id=g.user.id, body=body, image_filename=stored or "",
+                image_name=original, image_size=size or 0)
+    db.session.add(post)
+    db.session.commit()
+    log_audit("post.created", target=str(post.id), details=f"photo={'oui' if stored else 'non'}")
+    return jsonify({"ok": True, "id": post.id}), 201
+
+
+@bp.route("/api/posts/<int:post_id>/react", methods=["POST"])
+@login_required
+def api_post_react(post_id: int):
+    payload = request.get_json(silent=True) or {}
+    kind = (payload.get("kind") or "").strip()
+    if kind not in REACTION_KINDS:
+        return jsonify({"ok": False, "error": "Réaction inconnue."}), 400
+    post = db.session.get(Post, post_id)
+    if post is None or post.deleted:
+        return jsonify({"ok": False, "error": "Publication introuvable."}), 404
+
+    existing = PostReaction.query.filter_by(post_id=post.id, user_id=g.user.id).first()
+    if existing and existing.kind == kind:
+        db.session.delete(existing)          # même emoji : on retire sa réaction
+        current = ""
+    elif existing:
+        existing.kind = kind                 # changement de réaction
+        current = kind
+    else:
+        db.session.add(PostReaction(post_id=post.id, user_id=g.user.id, kind=kind))
+        current = kind
+    db.session.commit()
+
+    db.session.expire_all()
+    summary = db.session.get(Post, post.id).reaction_summary()
+    return jsonify({
+        "ok": True,
+        "current": current,
+        "total": sum(item["count"] for item in summary),
+        "summary": summary,
+    })
+
+
+@bp.route("/api/posts/<int:post_id>/comment", methods=["POST"])
+@login_required
+def api_post_comment(post_id: int):
+    payload = request.get_json(silent=True) or {}
+    body = (payload.get("body") or "").strip()[:600]
+    if not body:
+        return jsonify({"ok": False, "error": "Le commentaire est vide."}), 400
+    post = db.session.get(Post, post_id)
+    if post is None or post.deleted:
+        return jsonify({"ok": False, "error": "Publication introuvable."}), 404
+
+    comment = PostComment(post_id=post.id, author_id=g.user.id, body=body)
+    db.session.add(comment)
+    db.session.commit()
+    log_audit("post.commented", target=str(post.id))
+    return jsonify({"ok": True, "id": comment.id}), 201
+
+
+@bp.route("/api/posts/<int:post_id>/delete", methods=["POST"])
+@login_required
+def api_post_delete(post_id: int):
+    post = db.session.get(Post, post_id)
+    if post is None or post.deleted:
+        return jsonify({"ok": False, "error": "Publication introuvable."}), 404
+    if post.author_id != g.user.id and not g.user.is_admin:
+        return jsonify({"ok": False, "error": "Vous ne pouvez supprimer que vos publications."}), 403
+    post.deleted = True
+    db.session.commit()
+    log_audit("post.deleted", target=str(post.id), details=f"par={g.user.username}")
+    return jsonify({"ok": True})
+
+
+@bp.route("/media/<path:filename>")
+@login_required
+def media(filename: str):
+    """Sert une photo de publication (inline), jamais un fichier arbitraire."""
+    if "/" in filename or "\\" in filename or filename.startswith("."):
+        abort(404)
+    post = Post.query.filter_by(image_filename=filename).first()
+    if post is None:
+        abort(404)
+    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename, as_attachment=False)

@@ -228,4 +228,44 @@ sert l'application ; il est idempotent grâce au marqueur `~/.tic_bootstrap_done
 
 ---
 
+## 11. Mise à jour du 29/10/2026 — Battles validées & réseau social du profil
+
+### Nouvelles fonctionnalités vérifiées
+
+| Fonction | Contrôle | Résultat |
+|---|---|---|
+| Demande de battle | élève → `POST /api/battle/create` ⇒ statut **`pending`** (aucun démarrage possible) | ✔ |
+| | démarrage avant validation → **403** « doit d'abord être acceptée » | ✔ |
+| | la battle n'apparaît pas dans les groupes ouverts tant qu'elle n'est pas validée | ✔ |
+| Validation (`/admin/battles`) | ADMIN et SUPER ADMIN : accepter (`pending` → `lobby`) / refuser (`pending` → `refused`) | ✔ |
+| | apprenant → **403** sur la page et sur les deux actions | ✔ |
+| | refusée : message explicite dans la salle, impossible de démarrer | ✔ |
+| Fil d'actualité (`/mon-profil`) | publication de texte, de photo ou des deux | ✔ |
+| | photo : signature binaire vérifiée (un `.php` renommé `.png` → **400**), service protégé par authentification | ✔ |
+| Réactions emoji | ❤️ J'aime, 😂 Rire, 👊 Bravo, 😠 Colère, 😢 Triste | ✔ |
+| | une seule réaction par personne et par publication (contrainte `uq_reaction_post_user`), changement et retrait possibles | ✔ |
+| | réaction inconnue → **400** | ✔ |
+| Commentaires | ajout, affichage, compteur ; commentaire vide → **400** | ✔ |
+| Suppression | l'auteur ou l'administration uniquement | ✔ |
+| Conservation des données | champ « 0 = illimitée » ; valeurs `0`, vide, `illimite` ⇒ stockage `0` | ✔ |
+| Notes individuelles /20 | tableau « Notes individuelles (sur 20) » sur le tableau de bord du super administrateur | ✔ |
+| Édition des cours | super administrateur : modification d'un module et d'une leçon → **302** + données enregistrées | ✔ |
+| | apprenant → **403** | ✔ |
+
+### Résultats des tests
+
+- `pytest -q` → **32 tests réussis** (10 nouveaux : fil social, photos falsifiées, réactions, commentaires,
+  suppression, médias protégés, battle en attente, acceptation/refus, conservation illimitée, notes individuelles).
+- Schéma : `create_all()` idempotent au démarrage → les tables `posts`, `post_reactions` et `post_comments`
+  sont créées automatiquement sur les bases déjà en service (Render et PythonAnywhere).
+
+### Points d'attention
+
+- Les photos sont stockées dans `instance/uploads` et servies par `/media/<fichier>` (authentification obligatoire).
+- Sur l'offre gratuite de Render, le disque est **éphémère** : les photos publiées disparaissent au redéploiement.
+  Pour une conservation durable, ajouter un disque persistant (`/var/data`) et pointer `UPLOAD_FOLDER` dessus.
+- La validation des battles ne concerne que les demandes **des élèves** : le personnel ouvre directement un salon.
+
+---
+
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*

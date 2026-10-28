@@ -379,3 +379,252 @@ def test_super_admin_is_a_teacher_without_exams(client, app):
     response = client.post(f"/examens/{exam_id}/commencer", data={"csrf_token": token},
                            follow_redirects=False)
     assert response.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Fil d'actualité du profil : publications, photos, réactions, commentaires
+# ---------------------------------------------------------------------------
+def _seed_post(app, author_id, body="Bonjour la classe", image_filename=""):
+    from app.models import Post
+    with app.app_context():
+        post = Post(author_id=author_id, body=body, image_filename=image_filename,
+                    image_name="photo.png" if image_filename else "", image_size=10)
+        db.session.add(post)
+        db.session.commit()
+        return post.id
+
+
+def test_profile_has_social_feed(app):
+    uid = _make_user(app, "apprenant")
+    client = app.test_client()
+    _login(client, "apprenant", "MotDePasse2026!")
+    post_id = _seed_post(app, uid, "Première publication")
+
+    page = client.get("/mon-profil")
+    html = page.get_data(as_text=True)
+    assert page.status_code == 200
+    assert 'id="post-form"' in html            # composeur de publication
+    assert "Première publication" in html      # fil d'actualité
+    for emoji in ("❤️", "😂", "👊", "😠", "😢"):
+        assert emoji in html                   # les cinq réactions demandées
+    assert post_id  # la publication existe bien
+
+
+def test_create_post_and_reject_empty(app):
+    _make_user(app, "apprenant")
+    client = app.test_client()
+    _login(client, "apprenant", "MotDePasse2026!")
+    token = _csrf(client)
+
+    empty = client.post("/api/posts", data={"body": "   "}, headers={"X-CSRF-Token": token})
+    assert empty.status_code == 400
+
+    created = client.post("/api/posts", data={"body": "Coucou"}, headers={"X-CSRF-Token": token})
+    assert created.status_code == 201
+    assert created.get_json()["ok"] is True
+
+    from app.models import Post
+    with app.app_context():
+        assert Post.query.count() == 1
+        assert Post.query.first().body == "Coucou"
+
+
+def test_create_post_rejects_fake_image(app):
+    import io
+    _make_user(app, "apprenant")
+    client = app.test_client()
+    _login(client, "apprenant", "MotDePasse2026!")
+    token = _csrf(client)
+
+    fake = client.post(
+        "/api/posts",
+        data={"body": "", "image": (io.BytesIO(b"<?php echo 'x'; ?>"), "photo.png")},
+        headers={"X-CSRF-Token": token},
+        content_type="multipart/form-data",
+    )
+    assert fake.status_code == 400
+
+
+def test_reactions_are_unique_and_toggle(app):
+    uid = _make_user(app, "apprenant")
+    post_id = _seed_post(app, uid)
+    client = app.test_client()
+    _login(client, "apprenant", "MotDePasse2026!")
+    token = _csrf(client)
+
+    first = client.post(f"/api/posts/{post_id}/react", json={"kind": "love"},
+                        headers={"X-CSRF-Token": token})
+    assert first.status_code == 200
+    assert first.get_json()["current"] == "love"
+
+    changed = client.post(f"/api/posts/{post_id}/react", json={"kind": "haha"},
+                          headers={"X-CSRF-Token": token})
+    assert changed.get_json()["current"] == "haha"
+    assert changed.get_json()["total"] == 1     # une seule réaction par personne
+
+    removed = client.post(f"/api/posts/{post_id}/react", json={"kind": "haha"},
+                          headers={"X-CSRF-Token": token})
+    assert removed.get_json()["current"] == ""
+    assert removed.get_json()["total"] == 0
+
+    bad = client.post(f"/api/posts/{post_id}/react", json={"kind": "amour"},
+                      headers={"X-CSRF-Token": token})
+    assert bad.status_code == 400
+
+    for kind in ("love", "haha", "fist", "angry", "sad"):
+        ok = client.post(f"/api/posts/{post_id}/react", json={"kind": kind},
+                         headers={"X-CSRF-Token": token})
+        assert ok.status_code == 200
+
+
+def test_comments_and_delete(app):
+    uid = _make_user(app, "apprenant")
+    post_id = _seed_post(app, uid)
+    client = app.test_client()
+    _login(client, "apprenant", "MotDePasse2026!")
+    token = _csrf(client)
+
+    empty = client.post(f"/api/posts/{post_id}/comment", json={"body": ""},
+                        headers={"X-CSRF-Token": token})
+    assert empty.status_code == 400
+
+    ok = client.post(f"/api/posts/{post_id}/comment", json={"body": "Bravo !"},
+                     headers={"X-CSRF-Token": token})
+    assert ok.status_code == 201
+
+    from app.models import Post, PostComment
+    with app.app_context():
+        assert PostComment.query.count() == 1
+
+    deleted = client.post(f"/api/posts/{post_id}/delete", json={}, headers={"X-CSRF-Token": token})
+    assert deleted.status_code == 200
+    with app.app_context():
+        assert Post.query.filter_by(deleted=False).count() == 0
+
+
+def test_media_requires_login(app):
+    uid = _make_user(app, "apprenant")
+    _seed_post(app, uid, image_filename="abc123.png")
+    anonymous = app.test_client()
+    assert anonymous.get("/media/abc123.png").status_code == 302
+    assert app.test_client().get("/media/inexistant.png").status_code == 302
+
+
+# ---------------------------------------------------------------------------
+# Battles : validation par l'administration
+# ---------------------------------------------------------------------------
+def _seed_quiz(app):
+    with app.app_context():
+        module = Module(title="Réseaux", slug="reseaux", status="published")
+        db.session.add(module)
+        db.session.commit()
+        exercise = Exercise(title="Quiz battle", kind="exercise", module_id=module.id,
+                            published=True, pass_score=50)
+        db.session.add(exercise)
+        db.session.commit()
+        for index in range(6):
+            question = Question(exercise_id=exercise.id, text=f"Question {index} ?",
+                                order_index=index)
+            db.session.add(question)
+            db.session.commit()
+            db.session.add_all([
+                Option(question_id=question.id, text="Bonne réponse", is_correct=True),
+                Option(question_id=question.id, text="Mauvaise réponse", is_correct=False),
+            ])
+        db.session.commit()
+
+
+def test_student_battle_waits_for_approval(app):
+    _seed_quiz(app)
+    _make_user(app, "apprenant")
+    client = app.test_client()
+    _login(client, "apprenant", "MotDePasse2026!")
+    token = _csrf(client)
+
+    created = client.post("/api/battle/create", json={"mode": "solo"},
+                          headers={"X-CSRF-Token": token})
+    assert created.status_code == 201
+    payload = created.get_json()
+    assert payload["status"] == "pending"
+    assert payload["pending"] is True
+
+    # impossible de démarrer avant l'accord de l'administration
+    started = client.post("/api/battle/start", json={"code": payload["code"]},
+                          headers={"X-CSRF-Token": token})
+    assert started.status_code == 403
+
+    page = client.get("/battle").get_data(as_text=True)
+    assert "En attente de validation" in page
+
+    # l'apprenant n'a pas accès à l'écran de validation
+    assert client.get("/admin/battles").status_code == 403
+
+
+def test_admin_accepts_and_refuses_battles(app):
+    _seed_quiz(app)
+    owner = _make_user(app, "apprenant")
+    _make_user(app, "modo", role=ROLE_ADMIN)
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+
+    from app.models import BattleRoom
+    with app.app_context():
+        room = BattleRoom(name="Duel TIC", mode="group", code="ABC123", owner_id=owner,
+                          status="pending")
+        other = BattleRoom(name="Duel refusé", mode="solo", code="XYZ789", owner_id=owner,
+                           status="pending")
+        db.session.add_all([room, other])
+        db.session.commit()
+        room_id, other_id = room.id, other.id
+
+    modo = app.test_client()
+    _login(modo, "modo", "MotDePasse2026!")
+    token = _csrf(modo)
+    assert modo.get("/admin/battles").status_code == 200
+    assert modo.post(f"/admin/battles/{room_id}/accepter", data={"csrf_token": token}).status_code == 302
+    assert modo.post(f"/admin/battles/{other_id}/refuser", data={"csrf_token": token}).status_code == 302
+
+    with app.app_context():
+        assert db.session.get(BattleRoom, room_id).status == "lobby"
+        assert db.session.get(BattleRoom, other_id).status == "refused"
+
+
+# ---------------------------------------------------------------------------
+# Paramètres : conservation des données illimitée
+# ---------------------------------------------------------------------------
+def test_retention_can_be_unlimited(app):
+    from app.models import Setting
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    client = app.test_client()
+    _login(client, "chef", "MotDePasse2026!")
+    token = _csrf(client)
+
+    page = client.get("/admin/parametres").get_data(as_text=True)
+    assert "conservation illimitée" in page
+
+    for value in ("", "0", "illimite", "illimité"):
+        client.post("/admin/parametres", data={"retention_days": value, "csrf_token": token})
+        with app.app_context():
+            assert Setting.get("retention_days") == "0"
+
+    client.post("/admin/parametres", data={"retention_days": "365", "csrf_token": token})
+    with app.app_context():
+        assert Setting.get("retention_days") == "365"
+
+
+# ---------------------------------------------------------------------------
+# Notes individuelles sur 20 dans l'espace super administrateur
+# ---------------------------------------------------------------------------
+def test_dashboard_shows_individual_notes(app):
+    _make_user(app, "apprenant")
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+
+    chief = app.test_client()
+    _login(chief, "chef", "MotDePasse2026!")
+    html = chief.get("/admin/").get_data(as_text=True)
+    assert "Notes individuelles (sur 20)" in html
+    assert "Battles à valider" in html
+
+    modo = app.test_client()
+    _make_user(app, "modo", role=ROLE_ADMIN)
+    _login(modo, "modo", "MotDePasse2026!")
+    assert "Notes individuelles (sur 20)" not in modo.get("/admin/").get_data(as_text=True)

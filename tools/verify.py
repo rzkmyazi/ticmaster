@@ -52,6 +52,13 @@ def csrf(session: requests.Session, path: str) -> str:
 
 
 # ---------------------------------------------------------------- provision
+def app_post_delete(session, token: str, post_id: int) -> bool:
+    """Supprime une publication de test (nettoyage)."""
+    response = session.post(BASE + f"/api/posts/{post_id}/delete", json={},
+                            headers={"X-CSRF-Token": token})
+    return response.status_code == 200
+
+
 def _can_login(identifier: str, password: str) -> bool:
     probe = requests.Session()
     token = csrf(probe, "/auth/connexion")
@@ -401,9 +408,41 @@ def main() -> int:
     ok("création d'une battle solo", r.status_code in (200, 201), str(r.status_code))
     code = (r.json() or {}).get("code")
     if code:
+        payload = r.json() or {}
+        ok("demande en attente de validation", payload.get("status") == "pending",
+           f"statut={payload.get('status')}")
+
         r = p.post(BASE + "/api/battle/start", json={"code": code},
                    headers={"X-CSRF-Token": token})
-        ok("démarrage de la battle", r.status_code == 200, r.text[:80])
+        ok("démarrage refusé avant validation", r.status_code == 403, str(r.status_code))
+
+        r = p.get(BASE + "/admin/battles", allow_redirects=False)
+        ok("validation de battle interdite à l'apprenant",
+           r.status_code in (403, 302), str(r.status_code))
+
+        # acceptation par le super administrateur
+        page = sa.get(BASE + "/admin/battles")
+        ok("page de validation accessible au super administrateur", page.status_code == 200,
+           str(page.status_code))
+        # on retrouve la ligne correspondant au code créé
+        matching_ids = [
+            battle_id for row in page.text.split("<tr")
+            if code in row for battle_id in re.findall(r"/admin/battles/(\d+)/accepter", row)
+        ]
+        token_sa = csrf(sa, "/admin/battles")
+        accepted = False
+        for battle_id in matching_ids:
+            res = sa.post(BASE + f"/admin/battles/{battle_id}/accepter",
+                          data={"csrf_token": token_sa}, allow_redirects=False)
+            if res.status_code == 302:
+                accepted = True
+                break
+        ok("acceptation de la demande par le super administrateur", accepted,
+           "" if matching_ids else "demande introuvable dans la liste")
+
+        r = p.post(BASE + "/api/battle/start", json={"code": code},
+                   headers={"X-CSRF-Token": token})
+        ok("démarrage de la battle après validation", r.status_code == 200, r.text[:80])
         state = p.get(BASE + f"/api/battle/state?code={code}").json()
         room_status = (state.get("room") or {}).get("status")
         ok("question en cours",
@@ -412,6 +451,45 @@ def main() -> int:
         r = p.post(BASE + "/api/battle/rename", json={"code": code, "name": "Autre nom"},
                    headers={"X-CSRF-Token": token})
         ok("renommage d'une battle solo refusé", r.status_code == 400, str(r.status_code))
+
+    # ------------------------------------------------------------ fil social
+    print("▸ Fil d'actualité du profil")
+    token = csrf(p, "/mon-profil")
+    profile = p.get(BASE + "/mon-profil")
+    ok("onglet Fil d'actualité dans le profil",
+       profile.status_code == 200 and 'data-tab-link="fil"' in profile.text,
+       str(profile.status_code))
+    r = p.post(BASE + "/api/posts", data={"body": "Vérification auto du fil"},
+               headers={"X-CSRF-Token": token})
+    ok("publication d'un message", r.status_code == 201, str(r.status_code))
+    post_id = (r.json() or {}).get("id")
+    if post_id:
+        for kind, emoji in (("love", "❤️"), ("haha", "😂"), ("fist", "👊"),
+                            ("angry", "😠"), ("sad", "😢")):
+            r = sa.post(BASE + f"/api/posts/{post_id}/react", json={"kind": kind},
+                        headers={"X-CSRF-Token": csrf(sa, "/espace")})
+            ok(f"réaction {emoji} {kind}", r.status_code == 200, str(r.status_code))
+        r = p.post(BASE + f"/api/posts/{post_id}/react", json={"kind": "fist"},
+                   headers={"X-CSRF-Token": token})
+        ok("une seule réaction conservée par personne",
+           r.json().get("current") == "fist" and r.json().get("total") == 2, r.text[:80])
+        r = p.post(BASE + f"/api/posts/{post_id}/comment", json={"body": "Commentaire auto"},
+                   headers={"X-CSRF-Token": token})
+        ok("commentaire ajouté", r.status_code == 201, str(r.status_code))
+        r = p.get(BASE + "/mon-profil")
+        ok("fil affiché avec réactions et commentaires",
+           "Vérification auto du fil" in r.text and "Commentaire auto" in r.text)
+        r = app_post_delete(p, token, post_id)
+        ok("suppression de sa publication", r, "POST /api/posts/<id>/delete")
+
+    # ------------------------------------------------- conservation illimitée
+    print("▸ Paramètres — conservation des données")
+    token = csrf(sa, "/admin/parametres")
+    page = sa.get(BASE + "/admin/parametres")
+    ok("option « conservation illimitée » proposée", "conservation illimitée" in page.text)
+    r = sa.post(BASE + "/admin/parametres", data={"retention_days": "", "csrf_token": token},
+                allow_redirects=False)
+    ok("enregistrement d'une conservation illimitée", r.status_code == 302, str(r.status_code))
 
     # ---------------------------------------- mot de passe temporaire imposé
     print("▸ Mot de passe temporaire et changement forcé")

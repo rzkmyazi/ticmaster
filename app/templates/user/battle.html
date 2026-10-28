@@ -6,9 +6,25 @@
 {% block page_subtitle %}<p class="page-sub">Défiez-vous sur le programme TIC</p>{% endblock %}
 
 {% block content %}
+{% if can_approve %}
+<div class="card card--callout mb-2">
+  <div class="callout-txt">
+    <strong>{{ icon('shield-alert', 16) }} Demandes de battle</strong>
+    <span>En tant qu'administrateur, vous validez ou refusez les demandes des élèves.</span>
+  </div>
+  <div class="callout-actions">
+    <a class="btn btn-primary btn-sm" href="{{ url_for('admin.battles') }}">{{ icon('check-circle', 15) }} Gérer les demandes</a>
+  </div>
+</div>
+{% endif %}
+
 <section class="battle-hero mb-2">
   <h2><span class="zap-anim">{{ icon('zap') }}</span> Lancez une battle de connaissances</h2>
   <p class="section-sub mt-1">5 questions tirées au hasard dans le programme, 20 secondes par question. Le score compte dès la première bonne réponse.</p>
+  <div class="alert alert-info mt-1" style="margin-bottom:0">
+    {{ icon('shield') }}
+    <span>Chaque demande de battle (solo ou groupe) est soumise à l'accord d'un administrateur ou du super administrateur avant de pouvoir démarrer.</span>
+  </div>
 
   <div class="mode-grid" id="battle-launcher">
     <div class="mode-card">
@@ -45,6 +61,48 @@
   </div>
 </section>
 
+{% if pending %}
+<section class="card mb-2" style="border-color:rgba(251,191,36,.45)">
+  <div class="card-head">
+    <h2 class="card-title">{{ icon('hourglass') }} Demandes en attente de validation</h2>
+    <span class="badge badge-warning">{{ pending|length }}</span>
+  </div>
+  <div class="card-body">
+    <div class="stack" style="gap:.5rem">
+      {% for room in pending %}
+      <div class="row-between" style="gap:.6rem;flex-wrap:wrap">
+        <div>
+          <strong>{{ room.name }}</strong>
+          <div class="text-xs text-muted">{{ 'Solo' if room.mode == 'solo' else 'Groupe' }} · code {{ room.code }} · déposée {{ time_ago(room.created_at) }}</div>
+        </div>
+        <span class="badge badge-warning">{{ icon('clock', 14) }} Attente admin</span>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="text-xs text-muted mt-2" style="margin-bottom:0">Vous serez prévenu dès qu'un administrateur aura accepté : la battle passera en « Salon ouvert » et le bouton Démarrer apparaîtra.</p>
+  </div>
+</section>
+{% endif %}
+
+{% if refused %}
+<section class="card mb-2" style="border-color:rgba(248,113,113,.45)">
+  <div class="card-head"><h2 class="card-title">{{ icon('ban') }} Demandes refusées</h2></div>
+  <div class="card-body">
+    <div class="stack" style="gap:.45rem">
+      {% for room in refused %}
+      <div class="row-between" style="gap:.6rem;flex-wrap:wrap">
+        <div>
+          <strong>{{ room.name }}</strong>
+          <div class="text-xs text-muted">{{ 'Solo' if room.mode == 'solo' else 'Groupe' }} · {{ time_ago(room.created_at) }}</div>
+        </div>
+        <span class="badge badge-danger">Refusée</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
 {% if my_rooms %}
 <section class="card mb-2">
   <div class="card-head"><h2 class="card-title">{{ icon('clock') }} Mes battles</h2></div>
@@ -55,7 +113,14 @@
         <span class="lesson-num">{{ icon('zap') }}</span>
         <span class="lesson-item-txt">
           <strong>{{ room.name }}</strong>
-          <small>{{ 'Solo' if room.mode == 'solo' else 'Groupe' }} · {{ room.status }}</small>
+          <small>
+            {{ 'Solo' if room.mode == 'solo' else 'Groupe' }} ·
+            {% if room.status == 'pending' %}<span class="badge badge-warning">En attente de validation</span>
+            {% elif room.status == 'refused' %}<span class="badge badge-danger">Refusée</span>
+            {% elif room.status == 'finished' %}<span class="badge badge-neutral">Terminée</span>
+            {% elif room.status == 'running' %}<span class="badge badge-success">En cours</span>
+            {% else %}<span class="badge badge-info">Salon ouvert</span>{% endif %}
+          </small>
         </span>
         {{ icon('arrow-right') }}
       </a>

@@ -38,6 +38,8 @@ class Config:
     # --- Base de données --------------------------------------------------
     SQLALCHEMY_DATABASE_URI = _database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Crée automatiquement les tables manquantes au démarrage (idempotent)
+    AUTO_CREATE_SCHEMA = os.environ.get("AUTO_CREATE_SCHEMA", "1") not in ("0", "false", "False")
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
 
     # --- Cookies / sessions ----------------------------------------------

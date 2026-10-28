@@ -393,7 +393,8 @@ class BattleRoom(db.Model):
     mode = db.Column(db.String(20), nullable=False, default="solo")  # solo / group
     code = db.Column(db.String(10), unique=True, nullable=False, index=True)
     owner_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    status = db.Column(db.String(20), default="lobby")  # lobby / running / finished
+    # pending (demande à valider par l'administration) / lobby / running / finished / refused
+    status = db.Column(db.String(20), default="pending", index=True)
     current_index = db.Column(db.Integer, default=0)
     question_count = db.Column(db.Integer, default=5)
     question_ids = db.Column(db.Text, default="")       # ids séparés par des virgules
@@ -442,3 +443,99 @@ class Setting(db.Model):
             row.value = value
         else:
             db.session.add(Setting(key=key, value=value))
+
+
+# ---------------------------------------------------------------------------
+# Fil d'actualité du profil (publications, réactions, commentaires)
+# ---------------------------------------------------------------------------
+#: Réactions disponibles, dans l'ordre d'affichage.
+REACTION_KINDS = {
+    "love": "\u2764\ufe0f",   # cœur
+    "haha": "\U0001F602",      # rire aux larmes
+    "fist": "\U0001F44A",      # coup de poing
+    "angry": "\U0001F620",     # colère
+    "sad": "\U0001F622",       # triste
+}
+REACTION_LABELS = {
+    "love": "J'aime",
+    "haha": "Rire",
+    "fist": "Bravo",
+    "angry": "Colère",
+    "sad": "Triste",
+}
+
+
+class Post(db.Model):
+    """Publication du fil d'actualité (texte, photo, ou les deux)."""
+
+    __tablename__ = "posts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                          nullable=False, index=True)
+    body = db.Column(db.Text, nullable=False, default="")
+    image_filename = db.Column(db.String(255), default="")
+    image_name = db.Column(db.String(255), default="")
+    image_size = db.Column(db.Integer, default=0)
+    deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=utcnow, index=True)
+
+    author = db.relationship("User")
+    reactions = db.relationship("PostReaction", back_populates="post",
+                                cascade="all, delete-orphan")
+    comments = db.relationship("PostComment", back_populates="post",
+                               cascade="all, delete-orphan", order_by="PostComment.created_at")
+
+    # ---- helpers -------------------------------------------------------
+    def reaction_summary(self) -> list[dict]:
+        """Réactions agrégées, dans l'ordre officiel des emojis."""
+        counts = {}
+        for reaction in self.reactions:
+            counts[reaction.kind] = counts.get(reaction.kind, 0) + 1
+        return [
+            {"kind": kind, "emoji": REACTION_KINDS[kind], "label": REACTION_LABELS[kind],
+             "count": counts.get(kind, 0)}
+            for kind in REACTION_KINDS if counts.get(kind)
+        ]
+
+    def my_reaction(self, user_id: int) -> str:
+        for reaction in self.reactions:
+            if reaction.user_id == user_id:
+                return reaction.kind
+        return ""
+
+    def reaction_count(self) -> int:
+        return len(self.reactions)
+
+
+class PostReaction(db.Model):
+    """Une seule réaction par personne et par publication (modifiable)."""
+
+    __tablename__ = "post_reactions"
+    __table_args__ = (db.UniqueConstraint("post_id", "user_id", name="uq_reaction_post_user"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey("posts.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    kind = db.Column(db.String(12), nullable=False, default="love")
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+    post = db.relationship("Post", back_populates="reactions")
+    user = db.relationship("User")
+
+
+class PostComment(db.Model):
+    __tablename__ = "post_comments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey("posts.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                          nullable=False, index=True)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, index=True)
+
+    post = db.relationship("Post", back_populates="comments")
+    author = db.relationship("User")

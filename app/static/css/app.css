@@ -1533,3 +1533,120 @@ table.data tbody tr:hover { background: var(--surface-3); }
 @media (prefers-reduced-motion: reduce) {
   .tab-dot, .mb-pulse, .pill-status--on i, .mp-track > span { animation: none !important; }
 }
+
+/* ==========================================================================
+   19. Fil d'actualité du profil (publications, réactions emoji, commentaires)
+   ========================================================================== */
+
+/* ---------- 19.1 Onglets du profil ---------- */
+.tab-panel[data-tab-panel] { display: none; animation: fade-in .28s var(--ease); }
+.tab-panel[data-tab-panel].is-active { display: block; }
+.tabs .tab { display: inline-flex; align-items: center; gap: .4rem; text-decoration: none; }
+
+/* ---------- 19.2 Mise en page ---------- */
+.feed-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1rem; align-items: start; }
+@media (max-width: 980px) { .feed-layout { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- 19.3 Composeur ---------- */
+.composer-row { display: flex; gap: .7rem; align-items: flex-start; }
+.composer-row textarea {
+  flex: 1; min-width: 0; resize: vertical; min-height: 74px;
+  padding: .7rem .85rem; border-radius: 13px; line-height: 1.5;
+}
+.composer-actions {
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  margin-top: .7rem; padding-top: .7rem; border-top: 1px dashed var(--line);
+}
+.composer-actions #post-file-name { flex: 1; min-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-btn { cursor: pointer; }
+#post-preview img { width: 100%; max-height: 380px; object-fit: cover; border-radius: 14px; display: block; }
+#post-preview { margin-top: .7rem; }
+
+/* ---------- 19.4 Publication ---------- */
+.post {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: .95rem 1rem; box-shadow: var(--shadow-sm);
+  transition: border-color var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+.post + .post { margin-top: .85rem; }
+.post:hover { border-color: var(--line-strong); }
+.post-head { display: flex; align-items: center; gap: .65rem; }
+.post-meta { display: grid; gap: .1rem; min-width: 0; flex: 1; }
+.post-meta strong { font-size: .93rem; line-height: 1.25; }
+.post-meta small { color: var(--text-3); font-size: .74rem; }
+.post-del { margin-left: auto; color: var(--text-3); }
+.post-del:hover { color: var(--red); }
+.post-body { margin: .75rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; font-size: .93rem; }
+.post-media { margin: .75rem 0 0; border-radius: 14px; overflow: hidden; background: var(--surface-3); }
+.post-media img { display: block; width: 100%; max-height: 560px; object-fit: cover; }
+
+/* ---------- 19.5 Statistiques et réactions ---------- */
+.post-stats {
+  display: flex; align-items: center; justify-content: space-between; gap: .6rem;
+  margin-top: .7rem; padding-bottom: .55rem; border-bottom: 1px solid var(--line);
+  font-size: .76rem; flex-wrap: wrap;
+}
+.post-reactions { display: inline-flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+.rchip {
+  display: inline-flex; align-items: center; gap: .22rem;
+  padding: .1rem .4rem; border-radius: 999px; background: var(--surface-3);
+  border: 1px solid var(--line); font-size: .76rem; line-height: 1.5;
+}
+.rchip b { font-size: .72rem; color: var(--text-2); font-weight: 700; }
+
+.post-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding-top: .55rem; }
+.reaction-bar { display: inline-flex; gap: .18rem; align-items: center; }
+.react-btn {
+  width: 34px; height: 32px; display: inline-grid; place-items: center;
+  border-radius: 9px; border: 1px solid transparent; background: transparent;
+  font-size: 1.02rem; line-height: 1; cursor: pointer; filter: grayscale(.55); opacity: .72;
+  transition: transform var(--fast) var(--ease), background var(--fast) var(--ease),
+              filter var(--fast) var(--ease), opacity var(--fast) var(--ease);
+}
+.react-btn:hover { transform: translateY(-2px) scale(1.14); filter: none; opacity: 1; background: var(--surface-3); }
+.react-btn.is-active {
+  background: var(--accent-soft); border-color: var(--line-strong);
+  filter: none; opacity: 1; box-shadow: 0 0 0 3px rgba(56, 189, 248, .1);
+}
+.react-btn.is-active::after { content: ""; }
+.post-action {
+  display: inline-flex; align-items: center; gap: .38rem; margin-left: auto;
+  padding: .38rem .7rem; border-radius: 9px; border: 1px solid transparent;
+  background: transparent; color: var(--text-2); font-size: .8rem; font-weight: 600; cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.post-action:hover { background: var(--surface-3); color: var(--text); }
+
+/* ---------- 19.6 Commentaires ---------- */
+.post-comments { margin-top: .6rem; padding-top: .6rem; border-top: 1px dashed var(--line); display: grid; gap: .55rem; }
+.comment { display: flex; gap: .55rem; align-items: flex-start; }
+.comment-body {
+  background: var(--surface-3); border: 1px solid var(--line);
+  border-radius: 12px; padding: .45rem .65rem; min-width: 0; flex: 1;
+}
+.comment-body strong { display: block; font-size: .8rem; }
+.comment-body span { display: block; font-size: .84rem; color: var(--text-2); overflow-wrap: anywhere; margin-top: .1rem; }
+.comment-body small { display: block; font-size: .68rem; color: var(--text-3); margin-top: .22rem; }
+.comment-form { display: flex; gap: .45rem; align-items: center; }
+.comment-form input { flex: 1; min-width: 0; border-radius: 999px; padding: .42rem .8rem; font-size: .84rem; }
+.comment-form .btn { border-radius: 999px; }
+
+/* ---------- 19.7 Légende et état vide ---------- */
+.reaction-legend { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .7rem; }
+.rlegend {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .22rem .55rem; border-radius: 999px; background: var(--surface-3);
+  border: 1px solid var(--line); font-size: .74rem; color: var(--text-2);
+}
+.feed-empty { text-align: center; padding: 2.2rem 1rem; border: 1px dashed var(--line-strong); border-radius: var(--radius); background: var(--surface); }
+.feed-empty-emoji { font-size: 2.1rem; display: block; margin-bottom: .35rem; }
+.feed-empty h3 { margin: 0 0 .25rem; font-size: 1rem; }
+.feed-empty p { margin: 0; color: var(--text-3); font-size: .84rem; }
+
+@media (max-width: 640px) {
+  .post { padding: .8rem .75rem; }
+  .feed-aside { display: none; }
+  .reaction-bar { flex-wrap: wrap; }
+  .post-action { margin-left: 0; }
+  .post-media img { max-height: 360px; }
+}

@@ -1,0 +1,78 @@
+{#- Fil d'actualité : une publication (texte et/ou photo, réactions emoji, commentaires) -#}
+{% from "macros.html" import avatar, icon %}
+{% for post in posts %}
+<article class="post" data-post-id="{{ post.id }}">
+  <header class="post-head">
+    {{ avatar(post.author, 'md') }}
+    <div class="post-meta">
+      <strong>{{ post.author.full_name or post.author.username }}</strong>
+      <small>
+        @{{ post.author.username }} · {{ time_ago(post.created_at) }}
+        {% if post.author.is_admin %}<span class="badge badge--role-super_admin" style="margin-left:.35rem">{{ 'Super admin' if post.author.is_super_admin else 'Admin' }}</span>{% endif %}
+      </small>
+    </div>
+    {% if post.author_id == current_user.id or current_user.is_admin %}
+    <button class="icon-btn post-del" type="button" data-post-delete="{{ post.id }}" title="Supprimer la publication" aria-label="Supprimer">{{ icon('trash', 16) }}</button>
+    {% endif %}
+  </header>
+
+  {% if post.body %}<p class="post-body">{{ post.body }}</p>{% endif %}
+
+  {% if post.image_filename %}
+  <figure class="post-media">
+    <img src="{{ url_for('social.media', filename=post.image_filename) }}"
+         alt="Photo publiée par {{ post.author.full_name or post.author.username }}" loading="lazy">
+  </figure>
+  {% endif %}
+
+  {% set summary = post.reaction_summary() %}
+  <div class="post-stats">
+    <span class="post-reactions" data-reaction-summary="{{ post.id }}">
+      {% for item in summary %}<span class="rchip" title="{{ item.label }}">{{ item.emoji }}<b>{{ item.count }}</b></span>{% endfor %}
+      {% if not summary %}<span class="text-muted">Aucune réaction</span>{% endif %}
+    </span>
+    <span class="text-muted" data-comment-count="{{ post.id }}">
+      {{ post.comments|length }} commentaire{{ 's' if post.comments|length > 1 }}
+    </span>
+  </div>
+
+  <div class="post-actions">
+    <div class="reaction-bar" data-react-bar="{{ post.id }}">
+      {% set mine = post.my_reaction(current_user.id) %}
+      {% for kind, emoji in reaction_kinds.items() %}
+      <button type="button" class="react-btn{{ ' is-active' if mine == kind }}"
+              data-react="{{ kind }}" data-post="{{ post.id }}"
+              title="{{ reaction_labels[kind] }}" aria-label="{{ reaction_labels[kind] }}"
+              aria-pressed="{{ 'true' if mine == kind else 'false' }}">{{ emoji }}</button>
+      {% endfor %}
+    </div>
+    <button type="button" class="post-action" data-comment-toggle="{{ post.id }}">
+      {{ icon('message', 16) }} Commenter
+    </button>
+  </div>
+
+  <div class="post-comments" data-comments="{{ post.id }}" hidden>
+    {% for comment in post.comments %}
+    <div class="comment">
+      {{ avatar(comment.author, 'xs') }}
+      <div class="comment-body">
+        <strong>{{ comment.author.full_name or comment.author.username }}</strong>
+        <span>{{ comment.body }}</span>
+        <small>{{ time_ago(comment.created_at) }}</small>
+      </div>
+    </div>
+    {% endfor %}
+    <form class="comment-form" data-comment-form="{{ post.id }}">
+      <input type="text" name="body" maxlength="600" placeholder="Écrire un commentaire…"
+             aria-label="Votre commentaire" autocomplete="off">
+      <button class="btn btn-sm btn-primary" type="submit" aria-label="Envoyer">{{ icon('send', 15) }}</button>
+    </form>
+  </div>
+</article>
+{% else %}
+<div class="feed-empty">
+  <span class="feed-empty-emoji" aria-hidden="true">💬</span>
+  <h3>Le fil est encore vide</h3>
+  <p>Soyez le premier à publier une photo ou un message pour la classe.</p>
+</div>
+{% endfor %}

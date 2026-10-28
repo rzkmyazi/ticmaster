@@ -21,6 +21,18 @@
     </div>
   </div>
 
+  {% if room.status == 'pending' %}
+  <div class="alert alert-info mb-2">
+    {{ icon('hourglass') }}
+    <span>Cette battle attend la validation d'un administrateur. Aucun joueur ne peut la lancer avant l'accord du personnel.</span>
+  </div>
+  {% elif room.status == 'refused' %}
+  <div class="alert alert-danger mb-2">
+    {{ icon('ban') }}
+    <span>Cette battle a été refusée par l'administration. Vous pouvez en créer une nouvelle depuis la page Battle.</span>
+  </div>
+  {% endif %}
+
   {% if not is_member %}
   <div class="card mb-2"><div class="card-body row-between">
     <span class="text-sm">Vous n'êtes pas encore membre de cette battle.</span>
@@ -32,7 +44,7 @@
     <section class="stack">
       <div class="battle-question" id="battle-question">
         <div class="row-between">
-          <span class="badge badge-warning">{{ icon('zap') }} <span id="battle-status">{{ 'Salon d’attente' if room.status == 'lobby' else ('En cours' if room.status == 'running' else 'Terminée') }}</span></span>
+          <span class="badge badge-warning">{{ icon('zap') }} <span id="battle-status">{{ 'En attente de validation' if room.status == 'pending' else ('Refusée' if room.status == 'refused' else ('Salon d’attente' if room.status == 'lobby' else ('En cours' if room.status == 'running' else 'Terminée'))) }}</span></span>
           <span class="quiz-timer" id="battle-timer">{{ icon('clock') }} <span id="battle-timer-value">—</span></span>
         </div>
 

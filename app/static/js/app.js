@@ -331,6 +331,197 @@
     });
   }
 
+
+  /* ---------- Onglets du profil ---------- */
+  function initTabs() {
+    var links = $$("[data-tab-link]");
+    if (!links.length) return;
+    var panels = $$("[data-tab-panel]");
+    function show(name) {
+      links.forEach(function (link) {
+        var active = link.getAttribute("data-tab-link") === name;
+        link.classList.toggle("is-active", active);
+        link.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      panels.forEach(function (panel) {
+        panel.classList.toggle("is-active", panel.getAttribute("data-tab-panel") === name);
+      });
+    }
+    links.forEach(function (link) {
+      on(link, "click", function (e) {
+        e.preventDefault();
+        var name = link.getAttribute("data-tab-link");
+        show(name);
+        if (window.history && history.replaceState) history.replaceState(null, "", "#" + name);
+      });
+    });
+    var initial = (window.location.hash || "").replace("#", "");
+    show(initial === "fil" ? "fil" : "infos");
+  }
+
+  /* ---------- Fil d'actualité : publier, réagir, commenter ---------- */
+  function postJson(url, payload) {
+    return window.fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf() },
+      credentials: "same-origin",
+      body: JSON.stringify(payload || {})
+    }).then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); });
+  }
+
+  function refreshFeed(feed) {
+    var url = feed.getAttribute("data-refresh");
+    if (!url) return window.Promise ? window.Promise.resolve() : null;
+    return window.fetch(url, { credentials: "same-origin", headers: { "X-Requested-With": "fetch" } })
+      .then(function (res) { return res.json(); })
+      .then(function (data) { if (data && data.html) feed.innerHTML = data.html; })
+      .catch(function () {});
+  }
+
+  function initFeed() {
+    var feed = $("#feed");
+    var form = $("#post-form");
+    if (!feed && !form) return;
+
+    /* Publication */
+    if (form) {
+      var fileInput = $("#post-image");
+      var preview = $("#post-preview");
+      var fileName = $("#post-file-name");
+      var errBox = $("#post-error");
+      var submit = $("#post-submit");
+
+      on(fileInput, "change", function () {
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) {
+          if (preview) { preview.hidden = true; preview.querySelector("img").removeAttribute("src"); }
+          if (fileName) fileName.textContent = "Aucun fichier sélectionné";
+          return;
+        }
+        if (fileName) fileName.textContent = file.name;
+        if (preview && file.type.indexOf("image/") === 0) {
+          var url = URL.createObjectURL(file);
+          preview.querySelector("img").src = url;
+          preview.hidden = false;
+        }
+      });
+
+      on(form, "submit", function (e) {
+        e.preventDefault();
+        if (errBox) errBox.hidden = true;
+        var body = form.querySelector('textarea[name="body"]');
+        var hasFile = fileInput && fileInput.files && fileInput.files.length;
+        if ((!body || !body.value.trim()) && !hasFile) {
+          if (errBox) { errBox.textContent = "Écrivez un message ou ajoutez une photo."; errBox.hidden = false; }
+          return;
+        }
+        var btn = submit;
+        if (btn) { btn.disabled = true; btn.classList.add("is-loading"); }
+        window.fetch(form.getAttribute("data-endpoint"), {
+          method: "POST",
+          headers: { "X-CSRF-Token": csrf() },
+          credentials: "same-origin",
+          body: new FormData(form)
+        }).then(function (res) {
+          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+        }).then(function (result) {
+          if (!result.ok) {
+            if (errBox) { errBox.textContent = (result.data && result.data.error) || "Publication impossible."; errBox.hidden = false; }
+            return;
+          }
+          form.reset();
+          if (preview) { preview.hidden = true; preview.querySelector("img").removeAttribute("src"); }
+          if (fileName) fileName.textContent = "Aucun fichier sélectionné";
+          toast("Publication ajoutée.", "success");
+          return refreshFeed(feed);
+        }).catch(function () {
+          if (errBox) { errBox.textContent = "Erreur réseau, réessayez."; errBox.hidden = false; }
+        }).then(function () {
+          if (btn) { btn.disabled = false; btn.classList.remove("is-loading"); }
+        });
+      });
+    }
+
+    /* Clics délégués dans le fil (survit aux rafraîchissements) */
+    on(document, "click", function (e) {
+      var react = e.target.closest ? e.target.closest("[data-react]") : null;
+      if (react) {
+        var postId = react.getAttribute("data-post");
+        postJson("/api/posts/" + postId + "/react", { kind: react.getAttribute("data-react") })
+          .then(function (result) {
+            if (!result.ok) { toast((result.data && result.data.error) || "Réaction impossible.", "error"); return; }
+            var bar = document.querySelector('[data-react-bar="' + postId + '"]');
+            if (bar) {
+              $$("[data-react]", bar).forEach(function (b) {
+                var active = b.getAttribute("data-react") === result.data.current;
+                b.classList.toggle("is-active", active);
+                b.setAttribute("aria-pressed", active ? "true" : "false");
+              });
+            }
+            var holder = document.querySelector('[data-reaction-summary="' + postId + '"]');
+            if (holder) {
+              if (!result.data.summary.length) {
+                holder.innerHTML = '<span class="text-muted">Aucune réaction</span>';
+              } else {
+                holder.innerHTML = result.data.summary.map(function (item) {
+                  return '<span class="rchip" title="' + item.label + '">' + item.emoji + "<b>" + item.count + "</b></span>";
+                }).join("");
+              }
+            }
+          });
+        return;
+      }
+
+      var toggle = e.target.closest ? e.target.closest("[data-comment-toggle]") : null;
+      if (toggle) {
+        var box = document.querySelector('[data-comments="' + toggle.getAttribute("data-comment-toggle") + '"]');
+        if (box) {
+          box.hidden = !box.hidden;
+          if (!box.hidden) {
+            var field = box.querySelector('input[name="body"]');
+            if (field) field.focus();
+          }
+        }
+        return;
+      }
+
+      var del = e.target.closest ? e.target.closest("[data-post-delete]") : null;
+      if (del) {
+        if (!window.confirm("Supprimer définitivement cette publication ?")) return;
+        postJson("/api/posts/" + del.getAttribute("data-post-delete") + "/delete", {})
+          .then(function (result) {
+            if (!result.ok) { toast((result.data && result.data.error) || "Suppression impossible.", "error"); return; }
+            toast("Publication supprimée.", "success");
+            return refreshFeed(feed);
+          });
+      }
+    });
+
+    /* Commentaires */
+    on(document, "submit", function (e) {
+      var commentForm = e.target.closest ? e.target.closest("[data-comment-form]") : null;
+      if (!commentForm) return;
+      e.preventDefault();
+      var field = commentForm.querySelector('input[name="body"]');
+      var body = field ? field.value.trim() : "";
+      if (!body) return;
+      var postId = commentForm.getAttribute("data-comment-form");
+      field.value = "";
+      postJson("/api/posts/" + postId + "/comment", { body: body })
+        .then(function (result) {
+          if (!result.ok) {
+            toast((result.data && result.data.error) || "Commentaire refusé.", "error");
+            if (field) field.value = body;
+            return;
+          }
+          refreshFeed(feed).then(function () {
+            var box = document.querySelector('[data-comments="' + postId + '"]');
+            if (box) box.hidden = false;
+          });
+        });
+    });
+  }
+
   /* ---------- Démarrage ---------- */
   function boot() {
     applyTheme(currentTheme());
@@ -349,6 +540,8 @@
     initServiceWorker();
     initOffline();
     initShareLink();
+    initTabs();
+    initFeed();
 
     $$("[data-theme-toggle]").forEach(function (btn) {
       on(btn, "click", function () { TIC.theme.toggle(); });

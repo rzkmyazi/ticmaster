@@ -27,6 +27,7 @@
   <div class="callout-actions">
     <a class="btn btn-primary btn-sm" href="{{ url_for('admin.grades') }}">{{ icon('award', 15) }} Notes des élèves</a>
     <a class="btn btn-outline btn-sm" href="{{ url_for('admin.statistics') }}">{{ icon('chart', 15) }} Statistiques</a>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('admin.battles') }}">{{ icon('zap', 15) }} Battles à valider{% if pending_battles %} <span class="badge badge-warning">{{ pending_battles }}</span>{% endif %}</a>
   </div>
 </div>
 {% endif %}
@@ -150,4 +151,51 @@
     </section>
   </div>
 </div>
+
+{% if current_user.is_super_admin %}
+<section class="card mt-2">
+  <div class="card-head">
+    <h2 class="card-title">{{ icon('award') }} Notes individuelles (sur 20)</h2>
+    <a class="text-sm" href="{{ url_for('admin.grades') }}">Relevé complet →</a>
+  </div>
+  {% if individual_notes %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Rang</th><th>Élève</th><th class="num">Exercices</th><th class="num">Examens</th><th class="num">Note /20</th><th>Mention</th><th class="num">Progression</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for row in individual_notes %}
+        <tr>
+          <td class="num">{{ row.rank or '—' }}</td>
+          <td>
+            <div class="cell-user">
+              {{ avatar(row.user, 'sm', row.user.is_online()) }}
+              <div><strong>{{ row.user.full_name or row.user.username }}</strong><small>@{{ row.user.username }}</small></div>
+            </div>
+          </td>
+          <td class="num">{{ note20(row.avg_exos) if row.avg_exos is not none else '—' }}</td>
+          <td class="num">{{ note20(row.avg_exams) if row.avg_exams is not none else '—' }}</td>
+          <td class="num">
+            {% if row.note is not none %}<span class="note note--{{ 'good' if row.note >= 14 else ('mid' if row.note >= 10 else 'low') }}">{{ row.note }}</span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if row.note is not none %}
+              {% set m = mention_for(row.note) %}
+              <span class="badge badge--mention-{{ m[1] }}">{{ m[0] }}</span>
+            {% else %}<span class="text-muted text-xs">Non noté</span>{% endif %}
+          </td>
+          <td class="num">{{ row.progress }} %</td>
+          <td class="ta-right"><a class="btn btn-ghost btn-sm" href="{{ url_for('admin.student_sheet', user_id=row.user.id) }}">Fiche →</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body"><p class="text-sm text-muted" style="margin:0">Aucun élève enregistré pour l'instant.</p></div>
+  {% endif %}
+</section>
+{% endif %}
 {% endblock %}

@@ -41,9 +41,17 @@
                 <textarea id="welcome_message" name="welcome_message" rows="3" maxlength="1000">{{ values.welcome_message }}</textarea>
               </div>
               <div class="field">
-                <label for="retention_days">Conservation des données (jours)</label>
-                <input id="retention_days" type="number" name="retention_days" min="30" max="3650" value="{{ values.retention_days }}">
-                <span class="hint">Durée indicative appliquée à votre politique de conservation (RGPD).</span>
+                <label for="retention_days">Conservation des données</label>
+                <div class="row" style="gap:.5rem;align-items:center">
+                  <input id="retention_days" type="number" name="retention_days" min="0" max="36500"
+                         value="{{ values.retention_days }}" style="max-width:140px" aria-describedby="retention-hint">
+                  <span class="text-sm text-muted">jours</span>
+                  <span class="badge badge-success">{{ icon('shield', 14) }} Illimité par défaut</span>
+                </div>
+                <span class="hint" id="retention-hint">
+                  <strong>0 = conservation illimitée</strong> : aucune donnée n'est jamais supprimée automatiquement.
+                  Une valeur positive n'est qu'une durée indicative de votre politique de conservation (RGPD).
+                </span>
               </div>
               <button class="btn btn-primary" type="submit">{{ icon('save') }} Enregistrer</button>
             </form>

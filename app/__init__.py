@@ -40,9 +40,22 @@ def create_app(config_object: str | None = None) -> Flask:
     app.config.setdefault("SITE_TAGLINE", "")
 
     Path(app.instance_path).mkdir(parents=True, exist_ok=True)
+    # Chemin absolu : indispensable pour send_from_directory (photos du fil)
+    app.config["UPLOAD_FOLDER"] = str(Path(app.config["UPLOAD_FOLDER"]).resolve())
     Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
     db.init_app(app)
+
+    # ---------------- Schéma ----------------
+    # Les nouvelles tables (fil d'actualité, réactions, commentaires) doivent
+    # exister sur les bases déjà en service. `create_all` est idempotent : il ne
+    # crée que les tables manquantes et ne touche jamais aux données existantes.
+    if app.config.get("AUTO_CREATE_SCHEMA", True):
+        try:
+            with app.app_context():
+                db.create_all()
+        except Exception:  # pragma: no cover - une base injoignable ne doit pas bloquer le boot
+            app.logger.exception("Création du schéma ignorée (base indisponible ?)")
 
     # ---------------- Hooks ----------------
     @app.before_request
@@ -131,7 +144,7 @@ def create_app(config_object: str | None = None) -> Flask:
     # ---------------- Template helpers ----------------
     @app.context_processor
     def inject_globals():
-        from .models import ROLE_LABELS
+        from .models import REACTION_KINDS, REACTION_LABELS, ROLE_LABELS
         from .utils import render_content, human_size
 
         def fmt_dt(value, fmt="%d/%m/%Y %H:%M"):
@@ -172,6 +185,8 @@ def create_app(config_object: str | None = None) -> Flask:
             site_name=app.config["SITE_NAME"],
             site_tagline=app.config.get("SITE_TAGLINE", ""),
             role_labels=ROLE_LABELS,
+            reaction_kinds=REACTION_KINDS,
+            reaction_labels=REACTION_LABELS,
             fmt_dt=fmt_dt,
             fmt_date=fmt_date,
             time_ago=time_ago,

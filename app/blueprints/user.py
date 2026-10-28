@@ -187,9 +187,20 @@ def profile():
     passed = sum(1 for a in submitted if a.passed)
     best = max([a.percentage for a in submitted], default=0)
 
+    # Fil d'actualité du profil (les 30 dernières publications)
+    from ..models import Post
+
+    posts = (
+        Post.query.filter_by(deleted=False)
+        .order_by(Post.created_at.desc())
+        .limit(30)
+        .all()
+    )
+
     return render_template(
         "user/profile.html",
         user=user,
+        posts=posts,
         error=error,
         stats={
             "attempts": len(submitted),

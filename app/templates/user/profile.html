@@ -3,9 +3,15 @@
 
 {% block title %}Mon profil{% endblock %}
 {% block page_title %}Mon profil{% endblock %}
-{% block page_subtitle %}<p class="page-sub">Vos informations personnelles</p>{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Vos informations personnelles, vos photos et le fil de la classe</p>{% endblock %}
 
 {% block content %}
+<div class="tabs" data-tabs="profil">
+  <a class="tab is-active" href="#onglet-infos" data-tab-link="infos">{{ icon('user', 16) }} Profil</a>
+  <a class="tab" href="#onglet-fil" data-tab-link="fil">{{ icon('message', 16) }} Fil d'actualité</a>
+</div>
+
+<div class="tab-panel is-active" data-tab-panel="infos">
 <div class="grid" style="grid-template-columns:minmax(0,1fr) 320px;align-items:start;gap:1rem">
   <section class="card">
     <div class="card-head">
@@ -75,5 +81,71 @@
       </div>
     </section>
   </aside>
+</div>
+</div>
+
+{# ------------------------------------------------------------------ #}
+{# Fil d'actualité : publications, réactions emoji, commentaires       #}
+{# ------------------------------------------------------------------ #}
+<div class="tab-panel" data-tab-panel="fil">
+  <div class="feed-layout">
+    <div class="stack">
+      <section class="card composer">
+        <div class="card-head">
+          <h2 class="card-title">{{ icon('edit') }} Publier</h2>
+          <span class="text-xs text-muted">Visible par tous les membres</span>
+        </div>
+        <div class="card-body">
+          <form id="post-form" enctype="multipart/form-data" data-endpoint="{{ url_for('social.api_post_create') }}">
+            <div class="composer-row">
+              {{ avatar(user, 'md', true) }}
+              <textarea name="body" rows="3" maxlength="2000"
+                        placeholder="Quoi de neuf, {{ user.full_name or user.username }} ?"
+                        aria-label="Contenu de la publication"></textarea>
+            </div>
+            <div id="post-preview" class="post-media" hidden>
+              <img alt="Aperçu de la photo sélectionnée">
+            </div>
+            <div class="composer-actions">
+              <label class="btn btn-ghost btn-sm file-btn" for="post-image">
+                {{ icon('upload') }} Photo
+                <input type="file" id="post-image" name="image" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+              </label>
+              <span class="text-xs text-muted" id="post-file-name">Aucun fichier sélectionné</span>
+              <button class="btn btn-primary btn-sm" type="submit" id="post-submit">
+                {{ icon('send', 16) }} Publier
+              </button>
+            </div>
+            <div class="auth-error" id="post-error" hidden></div>
+          </form>
+        </div>
+      </section>
+
+      <div id="feed" data-refresh="{{ url_for('social.api_posts_list') }}">
+        {% include "partials/feed.html" %}
+      </div>
+    </div>
+
+    <aside class="stack feed-aside">
+      <section class="card">
+        <div class="card-head"><h2 class="card-title">{{ icon('users') }} La classe</h2></div>
+        <div class="card-body">
+          <p class="text-sm text-muted">Réagissez avec un cœur, un rire, un coup de poing, de la colère ou de la tristesse. Une seule réaction par photo, modifiable à tout moment.</p>
+          <div class="reaction-legend">
+            {% for kind, emoji in reaction_kinds.items() %}
+            <span class="rlegend"><span aria-hidden="true">{{ emoji }}</span>{{ reaction_labels[kind] }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2 class="card-title">{{ icon('info') }} Rappel</h2></div>
+        <div class="card-body">
+          <p class="text-sm">Restez courtois : les publications sont modérées par l'administration, qui peut retirer tout contenu inapproprié.</p>
+          <p class="text-xs text-muted mt-2">Formats acceptés : PNG, JPG, GIF, WEBP — 30 Mo maximum.</p>
+        </div>
+      </section>
+    </aside>
+  </div>
 </div>
 {% endblock %}

@@ -188,6 +188,8 @@
         if (!state || !state.ok) return;
         if (statusEl) {
           statusEl.textContent = state.room.status === "lobby" ? "Salon d'attente"
+            : state.room.status === "pending" ? "En attente de validation"
+            : state.room.status === "refused" ? "Refusée"
             : state.room.status === "running" ? "En cours" : "Terminée";
         }
         if (timerEl) timerEl.textContent = state.room.status === "running" ? state.seconds_left + "s" : "—";

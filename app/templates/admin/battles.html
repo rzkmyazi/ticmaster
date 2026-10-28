@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Battles à valider{% endblock %}
+{% block page_title %}Battles{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Validez les demandes de battle des élèves (solo ou groupe)</p>{% endblock %}
+
+{% block content %}
+<div class="alert alert-info mb-2">
+  {{ icon('info') }}
+  <span>Une battle demandée par un élève reste bloquée jusqu'à votre décision. Seuls l'administrateur et le super administrateur peuvent l'accepter ou la refuser.</span>
+</div>
+
+<section class="card mb-2">
+  <div class="card-head">
+    <h2 class="card-title">{{ icon('hourglass') }} Demandes en attente</h2>
+    <span class="badge badge-{{ 'warning' if pending else 'neutral' }}">{{ pending|length }} en attente</span>
+  </div>
+  {% if pending %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Battle</th><th>Mode</th><th>Demandée par</th><th>Code</th><th>Date</th><th class="ta-right">Décision</th></tr></thead>
+      <tbody>
+        {% for room in pending %}
+        <tr>
+          <td>
+            <div class="cell-user">
+              <span class="battle-icon" aria-hidden="true">{{ icon('zap', 16) }}</span>
+              <div><strong>{{ room.name }}</strong><small>{{ room.members|length }} participant{{ 's' if room.members|length > 1 }}</small></div>
+            </div>
+          </td>
+          <td><span class="badge badge-{{ 'info' if room.mode == 'solo' else 'accent' }}">{{ 'Solo' if room.mode == 'solo' else 'Groupe' }}</span></td>
+          <td class="text-sm">{{ room.owner.full_name or room.owner.username }}<br><small class="text-muted">@{{ room.owner.username }}</small></td>
+          <td><code>{{ room.code }}</code></td>
+          <td class="text-xs text-muted">{{ fmt_dt(room.created_at) }}</td>
+          <td class="ta-right">
+            <div class="row" style="justify-content:flex-end;gap:.35rem;flex-wrap:wrap">
+              <form method="post" action="{{ url_for('admin.battle_accept', battle_id=room.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-primary btn-sm" type="submit">{{ icon('check', 15) }} Accepter</button>
+              </form>
+              <form method="post" action="{{ url_for('admin.battle_refuse', battle_id=room.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-danger btn-sm" type="submit">{{ icon('ban', 15) }} Refuser</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <p class="text-sm text-muted" style="margin:0">{{ icon('check-circle', 15) }} Aucune demande en attente pour le moment.</p>
+  </div>
+  {% endif %}
+</section>
+
+{% if active %}
+<section class="card mb-2">
+  <div class="card-head"><h2 class="card-title">{{ icon('play') }} Battles ouvertes</h2></div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Battle</th><th>Mode</th><th>Statut</th><th>Code</th><th>Participants</th><th>Créée</th></tr></thead>
+      <tbody>
+        {% for room in active %}
+        <tr>
+          <td><strong>{{ room.name }}</strong></td>
+          <td>{{ 'Solo' if room.mode == 'solo' else 'Groupe' }}</td>
+          <td><span class="badge badge-{{ 'success' if room.status == 'running' else 'info' }}">{{ 'En cours' if room.status == 'running' else 'Salon ouvert' }}</span></td>
+          <td><code>{{ room.code }}</code></td>
+          <td>{{ room.members|length }}</td>
+          <td class="text-xs text-muted">{{ fmt_dt(room.created_at) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if history %}
+<section class="card">
+  <div class="card-head"><h2 class="card-title">{{ icon('history') }} Historique récent</h2></div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Battle</th><th>Mode</th><th>Résultat</th><th>Code</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for room in history %}
+        <tr>
+          <td><strong>{{ room.name }}</strong></td>
+          <td>{{ 'Solo' if room.mode == 'solo' else 'Groupe' }}</td>
+          <td>
+            {% if room.status == 'finished' %}<span class="badge badge-success">Terminée</span>
+            {% else %}<span class="badge badge-danger">Refusée</span>{% endif %}
+          </td>
+          <td><code>{{ room.code }}</code></td>
+          <td class="text-xs text-muted">{{ fmt_dt(room.created_at) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

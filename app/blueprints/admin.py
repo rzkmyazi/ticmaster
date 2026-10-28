@@ -72,6 +72,12 @@ def dashboard():
     )
     recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
     pending_requests = PasswordResetRequest.query.filter_by(status="pending").count()
+    pending_battles = BattleRoom.query.filter_by(status="pending").count()
+
+    # Notes individuelles sur 20 (super administrateur uniquement)
+    individual_notes = []
+    if g.user.is_super_admin:
+        individual_notes = student_rows(sort="moyenne")
 
     # Répartition des apprenants par module (progression moyenne)
     modules = Module.query.filter_by(status="published").order_by(Module.order_index).all()
@@ -100,8 +106,9 @@ def dashboard():
     return render_template(
         "admin/dashboard.html",
         stats=stats, recent_attempts=recent_attempts, recent_users=recent_users,
-        pending_requests=pending_requests, module_stats=module_stats,
-        signups=signups, max_signup=max_signup,
+        pending_requests=pending_requests, pending_battles=pending_battles,
+        module_stats=module_stats, signups=signups, max_signup=max_signup,
+        individual_notes=individual_notes, note20=note20, mention_for=mention_for,
     )
 
 
@@ -1016,6 +1023,61 @@ def reset_reject(request_id: int):
 
 
 # ---------------------------------------------------------------------------
+# Validation des battles (solo et groupe) — admin et super admin
+# ---------------------------------------------------------------------------
+@bp.route("/battles")
+@admin_required
+def battles():
+    """Demandes de battle déposées par les apprenants."""
+    pending = (
+        BattleRoom.query.filter_by(status="pending")
+        .order_by(BattleRoom.created_at.asc())
+        .all()
+    )
+    active = (
+        BattleRoom.query.filter(BattleRoom.status.in_(["lobby", "running"]))
+        .order_by(BattleRoom.created_at.desc())
+        .limit(25)
+        .all()
+    )
+    history = (
+        BattleRoom.query.filter(BattleRoom.status.in_(["finished", "refused"]))
+        .order_by(BattleRoom.created_at.desc())
+        .limit(25)
+        .all()
+    )
+    return render_template("admin/battles.html", pending=pending, active=active, history=history)
+
+
+@bp.route("/battles/<int:battle_id>/accepter", methods=["POST"])
+@admin_required
+def battle_accept(battle_id: int):
+    room = db.session.get(BattleRoom, battle_id) or abort(404)
+    if room.status != "pending":
+        flash("Cette demande a déjà été traitée.", "info")
+        return redirect(url_for("admin.battles"))
+    room.status = "lobby"
+    db.session.commit()
+    log_audit("battle.accepted", target=room.code, details=f"par={g.user.username}")
+    flash(f"Battle « {room.name} » acceptée : les joueurs peuvent démarrer.", "success")
+    return redirect(url_for("admin.battles"))
+
+
+@bp.route("/battles/<int:battle_id>/refuser", methods=["POST"])
+@admin_required
+def battle_refuse(battle_id: int):
+    room = db.session.get(BattleRoom, battle_id) or abort(404)
+    if room.status != "pending":
+        flash("Cette demande a déjà été traitée.", "info")
+        return redirect(url_for("admin.battles"))
+    room.status = "refused"
+    db.session.commit()
+    log_audit("battle.refused", target=room.code, details=f"par={g.user.username}")
+    flash(f"Battle « {room.name} » refusée.", "info")
+    return redirect(url_for("admin.battles"))
+
+
+# ---------------------------------------------------------------------------
 # Paramètres et sauvegardes
 # ---------------------------------------------------------------------------
 @bp.route("/parametres", methods=["GET", "POST"])
@@ -1051,9 +1113,19 @@ def settings():
                 flash("Message de mise à jour enregistré (maintenance inactive).", "info")
             return redirect(url_for("admin.settings", onglet="maintenance"))
 
-        for key in ("site_tagline", "support_email", "welcome_message", "retention_days"):
+        for key in ("site_tagline", "support_email", "welcome_message"):
             if key in request.form:
                 Setting.set(key, (request.form.get(key) or "").strip()[:1000])
+
+        # Conservation des données : vide, 0 ou « illimite » = aucune limite
+        if "retention_days" in request.form:
+            raw = (request.form.get("retention_days") or "").strip().lower()
+            raw = raw.replace("é", "e").replace("è", "e")
+            if raw in ("", "0", "illimite", "illimitee", "illimité", "infini", "infinity", "none"):
+                Setting.set("retention_days", "0")
+            else:
+                digits = "".join(ch for ch in raw if ch.isdigit())
+                Setting.set("retention_days", str(min(int(digits), 36500)) if digits else "0")
         db.session.commit()
         log_audit("settings.updated")
         flash("Paramètres enregistrés.", "success")
@@ -1063,7 +1135,7 @@ def settings():
         "site_tagline": Setting.get("site_tagline", current_app.config.get("SITE_TAGLINE", "")),
         "support_email": Setting.get("support_email", ""),
         "welcome_message": Setting.get("welcome_message", ""),
-        "retention_days": Setting.get("retention_days", "365"),
+        "retention_days": Setting.get("retention_days", "0"),
         "maintenance_mode": maintenance.active(),
         "maintenance_message": Setting.get("maintenance_message", ""),
         "maintenance_return_at": Setting.get("maintenance_return_at", ""),

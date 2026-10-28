@@ -71,6 +71,7 @@
       <a class="nav-link{{ ' is-active' if request.endpoint in ['admin.exercises', 'admin.exercise_edit'] }}" href="{{ url_for('admin.exercises') }}">{{ icon('clipboard', 18) }} Exercices</a>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.announcements' }}" href="{{ url_for('admin.announcements') }}">{{ icon('bell', 18) }} Annonces</a>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.exams' }}" href="{{ url_for('admin.exams') }}">{{ icon('award', 18) }} Examens</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.battles' }}" href="{{ url_for('admin.battles') }}">{{ icon('zap', 18) }} Battles à valider</a>
       {% if current_user.is_super_admin %}
       <a class="nav-link nav-ic-pink{{ ' is-active' if request.endpoint == 'admin.user_messages' }}" href="{{ url_for('admin.user_messages') }}">{{ icon('message', 18) }} Messages des Utilisateurs</a>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.roles' }}" href="{{ url_for('admin.roles') }}">{{ icon('shield', 18) }} Rôles &amp; permissions</a>
