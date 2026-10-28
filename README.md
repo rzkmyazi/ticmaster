@@ -120,6 +120,7 @@ ouvrir `http://IP_DU_PC:5000`.
 |---|---|
 | `python run.py` | Serveur de développement |
 | `gunicorn wsgi:app -b 0.0.0.0:8000 -w 2 --threads 4` | Serveur de production local |
+| `python seed.py bootstrap` | Tout-en-un idempotent (production/Render) : tables, super admin, contenu |
 | `python seed.py seed` | (Re)charge le contenu pédagogique — idempotent |
 | `python seed.py demo` / `reset-demo` | Crée / supprime les comptes de démonstration |
 | `pytest -q` | Tests automatisés |
@@ -184,15 +185,19 @@ révocation de session.
 
 ## 7. Déploiement
 
-Procédure détaillée : [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/rzkmyazi/ticmaster)
 
-1. **GitHub** — `git init && git add . && git commit -m "TIC MASTER" && git push`
-2. **Render** — Blueprint `render.yaml` (service web + PostgreSQL), `gunicorn wsgi:app`,
-   health check `/sante`, puis `python seed.py superadmin` via le Shell Render.
-3. **Cloudflare** — domaine, proxy DNS, SSL Full (strict), cache et règles de sécurité.
-4. **PythonAnywhere** — alternative (WSGI + MySQL/PostgreSQL), instructions fournies.
+**Mise en ligne en 3 écrans, sans aucune commande** : guide illustré → [`docs/RENDER.md`](docs/RENDER.md)
+Procédure détaillée (GitHub, Render, Cloudflare, PythonAnywhere) → [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
----
+1. **GitHub** — dépôt : <https://github.com/rzkmyazi/ticmaster>
+2. **Render** — cliquer sur le bouton ci-dessus, se connecter avec GitHub, saisir
+   `SUPER_ADMIN_PASSWORD` puis *Apply*. `render.yaml` crée le service web et le PostgreSQL,
+   et `python seed.py bootstrap` installe automatiquement tables, super administrateur,
+   12 modules et 69 questions (opération idempotente). Health check : `/sante`.
+3. **Cloudflare** — domaine, proxy DNS, SSL « Full (strict) », cache `/static/*`, limitation de
+   débit sur `/auth/connexion`.
+4. **PythonAnywhere** — alternative documentée (WSGI + MySQL/PostgreSQL).
 
 ## 8. Limites connues et recommandations
 

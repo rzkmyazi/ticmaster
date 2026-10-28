@@ -4,6 +4,7 @@
 Script d'installation et d'amorçage — TIC MASTER #by_Myazirzk
 
 Exemples :
+    python seed.py bootstrap          # tout-en-un, idempotent (production)
     python seed.py init --with-demo
     python seed.py superadmin --username Myazirzk
     python seed.py seed
@@ -217,6 +218,97 @@ def cmd_reset_demo(args):
         print("✔ Comptes de démonstration supprimés.")
 
 
+
+# ---------------------------------------------------------------------------
+# Amorçage automatique (Render, conteneurs, premier démarrage)
+# ---------------------------------------------------------------------------
+def _wait_for_db(app, attempts: int = 12, delay: int = 5):
+    """Sur Render, la base peut être indisponible quelques secondes au démarrage."""
+    import time
+    from sqlalchemy import text
+    last = None
+    for i in range(attempts):
+        try:
+            with app.app_context():
+                db.session.execute(text("SELECT 1"))
+                db.session.remove()
+            return True
+        except Exception as exc:  # pragma: no cover
+            last = exc
+            print(f"  … base indisponible (tentative {i + 1}/{attempts}) : {type(exc).__name__}")
+            time.sleep(delay)
+    print(f"✘ Base injoignable : {last}")
+    return False
+
+
+def cmd_bootstrap(args):
+    """Idempotent : tables + paramètres + SUPER ADMIN + contenu pédagogique.
+
+    Conçu pour être exécuté à chaque démarrage du conteneur (commande de start).
+    - Ne modifie jamais le mot de passe d'un compte existant.
+    - Ne crée les comptes de démonstration que si TIC_DEMO=1.
+    - N'échoue pas si la base est momentanément indisponible.
+    """
+    app = get_app()
+    if not _wait_for_db(app):
+        print("✘ Amorçage abandonné (base indisponible).")
+        return
+
+    with app.app_context():
+        db.create_all()
+        for k, v in {
+            "site_name": "TIC MASTER",
+            "site_tagline": "Plateforme de formation aux Technologies de l'Information et de la Communication",
+            "support_email": "support@ticmaster.local",
+            "maintenance": "0",
+            "maintenance_message": "",
+        }.items():
+            if not Setting.get(k):
+                Setting.set(k, v)
+        db.session.commit()
+
+    # --- Super administrateur (jamais modifié s'il existe) ------------------
+    username = os.environ.get("SUPER_ADMIN_USERNAME", "Myazirzk").strip() or "Myazirzk"
+    with app.app_context():
+        existing = User.query.filter_by(username=username).first()
+    if existing:
+        print(f"OK SUPER ADMIN « {username} » deja present - mot de passe inchange.")
+    else:
+        password = os.environ.get("SUPER_ADMIN_PASSWORD", "").strip()
+        generated = False
+        if password and not password_ok(password):
+            print("!! SUPER_ADMIN_PASSWORD trop faible : generation automatique.")
+            password = ""
+        if not password:
+            password = generate_password()
+            generated = True
+        with app.app_context():
+            user = User(username=username, full_name=os.environ.get("SUPER_ADMIN_FULLNAME", "Myazirzk"),
+                        email=os.environ.get("SUPER_ADMIN_EMAIL") or None,
+                        role=ROLE_SUPER_ADMIN, status=STATUS_ACTIVE, must_change_password=False,
+                        bio="Administrateur et fondateur de la plateforme TIC MASTER.")
+            user.set_password(password)
+            db.session.add(user)
+            db.session.commit()
+        print(f"OK SUPER ADMIN « {username} » cree.")
+        if generated:
+            print("  " + "=" * 58)
+            print(f"  MOT DE PASSE INITIAL : {password}")
+            print("  Notez-le, puis changez-le depuis « Mon profil ».")
+            print("  " + "=" * 58)
+
+    # --- Contenu pédagogique (idempotent) ----------------------------------
+    class _Args:
+        pass
+    cmd_seed(_Args())
+
+    # --- Comptes de démonstration (facultatif) -----------------------------
+    if os.environ.get("TIC_DEMO", "0") == "1":
+        cmd_demo(_Args())
+
+    print("OK Amorçage termine.")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Installation TIC MASTER")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -238,6 +330,9 @@ def main():
 
     p_demo = sub.add_parser("demo", help="Crée les comptes de démonstration")
     p_demo.set_defaults(func=cmd_demo)
+
+    p_boot = sub.add_parser("bootstrap", help="Amorçage complet idempotent (Render, conteneurs)")
+    p_boot.set_defaults(func=cmd_bootstrap)
 
     p_reset = sub.add_parser("reset-demo", help="Supprime les comptes de démonstration")
     p_reset.set_defaults(func=cmd_reset_demo)

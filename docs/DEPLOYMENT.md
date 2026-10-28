@@ -50,20 +50,22 @@ Le fichier `render.yaml` décrit l'ensemble de l'infrastructure :
 2. **New → Blueprint** → sélectionner le dépôt `ticmaster`.
 3. Render détecte `render.yaml` et propose le service + la base : valider.
 4. Attendre la fin du build (`pip install -r requirements.txt`).
-5. Ouvrir le **Shell** du service et créer le premier super administrateur :
+5. **Aucune commande à taper** : la commande de démarrage exécute
+   `python seed.py bootstrap`, qui crée les tables, le super administrateur
+   (`SUPER_ADMIN_USERNAME`, mot de passe fourni à la création du Blueprint) et le contenu
+   pédagogique. L'opération est idempotente : elle ne modifie jamais un mot de passe existant
+   et ne recharge pas les contenus déjà présents.
+
+   Si `SUPER_ADMIN_PASSWORD` a été laissé vide, le mot de passe généré s'affiche **une seule
+   fois** dans les journaux (*Logs → « MOT DE PASSE INITIAL »*).
+
+   Équivalent manuel (facultatif) :
 
 ```bash
 python seed.py init
 python seed.py superadmin --username Myazirzk
 python seed.py seed
-# (facultatif, pour découvrir) :
-python seed.py demo
 ```
-
-> Le Shell Render est interactif : le mot de passe se saisit sans écho.
-> Si l'interactivité pose problème, utiliser une variable d'environnement ponctuelle :
-> `SUPER_ADMIN_PASSWORD='…' python seed.py superadmin --username Myazirzk`
-> puis **supprimer la variable** de l'environnement Render.
 
 6. Ouvrir l'URL `https://ticmaster.onrender.com` → page d'accueil, puis `/auth/connexion`.
 

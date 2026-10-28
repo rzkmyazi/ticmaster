@@ -1,6 +1,10 @@
 # ============================================================================
 # Blueprint Render — TIC MASTER (#by_Myazirzk)
 # Documentation : https://render.com/docs/blueprint-spec
+#
+# Au premier déploiement, `python seed.py bootstrap` crée les tables, le
+# SUPER ADMIN, les 12 modules et les 69 questions. L'opération est idempotente :
+# elle ne recharge rien et ne modifie jamais un mot de passe existant.
 # ============================================================================
 databases:
   - name: ticmaster-db
@@ -16,7 +20,7 @@ services:
     plan: free
     region: frankfurt
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
+    startCommand: python seed.py bootstrap && gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile -
     healthCheckPath: /sante
     autoDeploy: true
     envVars:
@@ -44,3 +48,11 @@ services:
         value: "30"
       - key: SITE_NAME
         value: TIC MASTER
+      # --- Premier super administrateur -----------------------------------
+      - key: SUPER_ADMIN_USERNAME
+        value: Myazirzk
+      # À saisir dans le formulaire de création du Blueprint (non versionné).
+      # Laissé vide : un mot de passe aléatoire est généré et affiché une seule
+      # fois dans les journaux du service.
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
