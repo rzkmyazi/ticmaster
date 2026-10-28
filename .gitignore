@@ -32,3 +32,7 @@ Thumbs.db
 
 # Journaux
 *.log
+
+# Aperçus HTML générés localement (design, non versionnés)
+apercus/
+apercu-maintenance.html

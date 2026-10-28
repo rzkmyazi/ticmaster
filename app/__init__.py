@@ -7,7 +7,9 @@ import secrets
 from datetime import timedelta
 from pathlib import Path
 
-from flask import Flask, g, jsonify, redirect, render_template, request, session, url_for
+from flask import (
+    Flask, g, jsonify, make_response, redirect, render_template, request, session, url_for,
+)
 from werkzeug.exceptions import HTTPException
 
 from .extensions import db
@@ -53,6 +55,28 @@ def create_app(config_object: str | None = None) -> Flask:
                 if request.path.startswith("/api/"):
                     return jsonify({"ok": False, "error": "Jeton CSRF invalide ou expiré. Rechargez la page."}), 400
                 return render_template("errors/400.html", message="Jeton de sécurité invalide ou expiré. Merci de recharger la page."), 400
+        # Mode « mise à jour du site » (les administrateurs ne sont jamais bloqués)
+        from .maintenance import blocks as maintenance_blocks, state as maintenance_state
+
+        maint = maintenance_state()
+        if maint["active"] and maintenance_blocks(request.path, getattr(g, "user", None)):
+            if request.path.startswith("/api/"):
+                return jsonify({
+                    "ok": False,
+                    "error": "maintenance",
+                    "message": maint["message"],
+                }), 503
+            response = make_response(
+                render_template(
+                    "errors/maintenance.html",
+                    info=maint,
+                    requested_path=request.path,
+                ),
+                503,
+            )
+            response.headers["Retry-After"] = "300"
+            return response
+
         # Force le changement de mot de passe initial
         if getattr(g, "user", None) and g.user.must_change_password:
             allowed = ("/auth/", "/static/", "/deconnexion", "/a-propos")
@@ -137,8 +161,11 @@ def create_app(config_object: str | None = None) -> Flask:
 
         from datetime import datetime as _dt
 
+        from .maintenance import state as maintenance_state
+
         return dict(
             year=_dt.now().year,
+            maintenance=maintenance_state(),
             csrf_token=csrf_token,
             csp_nonce=getattr(g, "csp_nonce", ""),
             current_user=g.get("user"),

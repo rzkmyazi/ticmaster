@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, progress, stat, empty %}
+
+{% block title %}Notes des élèves{% endblock %}
+{% block page_title %}Notes des élèves{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Scolarité · relevé général de la classe</p>{% endblock %}
+
+{% block content %}
+<div class="page-actions">
+  <a class="btn btn-outline" href="{{ url_for('admin.statistics') }}">{{ icon('chart', 16) }} Statistiques de la classe</a>
+  <a class="btn btn-outline" href="{{ url_for('admin.grades_export') }}">{{ icon('download', 16) }} Exporter le relevé (CSV)</a>
+</div>
+
+<div class="statgrid">
+  {{ stat(summary.students, 'Élèves inscrits', 'users', summary.graded ~ ' notés') }}
+  {{ stat(summary.note ~ '/20', 'Moyenne de la classe', 'chart', summary.average ~ ' % de réussite') }}
+  {{ stat(summary.success_rate ~ ' %', 'Taux de réussite', 'target', 'seuil de 10/20') }}
+  {{ stat(summary.at_risk, 'Élèves à soutenir', 'alert', 'moyenne < 10/20', 'warn' if summary.at_risk else '') }}
+</div>
+
+{% if summary.eliminated %}
+<div class="alert alert-warning" role="alert">
+  {{ icon('shield-alert', 18) }}
+  <div>{{ summary.eliminated }} élimination{{ 's' if summary.eliminated > 1 }} pour fraude sur examen. Pensez à vérifier les tentatives concernées dans <a href="{{ url_for('admin.exams') }}">Examens</a>.</div>
+</div>
+{% endif %}
+
+<section class="card">
+  <div class="card-head">
+    <h2 class="card-title">{{ icon('award') }} Relevé de la classe</h2>
+    <form method="get" class="inline-form filter-form">
+      <div class="input-icon">
+        {{ icon('search', 16) }}
+        <input type="search" name="q" value="{{ q }}" placeholder="Nom ou identifiant…" aria-label="Rechercher un élève">
+      </div>
+      <select name="tri" aria-label="Trier" onchange="this.form.submit()">
+        <option value="moyenne" {{ 'selected' if sort == 'moyenne' }}>Meilleures moyennes</option>
+        <option value="progression" {{ 'selected' if sort == 'progression' }}>Progression</option>
+        <option value="nom" {{ 'selected' if sort == 'nom' }}>Ordre alphabétique</option>
+        <option value="activite" {{ 'selected' if sort == 'activite' }}>Activité récente</option>
+      </select>
+      <button class="btn btn-sm btn-primary" type="submit">{{ icon('search', 15) }} Filtrer</button>
+      {% if q or sort != 'moyenne' %}<a class="btn btn-sm btn-ghost" href="{{ url_for('admin.grades') }}">Réinitialiser</a>{% endif %}
+    </form>
+  </div>
+
+  {% if rows %}
+  <div class="table-wrap table-wrap--flush">
+    <table class="table table--grades">
+      <thead>
+        <tr>
+          <th style="width:52px">Rang</th>
+          <th>Élève</th>
+          <th>Progression</th>
+          <th class="num">Exercices</th>
+          <th class="num">Examens</th>
+          <th class="num">Moyenne</th>
+          <th>Mention</th>
+          <th class="num">Dernière activité</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>
+            {% if row.rank %}
+              <span class="rank {{ 'rank--1' if row.rank == 1 }}{{ ' rank--2' if row.rank == 2 }}{{ ' rank--3' if row.rank == 3 }}">{{ row.rank }}</span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td>
+            <div class="cell-user">
+              {{ avatar(row.user, 'sm') }}
+              <div>
+                <div class="cell-name">{{ row.user.full_name or row.user.username }}</div>
+                <div class="cell-sub">@{{ row.user.username }}{% if row.user.status != 'active' %} · {{ row.user.status }}{% endif %}</div>
+              </div>
+            </div>
+          </td>
+          <td style="min-width:130px">{{ progress(row.progress) }}</td>
+          <td class="num">{{ row.exercises }}{% if row.avg_exos is not none %}<div class="cell-sub">{{ note20(row.avg_exos) }}/20</div>{% endif %}</td>
+          <td class="num">{{ row.exams }}{% if row.avg_exams is not none %}<div class="cell-sub">{{ note20(row.avg_exams) }}/20</div>{% endif %}</td>
+          <td class="num">
+            {% if row.note is not none %}
+              <span class="note note--{{ 'good' if row.note >= 14 else ('mid' if row.note >= 10 else 'low') }}">{{ row.note }}</span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if row.note is not none %}
+              {% set m = mention_for(row.note) %}
+              <span class="badge badge--mention-{{ m[1] }}">{{ m[0] }}</span>
+            {% else %}<span class="text-muted">Non noté</span>{% endif %}
+          </td>
+          <td class="num cell-sub">{{ time_ago(row.last_activity) }}</td>
+          <td class="actions">
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('admin.student_sheet', user_id=row.user.id) }}" title="Voir le bulletin">{{ icon('file', 15) }}</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ empty('Aucun élève', "Aucun apprenant ne correspond à cette recherche.", 'users', url_for('admin.grades'), 'Tout afficher') }}
+  {% endif %}
+</section>
+{% endblock %}

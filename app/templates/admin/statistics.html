@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, progress, stat, empty %}
+
+{% block title %}Statistiques de la classe{% endblock %}
+{% block page_title %}Statistiques de la classe{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Scolarité · vue d'ensemble pédagogique</p>{% endblock %}
+
+{% block content %}
+<div class="page-actions">
+  <a class="btn btn-outline" href="{{ url_for('admin.grades') }}">{{ icon('award', 16) }} Notes des élèves</a>
+  <a class="btn btn-ghost" href="{{ url_for('admin.dashboard') }}">{{ icon('grid', 16) }} Vue d'ensemble</a>
+</div>
+
+<div class="statgrid">
+  {{ stat(o.learners, 'Élèves', 'users', o.active ~ ' actifs') }}
+  {{ stat(o.note ~ '/20', 'Moyenne générale', 'chart', 'médiane ' ~ o.median ~ '/20') }}
+  {{ stat(o.success_rate ~ ' %', 'Réussite (≥ 10/20)', 'target', o.graded ~ ' élèves notés') }}
+  {{ stat(o.progress ~ ' %', 'Progression moyenne', 'book-open', o.total_lessons ~ ' leçons au programme') }}
+</div>
+
+<div class="statgrid statgrid--compact">
+  {{ stat(o.submitted, 'Copies remises', 'clipboard') }}
+  {{ stat(o.eliminated, 'Éliminations', 'shield-alert', o.elimination_rate ~ ' % des tentatives', 'warn' if o.eliminated else '') }}
+  {{ stat(o.graded, 'Élèves notés', 'user') }}
+  {% set best = o.top[0] if o.top else none %}
+  <div class="statcard statcard--hero">
+    <span class="statcard-icon">{{ icon('trophy', 20) }}</span>
+    <div>
+      {% if best %}
+      <div class="statcard-value">{{ best.user.full_name or best.user.username }}</div>
+      <div class="statcard-label">Meilleure moyenne · {{ best.note }}/20</div>
+      {% else %}
+      <div class="statcard-value">—</div>
+      <div class="statcard-label">Meilleure moyenne</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid" style="grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);align-items:start">
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">{{ icon('chart') }} Distribution des moyennes</h2>
+      <span class="badge badge--role-user">sur 20</span>
+    </div>
+    <div class="card-body">
+      {% if o.graded %}
+      <div class="bar-chart bar-chart--tall" role="img" aria-label="Répartition des moyennes de la classe">
+        {% for b in o.buckets %}
+        <div class="bar" title="{{ b.count }} élève(s) entre {{ b.label }}">
+          <span class="{{ 'is-low' if loop.index <= 2 else ('is-mid' if loop.index == 3 else 'is-good') }}"
+                style="height:{{ (b.count * 100 / o.max_bucket)|round|int if b.count else 2 }}%"></span>
+          <small>{{ b.label }}</small>
+          <b class="bar-val">{{ b.count }}</b>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted text-sm">Aucune note enregistrée pour l'instant : les statistiques apparaîtront dès les premières copies remises.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('award') }} Répartition des mentions</h2></div>
+    <div class="card-body">
+      {% for m in o.mentions %}
+      <div class="mention-row">
+        <span class="mention-label">{{ m.label }}</span>
+        <div class="mention-bar"><span class="is-{{ m.tone }}" style="width:{{ (m.count * 100 / (o.graded or 1))|round|int }}%"></span></div>
+        <span class="mention-count">{{ m.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<section class="card mt-2">
+  <div class="card-head"><h2 class="card-title">{{ icon('layers') }} Résultats par module</h2></div>
+  {% if o.per_module %}
+  <div class="table-wrap table-wrap--flush">
+    <table class="table table--compact">
+      <thead>
+        <tr><th>Module</th><th class="num">Épreuves</th><th class="num">Moyenne</th><th style="min-width:150px">Taux de réussite</th><th style="min-width:150px">Progression de la classe</th></tr>
+      </thead>
+      <tbody>
+        {% for item in o.per_module %}
+        <tr>
+          <td><span class="cell-name">{{ item.module.title }}</span><div class="cell-sub">{{ item.lessons }} leçon{{ 's' if item.lessons > 1 }}</div></td>
+          <td class="num">{{ item.attempts }}</td>
+          <td class="num">
+            {% if item.note is not none %}<span class="note note--{{ 'good' if item.note >= 14 else ('mid' if item.note >= 10 else 'low') }}">{{ item.note }}</span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td>{{ progress(item.average|round|int if item.average is not none else 0) }}</td>
+          <td>{{ progress(item.completion) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ empty('Aucun module publié', 'Publiez des modules pour voir leurs statistiques.', 'layers') }}
+  {% endif %}
+</section>
+
+<div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start">
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('alert-triangle') }} Épreuves les plus difficiles</h2></div>
+    <div class="card-body">
+      {% if o.hardest %}
+      <ul class="list-clean">
+        {% for h in o.hardest %}
+        <li>
+          <span class="badge {{ 'badge--exam' if h.exercise.kind == 'exam' else 'badge--exercise' }}">{{ 'Examen' if h.exercise.kind == 'exam' else 'Exo' }}</span>
+          <span class="grow">{{ h.exercise.title }}</span>
+          <span class="note note--{{ 'good' if h.note >= 14 else ('mid' if h.note >= 10 else 'low') }}">{{ h.note }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="text-xs text-muted mt-2">Une note faible signale une notion à revoir en classe.</p>
+      {% else %}
+      <p class="text-muted text-sm">Pas encore assez de copies pour comparer les épreuves.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('activity') }} Activité des 14 derniers jours</h2></div>
+    <div class="card-body">
+      <div class="bar-chart bar-chart--slim" role="img" aria-label="Nombre de tentatives par jour">
+        {% for a in o.activity %}
+        <div class="bar" title="{{ a.label }} : {{ a.value }} tentative(s)">
+          <span style="height:{{ (a.value * 100 / o.max_activity)|round|int if a.value else 2 }}%"></span>
+          {% if loop.index0 % 2 == 0 %}<small>{{ a.label }}</small>{% else %}<small>&nbsp;</small>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start">
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('trophy') }} Palmarès</h2></div>
+    <div class="card-body">
+      {% if o.top %}
+      <ol class="leaderboard">
+        {% for row in o.top %}
+        <li>
+          <span class="rank {{ 'rank--1' if loop.index == 1 }}{{ ' rank--2' if loop.index == 2 }}{{ ' rank--3' if loop.index == 3 }}">{{ loop.index }}</span>
+          {{ avatar(row.user, 'sm') }}
+          <a class="grow" href="{{ url_for('admin.student_sheet', user_id=row.user.id) }}">{{ row.user.full_name or row.user.username }}</a>
+          <span class="note note--good">{{ row.note }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <p class="text-muted text-sm">Le palmarès s'affichera dès les premières notes.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('alert') }} Élèves à soutenir</h2></div>
+    <div class="card-body">
+      {% set struggling = o.struggling %}
+      {% if struggling %}
+      <ul class="leaderboard">
+        {% for row in struggling %}
+        <li>
+          <span class="rank rank--low">{{ loop.index }}</span>
+          {{ avatar(row.user, 'sm') }}
+          <a class="grow" href="{{ url_for('admin.student_sheet', user_id=row.user.id) }}">{{ row.user.full_name or row.user.username }}</a>
+          <span class="note note--low">{{ row.note }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="text-xs text-muted mt-2">Moyenne inférieure à 10/20 : un accompagnement est recommandé.</p>
+      {% elif o.inactive %}
+      <p class="text-sm text-muted">Aucune moyenne sous la barre pour l'instant.</p>
+      {% else %}
+      <p class="text-sm text-muted">Aucun élève en difficulté détecté.</p>
+      {% endif %}
+
+      {% if o.inactive %}
+      <div class="divider"></div>
+      <h3 class="mini-title">{{ icon('clock', 15) }} Sans aucune activité</h3>
+      <ul class="list-clean">
+        {% for row in o.inactive %}
+        <li>{{ avatar(row.user, 'sm') }}<span class="grow">{{ row.user.full_name or row.user.username }}</span><span class="cell-sub">jamais connecté ou aucune tentative</span></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

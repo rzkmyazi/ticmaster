@@ -32,13 +32,27 @@
   <nav class="sidebar-nav">
     <div class="nav-section">
       <div class="nav-title">Mon espace</div>
+      {% if current_user.is_admin %}
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}">{{ icon('home', 18) }} Tableau de bord</a>
+      {% else %}
       <a class="nav-link{{ ' is-active' if request.endpoint == 'user.dashboard' }}" href="{{ url_for('user.dashboard') }}">{{ icon('home', 18) }} Tableau de bord</a>
+      {% endif %}
       <a class="nav-link{{ ' is-active' if request.endpoint == 'learning.catalog' or request.endpoint == 'learning.module_detail' or request.endpoint == 'learning.lesson' }}" href="{{ url_for('learning.catalog') }}">{{ icon('book', 18) }} Cours &amp; modules</a>
       <a class="nav-link{{ ' is-active' if request.endpoint in ['learning.exercises', 'learning.exercise_detail', 'learning.take_exercise', 'learning.result_detail'] }}" href="{{ url_for('learning.exercises') }}">{{ icon('clipboard', 18) }} Exercices</a>
+      {% if not current_user.is_super_admin %}
       <a class="nav-link{{ ' is-active' if request.endpoint in ['exam.index', 'exam.take_exam', 'exam.exam_result'] }}" href="{{ url_for('exam.index') }}">{{ icon('award', 18) }} Examens trimestriels</a>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'learning.results' }}" href="{{ url_for('learning.results') }}">{{ icon('chart', 18) }} Mes résultats</a>
+      {% endif %}
       <a class="nav-link{{ ' is-active' if request.endpoint == 'learning.resources' }}" href="{{ url_for('learning.resources') }}">{{ icon('file', 18) }} Ressources</a>
     </div>
+
+    {% if current_user.is_super_admin %}
+    <div class="nav-section nav-section--scolarite">
+      <div class="nav-title">Scolarité</div>
+      <a class="nav-link{{ ' is-active' if request.endpoint in ['admin.grades', 'admin.student_sheet'] }}" href="{{ url_for('admin.grades') }}">{{ icon('award', 18) }} Notes des élèves</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.statistics' }}" href="{{ url_for('admin.statistics') }}">{{ icon('chart', 18) }} Statistiques de la classe</a>
+    </div>
+    {% endif %}
 
     <div class="nav-section">
       <div class="nav-title">Communauté</div>
@@ -109,6 +123,24 @@
   </header>
 
   <main class="content" id="contenu">
+    {% if maintenance.active and current_user and current_user.is_admin %}
+    <div class="maintenance-banner" role="status">
+      <span class="mb-pulse" aria-hidden="true"></span>
+      <div class="mb-txt">
+        <strong>Mode « mise à jour du site » activé</strong>
+        <span>Les visiteurs et les élèves voient la page d'attente{% if maintenance.return_at %} (retour annoncé : {{ maintenance.return_at }}){% endif %}. Votre accès administrateur reste complet.</span>
+      </div>
+      <div class="mb-actions">
+        <a class="btn btn-sm btn-outline" href="{{ url_for('admin.settings', onglet='maintenance') }}">{{ icon('settings', 15) }} Gérer</a>
+        <form method="post" action="{{ url_for('admin.maintenance_toggle') }}" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <button class="btn btn-sm btn-primary" type="submit">{{ icon('check', 15) }} Terminer</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flash-stack">

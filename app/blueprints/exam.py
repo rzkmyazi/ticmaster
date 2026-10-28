@@ -15,10 +15,26 @@ from flask import (
 )
 
 from ..extensions import db
-from ..models import Attempt, Exercise, utcnow
+from ..models import Attempt, Exercise, utcnow, ROLE_SUPER_ADMIN
 from ..security.core import login_required, log_audit
 
 bp = Blueprint("exam", __name__)
+
+
+@bp.before_request
+def _teachers_have_no_exam():
+    """Le super administrateur est professeur : aucun examen à passer.
+
+    Contrôle fait côté serveur (masquer le menu ne suffit pas).
+    """
+    user = getattr(g, "user", None)
+    if user is None or user.role != ROLE_SUPER_ADMIN:
+        return None
+    if request.method == "GET":
+        flash("Votre rôle de professeur ne passe pas d'examen : voici les notes des élèves.", "info")
+        return redirect(url_for("admin.grades"))
+    abort(403)
+
 
 # Préfixes qui ne constituent JAMAIS une sortie d'onglet (fichiers techniques, API, santé)
 EXAM_PATHS_EXEMPT = (

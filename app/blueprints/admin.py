@@ -25,6 +25,11 @@ from ..security.core import (
     log_audit, password_errors, password_ok, revoke_all_sessions, revoke_session,
     super_admin_required, valid_username,
 )
+from .. import maintenance
+from ..reports import (
+    class_overview, mention as mention_for, note20, student_report as build_student_report,
+    student_rows,
+)
 from ..utils import paginate, save_upload, slugify
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -1017,21 +1022,167 @@ def reset_reject(request_id: int):
 @super_admin_required
 def settings():
     if request.method == "POST":
+        section = request.form.get("section", "general")
+
+        if section == "maintenance":
+            wanted = request.form.get("maintenance_mode") == "1"
+            was_active = maintenance.active()
+            message = (request.form.get("maintenance_message") or "").strip()[:600]
+            return_at = (request.form.get("maintenance_return_at") or "").strip()[:120]
+
+            if wanted and not was_active:
+                maintenance.enable(message, return_at)
+                log_audit("maintenance.enabled", details=return_at or "sans heure de retour")
+                flash("Mise à jour du site activée : les utilisateurs voient désormais la page d'attente.", "success")
+            elif wanted and was_active:
+                Setting.set("maintenance_message", message)
+                Setting.set("maintenance_return_at", return_at)
+                db.session.commit()
+                log_audit("maintenance.updated")
+                flash("Message de mise à jour actualisé.", "success")
+            elif was_active:
+                maintenance.disable()
+                log_audit("maintenance.disabled")
+                flash("Site de nouveau accessible : la mise à jour est terminée.", "success")
+            else:
+                Setting.set("maintenance_message", message)
+                Setting.set("maintenance_return_at", return_at)
+                db.session.commit()
+                flash("Message de mise à jour enregistré (maintenance inactive).", "info")
+            return redirect(url_for("admin.settings", onglet="maintenance"))
+
         for key in ("site_tagline", "support_email", "welcome_message", "retention_days"):
             if key in request.form:
                 Setting.set(key, (request.form.get(key) or "").strip()[:1000])
         db.session.commit()
         log_audit("settings.updated")
         flash("Paramètres enregistrés.", "success")
-        return redirect(url_for("admin.settings"))
+        return redirect(url_for("admin.settings", onglet="general"))
 
     values = {
         "site_tagline": Setting.get("site_tagline", current_app.config.get("SITE_TAGLINE", "")),
         "support_email": Setting.get("support_email", ""),
         "welcome_message": Setting.get("welcome_message", ""),
         "retention_days": Setting.get("retention_days", "365"),
+        "maintenance_mode": maintenance.active(),
+        "maintenance_message": Setting.get("maintenance_message", ""),
+        "maintenance_return_at": Setting.get("maintenance_return_at", ""),
+        "maintenance_since": maintenance.state()["since"],
     }
-    return render_template("admin/settings.html", values=values)
+    return render_template(
+        "admin/settings.html", values=values, onglet=request.args.get("onglet", "general")
+    )
+
+
+@bp.route("/maintenance/basculer", methods=["POST"])
+@super_admin_required
+def maintenance_toggle():
+    """Interrupteur rapide (bandeau d'alerte de l'administration)."""
+    if maintenance.active():
+        maintenance.disable()
+        log_audit("maintenance.disabled", details="bascule rapide")
+        flash("Site de nouveau accessible : la mise à jour est terminée.", "success")
+    else:
+        message = Setting.get("maintenance_message", "")
+        return_at = Setting.get("maintenance_return_at", "")
+        maintenance.enable(message, return_at)
+        log_audit("maintenance.enabled", details="bascule rapide")
+        flash("Mise à jour activée : les utilisateurs voient la page d'attente.", "success")
+    target = request.form.get("next") or url_for("admin.settings", onglet="maintenance")
+    return redirect(target)
+
+
+@bp.route("/apercu-maintenance")
+@super_admin_required
+def maintenance_preview():
+    """Aperçu de la page d'attente, même quand la maintenance est inactive."""
+    st = maintenance.state()
+    info = {
+        "active": True,
+        "message": st["message"],
+        "return_at": st["return_at"],
+        "since": st["since"],
+    }
+    return render_template("errors/maintenance.html", info=info, requested_path="/")
+
+
+# ---------------------------------------------------------------------------
+# Scolarité : notes et statistiques (super administrateur)
+# ---------------------------------------------------------------------------
+@bp.route("/notes")
+@super_admin_required
+def grades():
+    q = (request.args.get("q") or "").strip()
+    sort = request.args.get("tri", "moyenne")
+    rows = student_rows(search=q, sort=sort)
+    graded = [r for r in rows if r["average"] is not None]
+
+    summary = {
+        "students": len(rows),
+        "graded": len(graded),
+        "average": round(sum(r["average"] for r in graded) / len(graded), 1) if graded else 0,
+        "best": graded[0] if graded else None,
+        "success_rate": round(sum(1 for r in graded if r["average"] >= 50) * 100 / len(graded)) if graded else 0,
+        "at_risk": sum(1 for r in graded if r["average"] < 50),
+        "no_activity": sum(1 for r in rows if r["attempts"] == 0),
+        "eliminated": sum(r["eliminated"] for r in rows),
+    }
+    summary["note"] = note20(summary["average"])
+
+    return render_template(
+        "admin/grades.html", rows=rows, q=q, sort=sort, summary=summary,
+        mention_for=mention_for, note20=note20,
+    )
+
+
+@bp.route("/notes/export.csv")
+@super_admin_required
+def grades_export():
+    rows = student_rows(sort="moyenne")
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow([
+        "rang", "identifiant", "nom_complet", "statut", "progression_%", "exercices",
+        "moyenne_exercices_%", "examens", "moyenne_examens_%", "moyenne_generale_%",
+        "note_sur_20", "mention", "eliminations", "derniere_activite",
+    ])
+    for row in rows:
+        label = mention_for(row["note"])[0] if row["note"] is not None else "Non noté"
+        writer.writerow([
+            row["rank"] or "", row["user"].username, row["user"].full_name or "",
+            row["user"].status, row["progress"], row["exercises"],
+            row["avg_exos"] if row["avg_exos"] is not None else "",
+            row["exams"], row["avg_exams"] if row["avg_exams"] is not None else "",
+            row["average"] if row["average"] is not None else "",
+            row["note"] if row["note"] is not None else "",
+            label, row["eliminated"],
+            row["last_activity"].strftime("%Y-%m-%d %H:%M") if row["last_activity"] else "",
+        ])
+    log_audit("grades.exported", details=f"{len(rows)} apprenants")
+    return Response(
+        "\ufeff" + output.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=ticmaster-notes.csv"},
+    )
+
+
+@bp.route("/notes/<int:user_id>")
+@super_admin_required
+def student_sheet(user_id: int):
+    report = build_student_report(user_id)
+    if report is None:
+        abort(404)
+    log_audit("grades.viewed", target=report["user"].username)
+    return render_template(
+        "admin/student_sheet.html", r=report, mention_for=mention_for, note20=note20,
+    )
+
+
+@bp.route("/statistiques")
+@super_admin_required
+def statistics():
+    overview = class_overview()
+    return render_template("admin/statistics.html", o=overview, mention_for=mention_for)
 
 
 @bp.route("/sauvegardes")

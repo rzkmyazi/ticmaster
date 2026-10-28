@@ -17,6 +17,20 @@
     <div class="stat-foot">examens surveillés</div>{{ icon('ban', 'stat-icon') }}</div>
 </div>
 
+{% if current_user.is_super_admin %}
+<div class="card card--callout mb-2">
+  <div class="callout-txt">
+    <span class="callout-badge">{{ icon('trophy', 14) }} Espace chef d'établissement</span>
+    <strong>Suivez les notes et les progrès de chaque élève</strong>
+    <span>Relevé complet de la classe, bulletins individuels, moyennes par module et palmarès.</span>
+  </div>
+  <div class="callout-actions">
+    <a class="btn btn-primary btn-sm" href="{{ url_for('admin.grades') }}">{{ icon('award', 15) }} Notes des élèves</a>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('admin.statistics') }}">{{ icon('chart', 15) }} Statistiques</a>
+  </div>
+</div>
+{% endif %}
+
 <div class="grid" style="grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);align-items:start">
   <div class="stack">
     <section class="card">

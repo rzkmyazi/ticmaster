@@ -188,6 +188,25 @@ révocation de session.
 
 ---
 
+### Espace « chef d'établissement » (super administrateur)
+
+Le super administrateur est **professeur de TIC**, pas apprenant : il ne passe aucun examen
+et n'a pas de statistiques personnelles. À la place, il dirige la scolarité :
+
+| Page | Contenu |
+|---|---|
+| **Notes des élèves** (`/admin/notes`) | Relevé complet : rang, progression, moyenne exercices/examens, note sur 20, mention, export CSV |
+| **Bulletin individuel** (`/admin/notes/<id>`) | Note générale, mention, rang, résultats par module et par trimestre, historique des tentatives |
+| **Statistiques de la classe** (`/admin/statistiques`) | Moyenne et médiane, distribution sur 20, mentions, résultats par module, épreuves les plus difficiles, activité sur 14 jours, palmarès et élèves à soutenir |
+
+Ces trois pages sont protégées côté serveur : un simple administrateur ou un utilisateur reçoit un **403**.
+
+### Mode « mise à jour du site »
+
+*Administration → Paramètres → onglet « Mise à jour du site »*. Un interrupteur ferme la plateforme :
+les visiteurs et les élèves voient une page d'attente animée (HTTP 503, réactualisation automatique),
+tandis que les administrateurs conservent l'accès. Un examen déjà commencé peut toujours être terminé.
+
 ## 7. Déploiement
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/rzkmyazi/ticmaster)

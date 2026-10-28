@@ -1260,3 +1260,267 @@ table.data tbody tr:hover { background: var(--surface-3); }
 .topbar-heading .page-sub { margin: .1rem 0 0; font-size: .74rem; color: var(--text-3); }
 .topbar-heading .page-sub:empty { display: none; }
 .flash-stack + .page-head { margin-top: .2rem; }
+
+/* ==========================================================================
+   18. Scolarité, maintenance & onglets — ajouts #by_Myazirzk
+   ========================================================================== */
+
+/* ---------- 18.1 Grille de statistiques ---------- */
+.statgrid {
+  display: grid; gap: .9rem; margin-bottom: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.statgrid--compact { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.statcard--hero { background: linear-gradient(135deg, rgba(37,99,235,.18), rgba(34,211,238,.12)); border-color: var(--line-strong); }
+.statcard--hero .statcard-icon { background: rgba(251,191,36,.16); color: var(--amber); }
+.statcard--warn .statcard-icon { background: rgba(248,113,113,.14); color: var(--red); }
+.statcard--warn .statcard-value { color: var(--red); }
+[data-theme="light"] .statcard--warn .statcard-value { color: #b91c1c; }
+
+/* ---------- 18.2 Notes, mentions, rangs ---------- */
+.note {
+  display: inline-grid; place-items: center; min-width: 46px; padding: .18rem .5rem;
+  border-radius: 9px; font-weight: 800; font-size: .84rem; font-variant-numeric: tabular-nums;
+  background: var(--surface-3); border: 1px solid var(--line);
+}
+.note--good { color: #6ee7b7; background: rgba(52,211,153,.13); border-color: rgba(52,211,153,.32); }
+.note--mid  { color: #fcd34d; background: rgba(251,191,36,.13); border-color: rgba(251,191,36,.32); }
+.note--low  { color: #fca5a5; background: rgba(248,113,113,.13); border-color: rgba(248,113,113,.32); }
+[data-theme="light"] .note--good { color: #047857; }
+[data-theme="light"] .note--mid  { color: #92400e; }
+[data-theme="light"] .note--low  { color: #b91c1c; }
+
+.rank {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 9px;
+  font-weight: 800; font-size: .78rem; font-variant-numeric: tabular-nums;
+  background: var(--surface-3); border: 1px solid var(--line); color: var(--text-2);
+}
+.rank--1 { background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #241500; border-color: transparent; box-shadow: 0 6px 18px -8px rgba(251,191,36,.8); }
+.rank--2 { background: linear-gradient(135deg,#e2e8f0,#94a3b8); color: #111827; border-color: transparent; }
+.rank--3 { background: linear-gradient(135deg,#f0a068,#c2703a); color: #241000; border-color: transparent; }
+.rank--low { background: rgba(248,113,113,.14); color: #fca5a5; border-color: rgba(248,113,113,.3); }
+[data-theme="light"] .rank--low { color: #b91c1c; }
+
+.badge--mention-good { color: #6ee7b7; background: rgba(52,211,153,.12); border-color: rgba(52,211,153,.3); }
+.badge--mention-mid  { color: #fcd34d; background: rgba(251,191,36,.12); border-color: rgba(251,191,36,.3); }
+.badge--mention-low  { color: #fca5a5; background: rgba(248,113,113,.12); border-color: rgba(248,113,113,.3); }
+[data-theme="light"] .badge--mention-good { color: #047857; }
+[data-theme="light"] .badge--mention-mid  { color: #92400e; }
+[data-theme="light"] .badge--mention-low  { color: #b91c1c; }
+
+.badge--exam     { color: #f9a8d4; background: rgba(244,114,182,.13); border-color: rgba(244,114,182,.3); }
+.badge--exercise { color: #7dd3fc; background: rgba(56,189,248,.13); border-color: rgba(56,189,248,.3); }
+.badge--danger   { color: #fca5a5; background: rgba(248,113,113,.13); border-color: rgba(248,113,113,.32); }
+.badge--draft    { color: var(--text-3); }
+[data-theme="light"] .badge--exam { color: #9d174d; }
+[data-theme="light"] .badge--exercise { color: #075985; }
+
+/* ---------- 18.3 Tableaux de notes ---------- */
+.table-wrap--flush { border: 0; border-radius: 0; background: transparent; }
+.table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table--grades tbody td { padding-top: .62rem; padding-bottom: .62rem; }
+.table .grow { flex: 1; min-width: 0; }
+
+.filter-form { display: flex; gap: .45rem; align-items: center; flex-wrap: wrap; position: relative; }
+.filter-form .input-icon { position: relative; left: auto; top: auto; transform: none; }
+.filter-form input[type="search"] {
+  padding: .45rem .7rem .45rem 2rem; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--text); font-size: .82rem; min-width: 170px;
+}
+.filter-form .input-icon { position: absolute; left: .65rem; top: 50%; transform: translateY(-50%); }
+.filter-form select {
+  padding: .45rem .6rem; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--text); font-size: .82rem;
+}
+
+/* ---------- 18.4 Bulletin ---------- */
+.bulletin-head {
+  display: flex; gap: 1.2rem; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; padding: 1.3rem 1.4rem; margin-bottom: 1rem;
+  background: var(--grad-soft);
+}
+.bulletin-id { display: flex; gap: 1rem; align-items: center; min-width: 0; }
+.bulletin-name { margin: 0 0 .25rem; font-size: 1.35rem; letter-spacing: -.02em; }
+.bulletin-meta { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; font-size: .8rem; color: var(--text-3); }
+.bulletin-sub { font-size: .82rem; color: var(--text-2); margin-top: .4rem; }
+.bulletin-score { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+.ring--lg { width: 92px; height: 92px; }
+.ring--lg .ring-text { font-size: 1.35rem; }
+.ring--lg .ring-text small { font-size: .72rem; }
+.bulletin-mention { letter-spacing: .04em; }
+
+.term-row { display: grid; grid-template-columns: 46px 1fr auto; gap: .6rem; align-items: center; margin-bottom: .55rem; }
+.term-label { font-size: .78rem; font-weight: 700; color: var(--text-2); }
+.term-bar { height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.term-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--grad); }
+.term-note { font-size: .8rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.mention-row { display: grid; grid-template-columns: 92px 1fr 28px; gap: .6rem; align-items: center; margin-bottom: .5rem; }
+.mention-label { font-size: .8rem; color: var(--text-2); }
+.mention-bar { height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.mention-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); min-width: 0; }
+.mention-bar .is-good { background: linear-gradient(90deg,#059669,#34d399); }
+.mention-bar .is-mid  { background: linear-gradient(90deg,#d97706,#fbbf24); }
+.mention-bar .is-low  { background: linear-gradient(90deg,#dc2626,#f87171); }
+.mention-count { font-size: .78rem; font-weight: 800; text-align: right; color: var(--text-2); }
+
+.leaderboard { list-style: none; margin: 0; padding: 0; display: grid; gap: .45rem; }
+.leaderboard li { display: flex; align-items: center; gap: .55rem; font-size: .87rem; }
+.leaderboard a { color: var(--text); text-decoration: none; font-weight: 600; }
+.leaderboard a:hover { color: var(--accent); }
+
+.bar-chart--tall { height: 190px; }
+.bar-chart--slim { height: 110px; }
+.bar-chart .bar-val { font-size: .68rem; font-weight: 800; color: var(--text-2); }
+.bar-chart .bar > span.is-good { background: linear-gradient(180deg,#34d399,#059669); }
+.bar-chart .bar > span.is-mid  { background: linear-gradient(180deg,#fbbf24,#d97706); }
+.bar-chart .bar > span.is-low  { background: linear-gradient(180deg,#f87171,#dc2626); }
+
+.list-check { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; font-size: .84rem; color: var(--text-2); }
+.list-check li { display: flex; gap: .5rem; align-items: flex-start; }
+.list-check .ic { flex: none; color: var(--green); margin-top: .1rem; }
+.mini-title { font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; color: var(--text-3); margin: .2rem 0 .6rem; display: flex; gap: .4rem; align-items: center; }
+
+/* ---------- 18.5 Onglets de paramètres ---------- */
+.settings-tabs { position: relative; }
+.tab-radio { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.tab-bar {
+  display: flex; gap: .35rem; padding: .32rem; border-radius: 14px; width: fit-content;
+  background: var(--surface-3); border: 1px solid var(--line); margin-bottom: 1rem; flex-wrap: wrap;
+}
+.tab-btn {
+  display: inline-flex; align-items: center; gap: .45rem; padding: .55rem 1.05rem;
+  border-radius: 10px; cursor: pointer; font-size: .86rem; font-weight: 650; color: var(--text-2);
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease);
+  user-select: none;
+}
+.tab-btn:hover { color: var(--text); background: var(--surface-2); }
+.tab-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px rgba(251,191,36,.2); animation: blink-dot 1.8s ease-in-out infinite; }
+@keyframes blink-dot { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+.tab-panels .tab-panel { display: none; animation: fade-in .28s var(--ease); }
+@keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+#tab-general:checked ~ .tab-bar label[for="tab-general"],
+#tab-maintenance:checked ~ .tab-bar label[for="tab-maintenance"] {
+  background: var(--grad); color: #04101f; box-shadow: 0 10px 24px -14px var(--glow);
+}
+[data-theme="light"] #tab-general:checked ~ .tab-bar label[for="tab-general"],
+[data-theme="light"] #tab-maintenance:checked ~ .tab-bar label[for="tab-maintenance"] { color: #fff; }
+#tab-general:checked ~ .tab-panels .panel-general { display: block; }
+#tab-maintenance:checked ~ .tab-panels .panel-maintenance { display: block; }
+
+/* ---------- 18.6 Interrupteur ---------- */
+.switch {
+  display: flex; gap: .85rem; align-items: flex-start; cursor: pointer;
+  padding: 1rem; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--surface-3); transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+  position: relative;
+}
+.switch:hover { border-color: var(--line-strong); }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch-track {
+  flex: none; width: 54px; height: 30px; border-radius: 999px; margin-top: .1rem;
+  background: var(--surface-2); border: 1px solid var(--line-strong); position: relative;
+  transition: background var(--med) var(--ease), border-color var(--med) var(--ease);
+}
+.switch-track::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--text-3); transition: transform var(--med) var(--ease), background var(--med) var(--ease);
+}
+.switch input:checked + .switch-track {
+  background: linear-gradient(135deg,#f59e0b,#f97316); border-color: transparent;
+  box-shadow: 0 0 22px -4px rgba(249,115,22,.65);
+}
+.switch input:checked + .switch-track::after { transform: translateX(24px); background: #fff; }
+.switch input:focus-visible + .switch-track { outline: 2px solid var(--accent); outline-offset: 3px; }
+.switch-text strong { display: block; font-size: .92rem; }
+.switch-text small { display: block; font-size: .78rem; color: var(--text-3); margin-top: .2rem; line-height: 1.5; }
+.row-gap { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
+
+/* ---------- 18.7 Maintenance : panneau de réglage ---------- */
+.card--maintenance.is-on { border-color: rgba(251,191,36,.42); box-shadow: 0 0 0 1px rgba(251,191,36,.14), 0 18px 44px -30px rgba(251,191,36,.5); }
+.pill-status {
+  display: inline-flex; align-items: center; gap: .4rem; padding: .22rem .6rem; border-radius: 999px;
+  font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  border: 1px solid var(--line); color: var(--text-3);
+}
+.pill-status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill-status--on { color: var(--amber); border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.1); }
+.pill-status--on i { animation: blink-dot 1.6s ease-in-out infinite; }
+.pill-status--off { color: var(--green); border-color: rgba(52,211,153,.32); background: rgba(52,211,153,.08); }
+[data-theme="light"] .pill-status--on { color: #92400e; }
+[data-theme="light"] .pill-status--off { color: #047857; }
+
+.maint-alert {
+  display: flex; gap: .7rem; align-items: flex-start; padding: .85rem 1rem; border-radius: 13px;
+  background: rgba(251,191,36,.1); border: 1px solid rgba(251,191,36,.32); margin-bottom: 1rem;
+  font-size: .84rem; color: var(--text-2);
+}
+.maint-alert .ic { flex: none; color: var(--amber); margin-top: .1rem; }
+.maint-alert strong { display: block; color: var(--text); font-size: .88rem; margin-bottom: .2rem; }
+
+.mini-preview {
+  border-radius: 16px; padding: 1.2rem; text-align: center;
+  background: linear-gradient(160deg, rgba(37,99,235,.16), rgba(34,211,238,.08));
+  border: 1px dashed var(--line-strong);
+}
+.mp-badge {
+  display: inline-flex; align-items: center; gap: .35rem; padding: .18rem .6rem; border-radius: 999px;
+  font-size: .64rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--amber); border: 1px solid rgba(251,191,36,.35); background: rgba(251,191,36,.1);
+}
+.mini-preview strong { display: block; margin: .7rem 0 .45rem; font-size: 1rem; }
+.mini-preview p { margin: 0 auto .8rem; font-size: .78rem; color: var(--text-2); max-width: 30ch; line-height: 1.55; }
+.mini-preview small { display: block; margin-top: .5rem; font-size: .7rem; color: var(--text-3); }
+.mp-track { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; max-width: 190px; margin: 0 auto; }
+.mp-track > span { display: block; width: 40%; height: 100%; border-radius: inherit; background: var(--grad); animation: mp-slide 2.4s cubic-bezier(.45,0,.55,1) infinite; }
+@keyframes mp-slide { 0% { transform: translateX(-110%); } 100% { transform: translateX(250%); } }
+
+/* ---------- 18.8 Bandeau global de maintenance (admin) ---------- */
+.maintenance-banner {
+  display: flex; gap: .85rem; align-items: center; flex-wrap: wrap;
+  padding: .8rem 1rem; border-radius: 14px; margin-bottom: 1rem;
+  background: linear-gradient(120deg, rgba(251,191,36,.14), rgba(249,115,22,.08));
+  border: 1px solid rgba(251,191,36,.35);
+}
+.mb-pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--amber); flex: none; box-shadow: 0 0 0 0 rgba(251,191,36,.5); animation: mb-pulse 2s ease-out infinite; }
+@keyframes mb-pulse { 0% { box-shadow: 0 0 0 0 rgba(251,191,36,.5); } 70% { box-shadow: 0 0 0 12px rgba(251,191,36,0); } 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); } }
+.mb-txt { flex: 1; min-width: 220px; font-size: .82rem; color: var(--text-2); }
+.mb-txt strong { display: block; color: var(--text); font-size: .88rem; }
+.mb-actions { display: flex; gap: .45rem; align-items: center; flex-wrap: wrap; }
+[data-theme="light"] .mb-txt strong { color: #7c2d12; }
+
+.nav-section--scolarite .nav-title { color: var(--amber); }
+[data-theme="light"] .nav-section--scolarite .nav-title { color: #b45309; }
+
+/* ---------- 18.9 Responsive ---------- */
+@media (max-width: 860px) {
+  .grid[style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
+  .bulletin-head { flex-direction: column; align-items: flex-start; }
+  .bulletin-score { flex-direction: row; align-self: flex-start; }
+}
+@media (max-width: 560px) {
+  .statgrid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .6rem; }
+  .filter-form { width: 100%; }
+  .filter-form input[type="search"] { flex: 1; min-width: 0; }
+  .tab-bar { width: 100%; }
+  .tab-btn { flex: 1; justify-content: center; }
+  .mention-row { grid-template-columns: 76px 1fr 24px; }
+}
+
+/* ---------- 18.10 Encart « chef d'établissement » ---------- */
+.card--callout {
+  display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  padding: 1rem 1.15rem; background: linear-gradient(120deg, rgba(251,191,36,.12), rgba(56,189,248,.1));
+  border-color: var(--line-strong);
+}
+.callout-txt { display: grid; gap: .18rem; min-width: 220px; }
+.callout-txt strong { font-size: 1rem; }
+.callout-txt > span:last-child { font-size: .8rem; color: var(--text-3); }
+.callout-badge {
+  display: inline-flex; align-items: center; gap: .35rem; width: fit-content;
+  font-size: .66rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--amber);
+}
+[data-theme="light"] .callout-badge { color: #b45309; }
+.callout-actions { display: flex; gap: .45rem; flex-wrap: wrap; }

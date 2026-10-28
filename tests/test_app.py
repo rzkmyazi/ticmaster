@@ -292,3 +292,90 @@ def test_results_are_isolated_per_user(client, app):
     assert client.get("/resultats").status_code == 200
     with app.app_context():
         assert Attempt.query.count() == 0
+
+
+# ---------------------------------------------------------------------------
+# Mise à jour du site (maintenance)
+# ---------------------------------------------------------------------------
+def test_maintenance_blocks_students_but_never_admins(client, app):
+    """Pendant la maintenance : élèves bloqués, super administrateur jamais bloqué."""
+    _make_user(app, "apprenant")
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+
+    with app.app_context():
+        from app import maintenance
+        maintenance.enable("Installation des nouveaux modules.", "dans 20 minutes")
+
+    response = client.get("/cours")
+    assert response.status_code == 503
+    body = response.get_data(as_text=True).lower()
+    assert "mise à jour" in body
+    assert response.headers["Retry-After"] == "300"
+
+    # les fichiers techniques et la santé restent disponibles
+    assert client.get("/sante").status_code == 200
+    assert client.get("/static/css/app.css").status_code == 200
+    assert client.get("/auth/connexion").status_code == 200
+
+    # le super administrateur garde l'accès complet
+    _login(client, "chef", "MotDePasse2026!")
+    assert client.get("/admin/notes").status_code == 200
+    assert client.get("/cours").status_code == 200
+
+    with app.app_context():
+        from app import maintenance
+        maintenance.disable()
+    assert client.get("/cours").status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Scolarité : notes et statistiques (super administrateur seulement)
+# ---------------------------------------------------------------------------
+def test_grades_area_is_reserved_to_super_admin(app):
+    _make_user(app, "apprenant")
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    _make_user(app, "modo", role=ROLE_ADMIN)
+
+    student = app.test_client()
+    _login(student, "apprenant", "MotDePasse2026!")
+    assert student.get("/admin/notes").status_code == 403
+    assert student.get("/admin/statistiques").status_code == 403
+
+    admin_client = app.test_client()
+    _login(admin_client, "modo", "MotDePasse2026!")
+    assert admin_client.get("/admin/notes").status_code == 403
+
+    chief = app.test_client()
+    _login(chief, "chef", "MotDePasse2026!")
+    assert chief.get("/admin/notes").status_code == 200
+    assert chief.get("/admin/statistiques").status_code == 200
+    assert chief.get("/admin/notes/export.csv").status_code == 200
+
+
+def test_super_admin_is_a_teacher_without_exams(client, app):
+    """Le super administrateur est professeur : ni examen ni statistiques personnelles."""
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    _login(client, "chef", "MotDePasse2026!")
+
+    exams = client.get("/examens", follow_redirects=False)
+    assert exams.status_code == 302
+    assert "/admin/notes" in exams.headers["Location"]
+
+    results = client.get("/resultats", follow_redirects=False)
+    assert results.status_code == 302
+    assert "/admin/statistiques" in results.headers["Location"]
+
+    # il ne peut pas démarrer un examen (contrôle serveur, pas seulement le menu)
+    with app.app_context():
+        module = Module(title="Réseaux", slug="reseaux", status="published")
+        db.session.add(module)
+        db.session.commit()
+        exam = Exercise(title="Examen T1", kind="exam", term="T1", module_id=module.id,
+                        published=True, duration_minutes=20, pass_score=50)
+        db.session.add(exam)
+        db.session.commit()
+        exam_id = exam.id
+    token = _csrf(client)
+    response = client.post(f"/examens/{exam_id}/commencer", data={"csrf_token": token},
+                           follow_redirects=False)
+    assert response.status_code == 403

@@ -1,0 +1,227 @@
+{% from "macros.html" import logo, icon %}
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060b18">
+<meta name="robots" content="noindex, nofollow">
+<title>Mise à jour en cours — TIC MASTER</title>
+<link rel="icon" href="/favicon.ico" type="image/svg+xml">
+<style>
+/* ---------- jetons ---------- */
+:root, [data-theme="dark"] {
+  color-scheme: dark;
+  --bg:#050a15; --bg2:#0a1224;
+  --card: rgba(17,27,48,.72);
+  --line: rgba(148,178,230,.16);
+  --line-2: rgba(148,178,230,.3);
+  --text:#eef4ff; --text-2:#a9bcd8; --text-3:#7487a6;
+  --blue:#38bdf8; --deep:#2563eb; --cyan:#22d3ee; --violet:#8b5cf6;
+  --amber:#fbbf24; --green:#34d399;
+  --grad: linear-gradient(135deg,#2563eb 0%,#38bdf8 55%,#22d3ee 100%);
+  --glow: rgba(56,189,248,.34);
+  --shadow: 0 40px 90px -40px rgba(0,0,0,.85);
+}
+[data-theme="light"] {
+  color-scheme: light;
+  --bg:#eef3fc; --bg2:#dfe9fa;
+  --card: rgba(255,255,255,.86);
+  --line: rgba(30,64,175,.14);
+  --line-2: rgba(30,64,175,.26);
+  --text:#0b1a33; --text-2:#45608a; --text-3:#6b83a8;
+  --blue:#2563eb; --deep:#1d4ed8; --cyan:#0891b2; --violet:#7c3aed;
+  --amber:#b45309; --green:#059669;
+  --grad: linear-gradient(135deg,#1d4ed8 0%,#2563eb 55%,#0891b2 100%);
+  --glow: rgba(37,99,235,.24);
+  --shadow: 0 40px 90px -50px rgba(15,40,90,.45);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; color: var(--text); background: var(--bg);
+  font-family: "Segoe UI", Inter, system-ui, -apple-system, "Helvetica Neue", Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  display: grid; place-items: center; padding: 28px 18px;
+}
+
+/* ---------- décor animé ---------- */
+.aurora { position: fixed; inset: -20vmax; z-index: 0; filter: blur(70px); opacity: .55; pointer-events: none; }
+.aurora span {
+  position: absolute; width: 46vmax; height: 46vmax; border-radius: 50%;
+  animation: drift 26s ease-in-out infinite;
+}
+.aurora span:nth-child(1) { background: radial-gradient(circle, var(--deep), transparent 62%); top: 4%;  left: 2%; }
+.aurora span:nth-child(2) { background: radial-gradient(circle, var(--cyan), transparent 62%); top: 42%; left: 58%; animation-delay: -8s; }
+.aurora span:nth-child(3) { background: radial-gradient(circle, var(--violet), transparent 62%); top: 58%; left: 12%; animation-delay: -16s; }
+@keyframes drift {
+  0%,100% { transform: translate3d(0,0,0) scale(1); }
+  33% { transform: translate3d(6vmax,-5vmax,0) scale(1.12); }
+  66% { transform: translate3d(-5vmax,4vmax,0) scale(.94); }
+}
+.grid-bg {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .28;
+  background-image:
+    linear-gradient(to right, var(--line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at center, #000 20%, transparent 74%);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 20%, transparent 74%);
+}
+
+/* ---------- carte ---------- */
+.wrap { position: relative; z-index: 1; width: 100%; max-width: 660px; }
+.card {
+  position: relative; border-radius: 30px; padding: 42px 34px 30px;
+  background: var(--card); border: 1px solid var(--line);
+  box-shadow: var(--shadow); backdrop-filter: blur(18px) saturate(140%);
+  text-align: center; overflow: hidden;
+  animation: rise .7s cubic-bezier(.22,.61,.36,1) both;
+}
+.card::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: linear-gradient(140deg, var(--blue), transparent 34%, transparent 66%, var(--cyan));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude; opacity: .55; pointer-events: none;
+}
+@keyframes rise { from { opacity: 0; transform: translateY(26px) scale(.985); } to { opacity: 1; transform: none; } }
+
+.brand { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.brand-logo { position: relative; display: inline-grid; place-items: center; }
+.brand-logo::after {
+  content: ""; position: absolute; inset: -12px; border-radius: 50%;
+  border: 1px solid var(--line-2); animation: halo 3.4s ease-out infinite;
+}
+.brand-logo::before {
+  content: ""; position: absolute; inset: -12px; border-radius: 50%;
+  border: 1px solid var(--line-2); animation: halo 3.4s ease-out infinite 1.7s;
+}
+@keyframes halo { 0% { transform: scale(.82); opacity: .8; } 100% { transform: scale(1.5); opacity: 0; } }
+.brand-name { font-weight: 800; letter-spacing: .14em; font-size: 1rem; }
+.brand-name span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.brand-by { display: block; font-size: .68rem; color: var(--text-3); text-decoration: none; letter-spacing: .05em; }
+.brand-by:hover { color: var(--blue); }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 15px; border-radius: 999px; font-size: .74rem; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--amber); background: color-mix(in srgb, var(--amber) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 34%, transparent);
+}
+.pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); animation: blink 1.6s ease-in-out infinite; }
+@keyframes blink { 0%,100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--amber) 60%, transparent); } 50% { opacity: .45; box-shadow: 0 0 0 6px transparent; } }
+
+h1 { margin: 18px 0 10px; font-size: clamp(1.6rem, 4.6vw, 2.35rem); line-height: 1.15; letter-spacing: -.02em; }
+h1 em { font-style: normal; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+p.lead { margin: 0 auto; max-width: 46ch; color: var(--text-2); font-size: .96rem; line-height: 1.62; }
+
+/* ---------- barre de progression ---------- */
+.track { position: relative; height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; margin: 26px auto 12px; max-width: 340px; }
+.track span {
+  position: absolute; inset: 0; width: 42%; border-radius: 999px; background: var(--grad);
+  box-shadow: 0 0 22px var(--glow);
+  animation: slide 2.4s cubic-bezier(.45,0,.55,1) infinite;
+}
+@keyframes slide { 0% { transform: translateX(-105%); } 100% { transform: translateX(245%); } }
+
+/* ---------- infos ---------- */
+.meta { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 22px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 14px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  border: 1px solid var(--line); font-size: .8rem; color: var(--text-2);
+}
+.chip b { color: var(--text); font-weight: 700; }
+.chip .ic { width: 15px; height: 15px; }
+.ic { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.refresh { margin-top: 20px; font-size: .78rem; color: var(--text-3); }
+.refresh b { color: var(--blue); font-variant-numeric: tabular-nums; }
+
+/* ---------- pied ---------- */
+.foot { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; font-size: .76rem; color: var(--text-3); }
+.foot a { color: var(--text-2); text-decoration: none; }
+.foot a:hover { color: var(--blue); }
+.admin-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 10px; border: 1px solid var(--line); }
+.admin-link:hover { border-color: var(--line-2); }
+
+@media (max-width: 520px) {
+  .card { padding: 32px 20px 24px; border-radius: 24px; }
+  .foot { justify-content: center; text-align: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+{% include "_sprite.html" %}
+<div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+<div class="grid-bg" aria-hidden="true"></div>
+
+<main class="wrap">
+  <div class="card">
+    <div class="brand">
+      {{ logo(56) }}
+      <div style="text-align:left">
+        <div class="brand-name">TIC<span>MASTER</span></div>
+        <a class="brand-by" href="/a-propos">#by_Myazirzk</a>
+      </div>
+    </div>
+
+    <div class="pill"><i></i> Maintenance technique</div>
+
+    <h1>Le site est en <em>mise à jour</em></h1>
+    <p class="lead">{{ info.message }}</p>
+
+    <div class="track" role="progressbar" aria-label="Mise à jour en cours"><span></span></div>
+
+    <div class="meta">
+      {% if info.return_at %}
+      <span class="chip">{{ icon('clock', 15) }} Retour prévu : <b>{{ info.return_at }}</b></span>
+      {% endif %}
+      {% if info.since %}
+      <span class="chip">{{ icon('activity', 15) }} En cours depuis <b><span id="elapsed">—</span></b></span>
+      {% endif %}
+      <span class="chip">{{ icon('shield', 15) }} Vos données sont <b>intactes</b></span>
+    </div>
+
+    <p class="refresh">Cette page se réactualise automatiquement dans <b id="countdown">45</b> s.</p>
+
+    <div class="foot">
+      <span>© {{ year }} TIC MASTER — <a href="/a-propos">#by_Myazirzk</a></span>
+      <a class="admin-link" href="/auth/connexion">{{ icon('lock', 13) }} Espace administration</a>
+    </div>
+  </div>
+</main>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  try {
+    var t = localStorage.getItem('tic-theme');
+    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
+
+  var rest = 45, out = document.getElementById('countdown');
+  setInterval(function () {
+    rest -= 1;
+    if (out) out.textContent = rest;
+    if (rest <= 0) { location.reload(); }
+  }, 1000);
+
+  var since = {{ info.since.isoformat() if info.since else 'null' }};
+  var el = document.getElementById('elapsed');
+  if (since && el) {
+    var start = new Date(since + 'Z').getTime();
+    function tick() {
+      var s = Math.max(0, Math.floor((Date.now() - start) / 1000));
+      var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+      el.textContent = h ? (h + ' h ' + m + ' min') : (m ? (m + ' min') : 'moins d\u2019une minute');
+    }
+    tick(); setInterval(tick, 30000);
+  }
+})();
+</script>
+</body>
+</html>

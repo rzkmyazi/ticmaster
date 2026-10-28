@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, role_badge, status_badge, progress, stat, empty %}
+
+{% block title %}Bulletin de {{ r.user.full_name or r.user.username }}{% endblock %}
+{% block page_title %}Bulletin scolaire{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ r.user.full_name or r.user.username }} · @{{ r.user.username }}</p>{% endblock %}
+
+{% block content %}
+<div class="page-actions">
+  <a class="btn btn-ghost" href="{{ url_for('admin.grades') }}">{{ icon('arrow-left', 16) }} Toutes les notes</a>
+</div>
+
+<section class="card bulletin-head">
+  <div class="bulletin-id">
+    {{ avatar(r.user, 'xl') }}
+    <div>
+      <h2 class="bulletin-name">{{ r.user.full_name or r.user.username }}</h2>
+      <div class="bulletin-meta">
+        <span>@{{ r.user.username }}</span>
+        {{ role_badge(r.user.role) }}
+        {{ status_badge(r.user.status) }}
+      </div>
+      <div class="bulletin-sub">
+        {% if r.rank %}<strong>Rang {{ r.rank }}</strong> sur {{ r.class_size }} élèves notés{% else %}Pas encore de note{% endif %}
+        · {{ r.passed }} réussite{{ 's' if r.passed > 1 }} sur {{ r.submitted|length }} épreuve{{ 's' if r.submitted|length > 1 }}
+        {% if r.user.last_login_at %} · dernière connexion {{ fmt_dt(r.user.last_login_at) }}{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="bulletin-score">
+    <div class="ring ring--{{ r.tone }} ring--lg" style="--p:{{ r.average or 0 }}">
+      <span class="ring-text">{{ r.note if r.note is not none else '—' }}<small>/20</small></span>
+    </div>
+    <div class="bulletin-mention badge badge--mention-{{ r.tone }}">{{ r.mention }}</div>
+  </div>
+</section>
+
+<div class="statgrid">
+  {{ stat(r.avg_exos if r.avg_exos is not none else '—', 'Moyenne exercices', 'clipboard', (note20(r.avg_exos) ~ '/20') if r.avg_exos is not none else 'aucune tentative') }}
+  {{ stat(r.avg_exams if r.avg_exams is not none else '—', 'Moyenne examens', 'award', (note20(r.avg_exams) ~ '/20') if r.avg_exams is not none else 'aucun examen') }}
+  {{ stat(r.progress ~ ' %', 'Progression', 'chart', r.lessons_done ~ '/' ~ r.lessons_total ~ ' leçons') }}
+  {{ stat(r.eliminated|length, 'Éliminations', 'shield-alert', 'surveillance des examens', 'warn' if r.eliminated else '') }}
+</div>
+
+{% if r.running %}
+<div class="alert alert-info" role="alert">
+  {{ icon('clock', 18) }}
+  <div>{{ r.running|length }} examen en cours non soumis : la note n'apparaîtra qu'à la remise de la copie.</div>
+</div>
+{% endif %}
+
+<div class="grid" style="grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);align-items:start">
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('layers') }} Résultats par module</h2></div>
+    <div class="table-wrap table-wrap--flush">
+      <table class="table table--compact">
+        <thead>
+          <tr><th>Module</th><th>Leçons</th><th style="min-width:120px">Progression</th><th class="num">Épreuves</th><th class="num">Moyenne</th></tr>
+        </thead>
+        <tbody>
+          {% for item in r.per_module %}
+          <tr>
+            <td><span class="cell-name">{{ item.module.title }}</span></td>
+            <td class="cell-sub">{{ item.lessons_done }}/{{ item.lessons_total }}</td>
+            <td>{{ progress(item.progress) }}</td>
+            <td class="num">{{ item.attempts }}</td>
+            <td class="num">
+              {% if item.note is not none %}
+                <span class="note note--{{ 'good' if item.note >= 14 else ('mid' if item.note >= 10 else 'low') }}">{{ item.note }}</span>
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="stack">
+    {% if r.per_term %}
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('calendar') }} Moyennes par trimestre</h2></div>
+      <div class="card-body">
+        {% for t in r.per_term %}
+        <div class="term-row">
+          <span class="term-label">{{ t.term }}</span>
+          <div class="term-bar"><span style="width:{{ t.average }}%"></span></div>
+          <span class="term-note note--{{ 'good' if t.note >= 14 else ('mid' if t.note >= 10 else 'low') }}">{{ t.note }}/20</span>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('activity') }} Dernières notes</h2></div>
+      <div class="card-body">
+        {% if r.history %}
+        <div class="bar-chart" role="img" aria-label="Évolution des dernières notes">
+          {% for h in r.history %}
+          <div class="bar" title="{{ h.attempt.exercise.title }} — {{ h.value }} %">
+            <span style="height:{{ [h.value, 4]|max }}%"></span>
+            <small>{{ h.label }}</small>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-sm">Aucune épreuve remise pour l'instant.</p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+</div>
+
+<section class="card mt-2">
+  <div class="card-head">
+    <h2 class="card-title">{{ icon('history') }} Toutes les tentatives</h2>
+    <span class="badge badge--role-user">{{ r.attempts|length }} tentative{{ 's' if r.attempts|length > 1 }}</span>
+  </div>
+  {% if r.attempts %}
+  <div class="table-wrap table-wrap--flush">
+    <table class="table table--compact">
+      <thead>
+        <tr><th>Épreuve</th><th>Type</th><th class="num">Score</th><th class="num">Note</th><th>Statut</th><th class="num">Date</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for a in r.attempts %}
+        <tr>
+          <td><span class="cell-name">{{ a.exercise.title if a.exercise else '—' }}</span>
+            <div class="cell-sub">{{ a.exercise.module.title if a.exercise and a.exercise.module else '' }}</div></td>
+          <td>{% if a.exercise and a.exercise.kind == 'exam' %}<span class="badge badge--exam">Examen</span>{% else %}<span class="badge badge--exercise">Exercice</span>{% endif %}</td>
+          <td class="num">{{ a.score }}/{{ a.max_score }}</td>
+          <td class="num">
+            {% if a.status == 'submitted' %}<span class="note note--{{ 'good' if a.percentage >= 70 else ('mid' if a.percentage >= 50 else 'low') }}">{{ note20(a.percentage) }}</span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if a.status == 'submitted' %}<span class="badge badge--active"><i class="dot"></i>Remise</span>
+            {% elif a.status == 'eliminated' %}<span class="badge badge--danger"><i class="dot"></i>Éliminé</span>
+            {% else %}<span class="badge badge--draft"><i class="dot"></i>En cours</span>{% endif %}
+          </td>
+          <td class="num cell-sub">{{ fmt_dt(a.started_at) }}</td>
+          <td class="actions">
+            {% if a.status == 'submitted' %}<a class="btn btn-sm btn-ghost" href="{{ url_for('learning.result_detail', attempt_id=a.id) }}" title="Détail">{{ icon('eye', 15) }}</a>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ empty('Aucune tentative', "Cet élève n'a encore rien commencé.", 'clipboard') }}
+  {% endif %}
+</section>
+{% endblock %}

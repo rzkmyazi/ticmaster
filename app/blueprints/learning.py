@@ -296,6 +296,9 @@ def submit_exercise(attempt_id: int):
 @bp.route("/resultats")
 @login_required
 def results():
+    if g.user.is_super_admin:
+        flash("Vos statistiques personnelles d'apprenant sont remplacées par celles de la classe.", "info")
+        return redirect(url_for("admin.statistics"))
     attempts = (
         Attempt.query.filter_by(user_id=g.user.id, status="submitted")
         .order_by(Attempt.submitted_at.desc())

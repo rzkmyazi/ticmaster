@@ -110,13 +110,15 @@ def main() -> int:
         code = u.get(BASE + path, timeout=20).status_code
         ok(path, code == 200, str(code))
 
-    print("▸ Espace administrateur (18 pages)")
+    print("▸ Espace administrateur (22 pages)")
     for path in ["/admin/", "/admin/utilisateurs", "/admin/utilisateurs/nouveau",
                  "/admin/utilisateurs/1", "/admin/modules", "/admin/modules/1/modifier",
                  "/admin/lecons/1/modifier", "/admin/exercices",
                  "/admin/exercices/1/modifier", "/admin/annonces", "/admin/examens",
                  "/admin/roles", "/admin/journal", "/admin/sessions", "/admin/demandes",
                  "/admin/parametres", "/admin/sauvegardes",
+                 "/admin/notes", "/admin/statistiques", "/admin/notes/export.csv",
+                 "/admin/apercu-maintenance",
                  "/admin/messages-utilisateurs"]:
         code = sa.get(BASE + path, timeout=20).status_code
         ok(path, code == 200, str(code))
@@ -128,6 +130,23 @@ def main() -> int:
     ok("admin → messages super admin = 403",
        a.get(BASE + "/admin/messages-utilisateurs").status_code == 403)
     ok("admin → /admin/sauvegardes = 403", a.get(BASE + "/admin/sauvegardes").status_code == 403)
+    ok("utilisateur → /admin/notes = 403", u.get(BASE + "/admin/notes").status_code == 403)
+    ok("admin → /admin/notes = 403", a.get(BASE + "/admin/notes").status_code == 403)
+    ok("admin → /admin/statistiques = 403",
+       a.get(BASE + "/admin/statistiques").status_code == 403)
+
+    print("▸ Rôle professeur du super administrateur")
+    r = sa.get(BASE + "/examens", allow_redirects=False)
+    ok("super admin → /examens redirigé", r.status_code == 302 and "/admin/notes" in r.headers.get("Location", ""))
+    r = sa.get(BASE + "/resultats", allow_redirects=False)
+    ok("super admin → /resultats redirigé",
+       r.status_code == 302 and "/admin/statistiques" in r.headers.get("Location", ""))
+    r = sa.get(BASE + "/espace", allow_redirects=False)
+    ok("super admin → /espace redirigé vers l'administration",
+       r.status_code == 302 and "/admin" in r.headers.get("Location", ""))
+    page = sa.get(BASE + "/admin").text
+    ok("menu sans « Examens trimestriels » pour le professeur",
+       "Examens trimestriels" not in page and "Notes des élèves" in page)
     token = csrf(a, "/admin/utilisateurs/1")
     r = a.post(BASE + "/admin/utilisateurs/1/modifier",
                data={"csrf_token": token, "full_name": "Pirate", "username": "Myazirzk",

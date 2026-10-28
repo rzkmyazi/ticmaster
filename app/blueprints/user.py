@@ -54,6 +54,8 @@ def _global_progress(user_id: int) -> dict:
 @login_required
 def dashboard():
     user = g.user
+    if user.is_super_admin:
+        return redirect(url_for("admin.dashboard"))
     global_progress = _global_progress(user.id)
 
     # Modules en cours (leçon suivante à travailler)
