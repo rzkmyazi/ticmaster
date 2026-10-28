@@ -138,4 +138,35 @@ compte de démonstration. Il retourne le nombre d'échecs (0 = conforme).
 
 ---
 
+## 8. Vérification de l'instance de production
+
+**URL :** <https://ticmaster.onrender.com> · **Service Render** `srv-dbh6u7jbc2fs73fohv20` (Francfort, free)
+**Base :** PostgreSQL `ticmaster-db` (free) · **Déploiement :** `3fb6be4`, statut **live**
+
+| Contrôle | Résultat |
+|---|---|
+| `/sante` | `{"app":"TIC MASTER","database":true,"status":"ok"}` ✔ |
+| Pages publiques (`/`, `/a-propos`, `/auth/connexion`, `/auth/mot-de-passe-oublie`) | 200 ✔ |
+| `/inscription`, `/register` | **404** ✔ |
+| Accueil sans mention d'inscription | ✔ |
+| Connexion `Myazirzk` | 302 → `/admin/` ✔ |
+| 8 pages d'administration testées | 200 ✔ |
+| Contenu installé automatiquement | **12 modules**, 12 exercices ✔ |
+| Création de compte → mot de passe temporaire → changement imposé → accès | ✔ |
+| `POST` sans jeton CSRF | 400 ✔ |
+| Anonyme → `/admin/` | 302 (redirection connexion) ✔ |
+| HSTS + CSP | présents ✔ |
+
+**Incident corrigé pendant le déploiement :** SQLAlchemy 2.1 utilise par défaut le pilote
+`psycopg` (v3), absent de `requirements.txt` → premier démarrage en échec
+(`ModuleNotFoundError: No module named 'psycopg'`). Correctif : `config.py` force
+`postgresql+psycopg2://` (pilote déjà épinglé), plus mise à jour de la variable `DATABASE_URL`.
+Le déploiement suivant est passé **live** et l'amorçage a créé le super administrateur et les
+12 modules dans PostgreSQL.
+
+**État final de la base de production :** un seul compte, `Myazirzk` (super administrateur).
+Les comptes de test créés par la vérification ont été supprimés.
+
+---
+
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*
