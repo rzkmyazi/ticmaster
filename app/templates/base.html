@@ -1,0 +1,140 @@
+{% from "macros.html" import icon, avatar, logo, brand_link, role_badge, status_badge, progress, progress_bar, stat, empty, pagination, page_nav, badge, alert, confirm_form, toggle_theme %}
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060b18">
+<meta name="description" content="TIC MASTER — plateforme d'apprentissage des Technologies de l'Information et de la Communication.">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>{% block title %}TIC MASTER{% endblock %}</title>
+<link rel="icon" href="{{ url_for('public.favicon') }}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
+<link rel="manifest" href="{{ url_for('public.manifest') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    try {
+      var t = localStorage.getItem('tic-theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+{% block head_extra %}{% endblock %}
+</head>
+<body class="app-shell" data-username="{{ current_user.username if current_user }}">
+{% include "_sprite.html" %}
+<a class="skip-link" href="#contenu">Aller au contenu</a>
+
+<aside class="sidebar" id="sidebar" aria-label="Navigation principale">
+  {{ brand_link(url_for('user.dashboard') if not current_user.is_admin else url_for('admin.dashboard'), 42) }}
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-title">Mon espace</div>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'user.dashboard' }}" href="{{ url_for('user.dashboard') }}">{{ icon('home', 18) }} Tableau de bord</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'learning.catalog' or request.endpoint == 'learning.module_detail' or request.endpoint == 'learning.lesson' }}" href="{{ url_for('learning.catalog') }}">{{ icon('book', 18) }} Cours &amp; modules</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint in ['learning.exercises', 'learning.exercise_detail', 'learning.take_exercise', 'learning.result_detail'] }}" href="{{ url_for('learning.exercises') }}">{{ icon('clipboard', 18) }} Exercices</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint in ['exam.index', 'exam.take_exam', 'exam.exam_result'] }}" href="{{ url_for('exam.index') }}">{{ icon('award', 18) }} Examens trimestriels</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'learning.results' }}" href="{{ url_for('learning.results') }}">{{ icon('chart', 18) }} Mes résultats</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'learning.resources' }}" href="{{ url_for('learning.resources') }}">{{ icon('file', 18) }} Ressources</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-title">Communauté</div>
+      <a class="nav-link{{ ' is-active' if request.endpoint in ['social.messages', 'social.api_messages'] }}" href="{{ url_for('social.messages') }}">{{ icon('message', 18) }} Messages</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint in ['social.battle_home', 'social.battle_room'] }}" href="{{ url_for('social.battle_home') }}">{{ icon('zap', 18) }} Battle</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'user.online_users' }}" href="{{ url_for('user.online_users') }}">{{ icon('users', 18) }} Utilisateurs en ligne</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'user.announcements' }}" href="{{ url_for('user.announcements') }}">{{ icon('bell', 18) }} Annonces</a>
+    </div>
+
+    {% if current_user.is_admin %}
+    <div class="nav-section">
+      <div class="nav-title">Administration</div>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}">{{ icon('grid', 18) }} Vue d'ensemble</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint in ['admin.users', 'admin.user_new', 'admin.user_detail', 'admin.user_edit'] }}" href="{{ url_for('admin.users') }}">{{ icon('user', 18) }} Utilisateurs</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint in ['admin.modules', 'admin.module_edit', 'admin.lesson_edit'] }}" href="{{ url_for('admin.modules') }}">{{ icon('layers', 18) }} Modules &amp; leçons</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint in ['admin.exercises', 'admin.exercise_edit'] }}" href="{{ url_for('admin.exercises') }}">{{ icon('clipboard', 18) }} Exercices</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.announcements' }}" href="{{ url_for('admin.announcements') }}">{{ icon('bell', 18) }} Annonces</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.exams' }}" href="{{ url_for('admin.exams') }}">{{ icon('award', 18) }} Examens</a>
+      {% if current_user.is_super_admin %}
+      <a class="nav-link nav-ic-pink{{ ' is-active' if request.endpoint == 'admin.user_messages' }}" href="{{ url_for('admin.user_messages') }}">{{ icon('message', 18) }} Messages des Utilisateurs</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.roles' }}" href="{{ url_for('admin.roles') }}">{{ icon('shield', 18) }} Rôles &amp; permissions</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.audit' }}" href="{{ url_for('admin.audit') }}">{{ icon('eye', 18) }} Journal d'audit</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.sessions' }}" href="{{ url_for('admin.sessions') }}">{{ icon('key', 18) }} Sessions</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.reset_requests' }}" href="{{ url_for('admin.reset_requests') }}">{{ icon('refresh', 18) }} Demandes</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.settings' }}" href="{{ url_for('admin.settings') }}">{{ icon('settings', 18) }} Paramètres</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.backups' }}" href="{{ url_for('admin.backups') }}">{{ icon('download', 18) }} Sauvegardes</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="nav-section">
+      <div class="nav-title">Mon compte</div>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'user.profile' }}" href="{{ url_for('user.profile') }}">{{ icon('settings', 18) }} Mon profil</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'user.history' }}" href="{{ url_for('user.history') }}">{{ icon('history', 18) }} Mon historique</a>
+      <a class="nav-link" href="{{ url_for('auth.change_password') }}">{{ icon('lock', 18) }} Mot de passe</a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      {{ avatar(current_user, 'sm') }}
+      <div class="user-chip-meta">
+        <span class="user-chip-name">{{ current_user.full_name or current_user.username }}</span>
+        <span class="user-chip-role">{{ role_labels.get(current_user.role, current_user.role) }}</span>
+      </div>
+      <form method="post" action="{{ url_for('auth.logout') }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="icon-btn icon-btn--danger" title="Se déconnecter" aria-label="Se déconnecter">{{ icon('logout', 17) }}</button>
+      </form>
+    </div>
+  </div>
+</aside>
+<div class="overlay" id="sidebar-overlay" data-sidebar-close></div>
+
+<div class="main">
+  <header class="topbar">
+    <button type="button" class="icon-btn sidebar-toggle" id="sidebar-toggle" aria-label="Ouvrir le menu" aria-controls="sidebar" aria-expanded="false">{{ icon('menu', 20) }}</button>
+    <div class="topbar-heading"><span class="topbar-title">{% block page_title %}{{ self.title() }}{% endblock %}</span>{% block page_subtitle %}{% endblock %}</div>
+    <span class="topbar-spacer"></span>
+    <div class="topbar-actions">
+      {% if current_user.is_super_admin %}
+      <a class="icon-btn" href="{{ url_for('admin.user_messages') }}" title="Messages des Utilisateurs" aria-label="Messages des Utilisateurs" style="color:var(--pink)">{{ icon('message', 19) }}</a>
+      {% endif %}
+      <a class="icon-btn" href="{{ url_for('social.messages') }}" title="Messagerie" aria-label="Messagerie">{{ icon('send', 18) }}</a>
+      {{ toggle_theme() }}
+      <a class="icon-btn" href="{{ url_for('user.profile') }}" title="Mon profil" aria-label="Mon profil">{{ avatar(current_user, 'sm') }}</a>
+    </div>
+  </header>
+
+  <main class="content" id="contenu">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'error' else category }}" role="alert">
+            {{ icon('check' if category == 'success' else ('alert' if category in ['danger','error'] else 'info'), 18) }}
+            <div>{{ message }}</div>
+            <button type="button" class="alert-close" data-dismiss aria-label="Fermer">{{ icon('x', 16) }}</button>
+          </div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="foot">
+    <span>© {{ year }} TIC MASTER — <a href="{{ url_for('public.about') }}" class="brand-by">#by_Myazirzk</a></span>
+    <span>Apprentissage des TIC · {{ site_name }}</span>
+  </footer>
+</div>
+
+<div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

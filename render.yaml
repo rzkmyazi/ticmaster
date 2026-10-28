@@ -1,0 +1,46 @@
+# ============================================================================
+# Blueprint Render — TIC MASTER (#by_Myazirzk)
+# Documentation : https://render.com/docs/blueprint-spec
+# ============================================================================
+databases:
+  - name: ticmaster-db
+    databaseName: ticmaster
+    user: ticmaster
+    plan: free
+    region: frankfurt
+
+services:
+  - type: web
+    name: ticmaster
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
+    healthCheckPath: /sante
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.6
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ticmaster-db
+          property: connectionString
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: AUTH_SESSION_HOURS
+        value: "8"
+      - key: LOGIN_MAX_ATTEMPTS
+        value: "5"
+      - key: LOGIN_LOCK_MINUTES
+        value: "15"
+      - key: PRESENCE_ONLINE_SECONDS
+        value: "120"
+      - key: MAX_CONTENT_MB
+        value: "30"
+      - key: SITE_NAME
+        value: TIC MASTER

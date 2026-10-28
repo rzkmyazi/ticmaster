@@ -1,0 +1,49 @@
+{% extends "base_public.html" %}
+
+
+{% block title %}Mot de passe oublié{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card reveal">
+    <div class="auth-brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 48 48" class="brand-logo" role="img" aria-label="Logo TIC MASTER">
+          <circle class="logo-ring" cx="24" cy="24" r="20.5"/>
+          <circle class="logo-orbit" cx="24" cy="24" r="20.5" stroke-dasharray="7 9"/>
+          <rect class="logo-chip" x="13.5" y="13.5" width="21" height="21" rx="6"/>
+          <path class="logo-node" d="M24 9v4.5M24 34.5V39M9 24h4.5M34.5 24H39"/>
+          <circle class="logo-pulse" cx="24" cy="24" r="3.4"/>
+        </svg>
+      </span>
+      <h1>Mot de passe oublié</h1>
+      <p>Une demande sera transmise à l'administration</p>
+    </div>
+
+    {% if sent %}
+    <div class="alert alert-info mb-2">
+      {{ icon('check-circle') }}
+      <span>Si un compte correspond à ces informations, votre demande a été transmise à l'administration. Vous recevrez vos nouveaux identifiants après vérification.</span>
+    </div>
+    {% else %}
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="identifier">Identifiant ou adresse e-mail</label>
+        <input type="text" id="identifier" name="identifier" autocomplete="username" autocapitalize="none" required autofocus>
+        <span class="hint">Indiquez l'identifiant communiqué par votre établissement ou l'e-mail associé au compte.</span>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">{{ icon('mail') }} Envoyer la demande</button>
+    </form>
+    {% endif %}
+
+    <p class="auth-note">
+      {{ icon('info') }} Aucune information sur l'existence d'un compte n'est divulguée.<br>
+      Pour des raisons de sécurité, les demandes sont validées manuellement par le super administrateur.
+    </p>
+    <div class="auth-links">
+      <a href="{{ url_for('auth.login') }}">{{ icon('arrow-left') }} Retour à la connexion</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

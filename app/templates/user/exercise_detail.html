@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+
+{% block title %}{{ exercise.title }}{% endblock %}
+{% block page_title %}{{ exercise.title }}{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ exercise.module.title if exercise.module else 'Exercice libre' }}</p>{% endblock %}
+
+{% block content %}
+<div class="grid grid-2" style="align-items:start">
+  <section class="card">
+    <div class="card-body">
+      <span class="eyebrow">{{ icon('clipboard') }} Exercice</span>
+      <h1 class="section-title mt-1">{{ exercise.title }}</h1>
+      <p class="mt-1">{{ exercise.description or "Répondez aux questions puis soumettez pour obtenir votre correction détaillée." }}</p>
+
+      <div class="stats-grid mt-2">
+        <div class="stat">
+          <span class="stat-label">Questions</span>
+          <div class="stat-value">{{ question_count }}</div>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Durée conseillée</span>
+          <div class="stat-value">{{ exercise.duration_minutes }}<small> min</small></div>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Seuil de réussite</span>
+          <div class="stat-value">{{ exercise.pass_score }}<small>%</small></div>
+        </div>
+      </div>
+
+      <div class="alert alert-info mt-2">
+        {{ icon('info') }}
+        <span>La correction est effectuée côté serveur : vos réponses sont enregistrées et notées de façon fiable.</span>
+      </div>
+
+      {% if question_count %}
+      <form method="post" action="{{ url_for('learning.start_exercise', exercise_id=exercise.id) }}" class="mt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-primary btn-lg btn-block" type="submit">{{ icon('play') }} Commencer l'exercice</button>
+      </form>
+      {% else %}
+      <div class="alert alert-warning mt-2">{{ icon('alert') }}<span>Cet exercice ne contient pas encore de question.</span></div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('chart') }} Vos tentatives</h2></div>
+    <div class="card-body">
+      {% for attempt in attempts %}
+      <div class="row-between" style="padding:.55rem 0;border-bottom:1px solid var(--border)">
+        <div>
+          <strong class="text-sm">{{ fmt_dt(attempt.started_at) }}</strong>
+          <div class="text-xs text-muted">
+            {% if attempt.status == 'submitted' %}{{ attempt.score }}/{{ attempt.max_score }} points
+            {% elif attempt.status == 'eliminated' %}Éliminé
+            {% else %}En cours{% endif %}
+          </div>
+        </div>
+        {% if attempt.status == 'submitted' %}
+        <span class="badge {{ 'badge-success' if attempt.passed else 'badge-warning' }}">{{ attempt.percentage }}%</span>
+        <a class="btn btn-sm btn-ghost" href="{{ url_for('learning.result_detail', attempt_id=attempt.id) }}">Détail</a>
+        {% elif attempt.status == 'in_progress' %}
+        <a class="btn btn-sm btn-outline" href="{{ url_for('learning.take_exercise', attempt_id=attempt.id) }}">Reprendre</a>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="empty">
+        <div class="empty-icon">{{ icon('clock') }}</div>
+        <h3>Aucune tentative</h3>
+        <p>Vous n'avez pas encore réalisé cet exercice.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

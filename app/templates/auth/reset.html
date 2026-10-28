@@ -1,0 +1,55 @@
+{% extends "base_public.html" %}
+
+
+{% block title %}Nouveau mot de passe{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card reveal">
+    <div class="auth-brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 48 48" class="brand-logo" role="img" aria-label="Logo TIC MASTER">
+          <circle class="logo-ring" cx="24" cy="24" r="20.5"/>
+          <circle class="logo-orbit" cx="24" cy="24" r="20.5" stroke-dasharray="7 9"/>
+          <rect class="logo-chip" x="13.5" y="13.5" width="21" height="21" rx="6"/>
+          <path class="logo-node" d="M24 9v4.5M24 34.5V39M9 24h4.5M34.5 24H39"/>
+          <circle class="logo-pulse" cx="24" cy="24" r="3.4"/>
+        </svg>
+      </span>
+      <h1>Nouveau mot de passe</h1>
+      <p>Choisissez un mot de passe robuste</p>
+    </div>
+
+    {% if token_valid %}
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="password">Nouveau mot de passe</label>
+        <div class="input-group">
+          <input type="password" id="password" name="password" autocomplete="new-password" minlength="10" required autofocus>
+          <button type="button" class="pw-toggle" data-pw-toggle aria-label="Afficher le mot de passe">
+            <span class="pw-off">{{ icon('eye') }}</span><span class="pw-on" hidden>{{ icon('eye-off') }}</span>
+          </button>
+        </div>
+        <span class="hint">10 caractères minimum, avec majuscule, minuscule, chiffre et caractère spécial.</span>
+      </div>
+      <div class="field">
+        <label for="password_confirm">Confirmer le mot de passe</label>
+        <input type="password" id="password_confirm" name="password_confirm" autocomplete="new-password" required>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">{{ icon('check') }} Enregistrer le mot de passe</button>
+    </form>
+    {% else %}
+    <div class="alert alert-danger mb-2">
+      {{ icon('alert') }}
+      <span>Ce lien de réinitialisation est invalide ou a expiré. Demandez un nouveau lien à l'administration.</span>
+    </div>
+    <a class="btn btn-outline btn-block" href="{{ url_for('auth.forgot_password') }}">{{ icon('refresh') }} Nouvelle demande</a>
+    {% endif %}
+
+    <div class="auth-links mt-2">
+      <a href="{{ url_for('auth.login') }}">{{ icon('arrow-left') }} Retour à la connexion</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

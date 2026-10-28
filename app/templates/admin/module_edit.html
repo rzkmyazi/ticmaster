@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+
+{% block title %}{{ module.title }}{% endblock %}
+{% block page_title %}{{ module.title }}{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Module {{ "%02d"|format(module.order_index) }} · {{ module.lessons|length }} leçon(s)</p>{% endblock %}
+
+{% block content %}
+<div class="row-between mb-2">
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.modules') }}">{{ icon('arrow-left') }} Modules</a>
+  <div class="row">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('learning.module_detail', slug=module.slug) }}">{{ icon('eye') }} Aperçu</a>
+    <form method="post" action="{{ url_for('admin.module_status', module_id=module.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="status" value="{{ 'draft' if module.status == 'published' else 'published' }}">
+      <button class="btn btn-sm btn-outline" type="submit">{{ icon('refresh') }} {{ 'Dépublier' if module.status == 'published' else 'Publier' }}</button>
+    </form>
+    <form method="post" action="{{ url_for('admin.module_delete', module_id=module.id) }}"
+          data-confirm="Supprimer ce module, ses leçons, ressources et exercices ?">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-sm btn-danger" type="submit">{{ icon('trash') }} Supprimer</button>
+    </form>
+  </div>
+</div>
+
+{% if error %}<div class="auth-error mb-2">{{ icon('alert') }}<span>{{ error }}</span></div>{% endif %}
+
+<div class="grid" style="grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);align-items:start">
+  <div class="stack">
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('edit') }} Contenu du module</h2></div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="field">
+            <label for="title">Titre <span class="req">*</span></label>
+            <input id="title" type="text" name="title" value="{{ module.title }}" required maxlength="190">
+          </div>
+          <div class="field">
+            <label for="summary">Résumé</label>
+            <textarea id="summary" name="summary" rows="2" maxlength="500">{{ module.summary }}</textarea>
+          </div>
+          <div class="field">
+            <label for="description">Description complète</label>
+            <textarea id="description" name="description" rows="4">{{ module.description }}</textarea>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label for="category_id">Catégorie</label>
+              <select id="category_id" name="category_id">
+                <option value="">Sans catégorie</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}" {{ 'selected' if module.category_id == category.id }}>{{ category.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field">
+              <label for="icon">Icône</label>
+              <select id="icon" name="icon">
+                {% for value, label in [('book-open','Livre'),('cpu','Processeur'),('settings','Système'),('file','Document'),('grid','Tableur'),('presentation','Présentation'),('globe','Internet'),('mail','E-mail'),('shield','Sécurité'),('wifi','Réseaux'),('code','Programmation'),('sparkles','IA')] %}
+                <option value="{{ value }}" {{ 'selected' if module.icon == value }}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field">
+              <label for="level">Niveau</label>
+              <select id="level" name="level">
+                <option value="débutant" {{ 'selected' if module.level == 'débutant' }}>Débutant</option>
+                <option value="intermédiaire" {{ 'selected' if module.level == 'intermédiaire' }}>Intermédiaire</option>
+                <option value="avancé" {{ 'selected' if module.level == 'avancé' }}>Avancé</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="status">Statut</label>
+              <select id="status" name="status">
+                <option value="published" {{ 'selected' if module.status == 'published' }}>Publié</option>
+                <option value="draft" {{ 'selected' if module.status == 'draft' }}>Brouillon</option>
+                <option value="archived" {{ 'selected' if module.status == 'archived' }}>Archivé</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="order_index">Ordre</label>
+              <input id="order_index" type="number" name="order_index" min="1" max="99" value="{{ module.order_index }}">
+            </div>
+            <div class="field">
+              <label for="estimated_minutes">Durée estimée (min)</label>
+              <input id="estimated_minutes" type="number" name="estimated_minutes" min="5" max="2000" value="{{ module.estimated_minutes }}">
+            </div>
+          </div>
+          <div class="field">
+            <label for="image">Image de couverture</label>
+            <input id="image" type="file" name="image" accept="image/*">
+            <span class="hint">PNG, JPG, WEBP, SVG — 5 Mo maximum recommandé.</span>
+          </div>
+          <button class="btn btn-primary" type="submit">{{ icon('save') }} Enregistrer</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{{ icon('layers') }} Leçons</h2>
+        <span class="text-xs text-muted">{{ module.lessons|length }}</span>
+      </div>
+      <div class="card-body">
+        <div class="lesson-list mb-2">
+          {% for lesson in module.lessons %}
+          <div class="lesson-item {{ 'is-done' if lesson.published }}">
+            <span class="lesson-num">{{ loop.index }}</span>
+            <span class="lesson-item-txt">
+              <strong>{{ lesson.title }}</strong>
+              <small>{{ lesson.estimated_minutes }} min · {{ 'publiée' if lesson.published else 'brouillon' }}</small>
+            </span>
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('admin.lesson_edit', lesson_id=lesson.id) }}">{{ icon('edit') }}</a>
+            <form method="post" action="{{ url_for('admin.lesson_delete', lesson_id=lesson.id) }}"
+                  data-confirm="Supprimer cette leçon ?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-ghost" type="submit" aria-label="Supprimer">{{ icon('trash') }}</button>
+            </form>
+          </div>
+          {% else %}
+          <p class="text-sm text-muted">Aucune leçon pour le moment.</p>
+          {% endfor %}
+        </div>
+
+        <form method="post" action="{{ url_for('admin.lesson_new', module_id=module.id) }}" class="alert" style="flex-direction:column;align-items:stretch">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <strong class="text-sm mb-1">{{ icon('plus') }} Ajouter une leçon</strong>
+          <div class="field">
+            <label class="sr-only" for="lesson-title">Titre</label>
+            <input id="lesson-title" type="text" name="title" placeholder="Titre de la leçon" required maxlength="190">
+          </div>
+          <div class="row">
+            <input type="number" name="estimated_minutes" value="10" min="1" max="300" style="max-width:110px" aria-label="Durée">
+            <label class="checkbox" style="margin-left:auto"><input type="checkbox" name="published" value="1" checked><span>Publier</span></label>
+            <button class="btn btn-primary btn-sm" type="submit">Ajouter</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <aside class="stack">
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('download') }} Ressources</h2></div>
+      <div class="card-body">
+        <div class="stack" style="gap:.45rem">
+          {% for resource in module.resources %}
+          <div class="row-between" style="padding:.4rem .5rem;border:1px solid var(--border);border-radius:10px">
+            <div class="text-sm">{{ icon('file') }} {{ resource.title }}<div class="text-xs text-muted">{{ human_size(resource.size) }}</div></div>
+            <form method="post" action="{{ url_for('admin.resource_delete', resource_id=resource.id) }}" data-confirm="Supprimer ce fichier ?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-ghost" type="submit" aria-label="Supprimer">{{ icon('trash') }}</button>
+            </form>
+          </div>
+          {% else %}
+          <p class="text-sm text-muted">Aucune ressource.</p>
+          {% endfor %}
+        </div>
+
+        <hr class="divider">
+        <form method="post" action="{{ url_for('admin.resource_new', module_id=module.id) }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="field">
+            <label for="resource-title">Titre du document</label>
+            <input id="resource-title" type="text" name="title" maxlength="190" placeholder="Fiche pratique PDF">
+          </div>
+          <div class="field">
+            <label for="resource-file">Fichier</label>
+            <input id="resource-file" type="file" name="file" required>
+            <span class="hint">PDF, DOCX, XLSX, PPTX, ZIP, images, audio, vidéo.</span>
+          </div>
+          <button class="btn btn-outline btn-block" type="submit">{{ icon('upload') }} Téléverser</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('clipboard') }} Exercices</h2></div>
+      <div class="card-body">
+        {% for exercise in module.exercises %}
+        <a class="lesson-item mb-1" href="{{ url_for('admin.exercise_edit', exercise_id=exercise.id) }}">
+          <span class="lesson-num">{{ icon('clipboard') }}</span>
+          <span class="lesson-item-txt"><strong>{{ exercise.title }}</strong><small>{{ exercise.questions|length }} question(s)</small></span>
+          {{ icon('arrow-right') }}
+        </a>
+        {% else %}
+        <p class="text-sm text-muted">Aucun exercice rattaché.</p>
+        {% endfor %}
+        <a class="btn btn-outline btn-sm btn-block mt-1" href="{{ url_for('admin.exercises') }}">{{ icon('plus') }} Gérer les exercices</a>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

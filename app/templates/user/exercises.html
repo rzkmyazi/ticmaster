@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+
+{% block title %}Exercices{% endblock %}
+{% block page_title %}Exercices{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Entraînement corrigé, sans limite de temps stricte</p>{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-head">
+    <h2 class="card-title">{{ icon('clipboard') }} Exercices disponibles</h2>
+    <span class="text-xs text-muted">{{ exercises|length }} exercice(s)</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Exercice</th><th>Module</th><th>Questions</th><th>Durée</th><th>Meilleur score</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for exercise in exercises %}
+        <tr>
+          <td>
+            <strong>{{ exercise.title }}</strong>
+            <div class="text-xs text-muted">{{ exercise.description|truncate(70) }}</div>
+          </td>
+          <td class="text-sm">{{ exercise.module.title if exercise.module else '—' }}</td>
+          <td class="text-sm">{{ exercise.questions|length }}</td>
+          <td class="text-sm">{{ exercise.duration_minutes }} min</td>
+          <td>
+            {% if best[exercise.id] %}
+              <span class="badge {{ 'badge-success' if best[exercise.id].passed else 'badge-warning' }}">{{ best[exercise.id].percentage }}%</span>
+            {% else %}
+              <span class="text-xs text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="row-actions">
+            <a class="btn btn-sm {{ 'btn-outline' if best[exercise.id] else 'btn-primary' }}"
+               href="{{ url_for('learning.exercise_detail', exercise_id=exercise.id) }}">
+              {{ 'Refaire' if best[exercise.id] else 'Commencer' }} {{ icon('arrow-right') }}
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">
+          <div class="empty">
+            <div class="empty-icon">{{ icon('clipboard') }}</div>
+            <h3>Aucun exercice publié</h3>
+            <p>Les exercices apparaîtront ici dès leur publication par l'administration.</p>
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

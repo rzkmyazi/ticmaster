@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+
+{% block title %}{{ module.title }}{% endblock %}
+{% block page_title %}{{ module.title }}{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Module {{ "%02d"|format(module.order_index) }} · {{ module.published_lessons|length }} leçons</p>{% endblock %}
+
+{% block content %}
+<div class="row mb-2 text-sm">
+  <a href="{{ url_for('learning.catalog') }}">Cours TIC</a>
+  <span class="text-muted">/</span>
+  <span class="text-muted">{{ module.title }}</span>
+</div>
+
+<div class="course-layout">
+  <div class="stack">
+    <section class="card">
+      <div class="card-body">
+        <div class="row-between">
+          <div style="max-width:62ch">
+            <span class="eyebrow">{{ icon(module.icon or 'book-open') }} {{ module.category.name if module.category else 'TIC' }}</span>
+            <h1 class="section-title mt-1">{{ module.title }}</h1>
+            <p class="mt-1">{{ module.description or module.summary }}</p>
+          </div>
+          <div class="score-ring" style="--pct: {{ module_progress.percent }}">
+            <span>{{ module_progress.percent }}%</span>
+          </div>
+        </div>
+        <div class="row mt-2" style="gap:.5rem">
+          <span class="badge badge-info">{{ icon('clock') }} {{ module.estimated_minutes }} min</span>
+          <span class="badge badge-neutral">{{ module.level }}</span>
+          {% if module_progress.total and module_progress.done == module_progress.total %}
+          <span class="badge badge-success">{{ icon('check') }} Module terminé</span>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{{ icon('layers') }} Programme du module</h2>
+        <span class="text-xs text-muted">{{ module_progress.done }}/{{ module_progress.total }} terminées</span>
+      </div>
+      <div class="card-body">
+        <div class="lesson-list">
+          {% for lesson in module.lessons %}
+          {% set is_done = lesson.id in module_progress.done_ids %}
+          <a class="lesson-item {{ 'is-done' if is_done }} {{ 'is-current' if not is_done and loop.index0 == module_progress.done }}"
+             href="{{ url_for('learning.lesson', slug=module.slug, lesson_id=lesson.id) }}">
+            <span class="lesson-num">{{ icon('check') if is_done else loop.index }}</span>
+            <span class="lesson-item-txt">
+              <strong>{{ lesson.title }}</strong>
+              <small>{{ lesson.estimated_minutes }} min{% if not lesson.published %} · brouillon{% endif %}</small>
+            </span>
+            <span class="spacer"></span>
+            {{ icon('arrow-right') }}
+          </a>
+          {% else %}
+          <div class="empty">
+            <div class="empty-icon">{{ icon('book') }}</div>
+            <h3>Aucune leçon</h3>
+            <p>Ce module est en préparation.</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    {% if exercises %}
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('clipboard') }} Exercices du module</h2></div>
+      <div class="card-body">
+        <div class="stack">
+          {% for exercise in exercises %}
+          <div class="row-between" style="padding:.6rem;border:1px solid var(--border);border-radius:12px">
+            <div>
+              <strong class="text-sm">{{ exercise.title }}</strong>
+              <div class="text-xs text-muted">{{ exercise.questions|length }} questions · {{ exercise.duration_minutes }} min</div>
+            </div>
+            {% if best[exercise.id] %}
+              <span class="badge badge-success">{{ best[exercise.id].percentage }}%</span>
+            {% endif %}
+            <a class="btn btn-sm btn-outline" href="{{ url_for('learning.exercise_detail', exercise_id=exercise.id) }}">
+              {{ 'Refaire' if best[exercise.id] else 'Commencer' }} {{ icon('arrow-right') }}
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+  </div>
+
+  <aside class="stack">
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('target') }} Votre progression</h2></div>
+      <div class="card-body">
+        {{ progress_bar(module_progress.percent, module_progress.done ~ ' / ' ~ module_progress.total ~ ' leçons') }}
+        <hr class="divider">
+        <div class="row-between text-sm">
+          <span class="text-muted">Exercices du module</span>
+          <strong>{{ exercises|length }}</strong>
+        </div>
+        <div class="row-between text-sm mt-1">
+          <span class="text-muted">Niveau</span>
+          <strong>{{ module.level }}</strong>
+        </div>
+        <div class="row-between text-sm mt-1">
+          <span class="text-muted">Durée estimée</span>
+          <strong>{{ module.estimated_minutes }} min</strong>
+        </div>
+      </div>
+    </section>
+
+    {% if module.resources %}
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('download') }} Ressources</h2></div>
+      <div class="card-body">
+        <div class="stack" style="gap:.5rem">
+          {% for resource in module.resources %}
+          <a class="lesson-item" href="{{ url_for('learning.download', filename=resource.filename) }}">
+            <span class="lesson-num">{{ icon('file') }}</span>
+            <span class="lesson-item-txt">
+              <strong>{{ resource.title }}</strong>
+              <small>{{ human_size(resource.size) }}</small>
+            </span>
+            {{ icon('download') }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

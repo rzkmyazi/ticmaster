@@ -1,0 +1,97 @@
+{% extends "base_public.html" %}
+
+
+{% block title %}Connexion{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-split">
+    <aside class="auth-aside reveal">
+      <span class="eyebrow">{{ icon('sparkles') }} Espace membre</span>
+      <h2 class="section-title">Content de vous revoir.</h2>
+      <p class="section-sub">Retrouvez vos cours, votre progression et vos résultats. Votre espace personnel est sécurisé et accessible depuis n'importe quel appareil.</p>
+      <div class="feature-grid">
+        <article class="feature">
+          <div class="feature-icon">{{ icon('book-open') }}</div>
+          <h3>Reprendre où vous en étiez</h3>
+          <p>Votre progression est sauvegardée automatiquement à chaque leçon terminée.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-icon">{{ icon('shield') }}</div>
+          <h3>Connexion sécurisée</h3>
+          <p>Sessions chiffrées, protection anti-force brute et journalisation des accès.</p>
+        </article>
+      </div>
+    </aside>
+
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="brand-mark">
+          <svg viewBox="0 0 48 48" class="brand-logo" role="img" aria-label="Logo TIC MASTER">
+            <circle class="logo-ring" cx="24" cy="24" r="20.5"/>
+            <circle class="logo-orbit" cx="24" cy="24" r="20.5" stroke-dasharray="7 9"/>
+            <rect class="logo-chip" x="13.5" y="13.5" width="21" height="21" rx="6"/>
+            <path class="logo-node" d="M24 9v4.5M24 34.5V39M9 24h4.5M34.5 24H39"/>
+            <circle class="logo-pulse" cx="24" cy="24" r="3.4"/>
+          </svg>
+        </span>
+        <h1>Connexion</h1>
+        <p>Accédez à votre espace de formation TIC</p>
+        <a class="brand-by auth-by" href="{{ url_for('public.about') }}#super-admin">#by_Myazirzk</a>
+      </div>
+
+      {% if error %}
+      <div class="auth-error" role="alert">
+        {{ icon('alert') }}
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      {% if notice %}
+      <div class="flash flash-success" style="margin-bottom:1rem">
+        {{ icon('check-circle') }}<span>{{ notice }}</span>
+      </div>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('auth.login') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if request.args.get('next') %}<input type="hidden" name="next" value="{{ request.args.get('next') }}">{% endif %}
+
+        <div class="field">
+          <label for="identifier">Identifiant ou nom d'utilisateur</label>
+          <input type="text" id="identifier" name="identifier" value="{{ identifier or '' }}"
+                 autocomplete="username" autocapitalize="none" spellcheck="false"
+                 placeholder="Ex. apprenant" required autofocus>
+        </div>
+
+        <div class="field">
+          <label for="password">Mot de passe</label>
+          <div class="input-group">
+            <input type="password" id="password" name="password" autocomplete="current-password"
+                   placeholder="••••••••" required>
+            <button type="button" class="pw-toggle" data-pw-toggle aria-label="Afficher le mot de passe">
+              <span class="pw-off">{{ icon('eye') }}</span>
+              <span class="pw-on" hidden>{{ icon('eye-off') }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="row-between" style="margin:.2rem 0 .9rem">
+          <a class="text-xs" href="{{ url_for('auth.forgot_password') }}">Mot de passe oublié ?</a>
+          <span class="text-xs text-muted">{{ icon('lock') }} Connexion sécurisée</span>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" type="submit" data-loading="Connexion…">
+          Se connecter {{ icon('arrow-right') }}
+        </button>
+      </form>
+
+      <p class="auth-note">
+        {{ icon('info') }} Vous n'avez pas de compte ?<br>
+        Les comptes sont créés <strong>exclusivement par l'administration</strong>.<br>
+        Aucune inscription publique n'est disponible.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

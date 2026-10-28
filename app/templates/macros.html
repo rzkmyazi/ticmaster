@@ -1,0 +1,177 @@
+{# ==========================================================================
+   TIC MASTER — macros réutilisables
+   ========================================================================== #}
+
+{% macro icon(name, size=20, cls='') -%}
+<svg class="ic {{ cls }}" width="{{ size }}" height="{{ size }}" aria-hidden="true" focusable="false"><use href="#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{% macro logo(size=40, animated=true) -%}
+<span class="brand-mark{% if animated %} brand-mark--animated{% endif %}" style="--logo-size:{{ size }}px">
+  <svg viewBox="0 0 64 64" width="{{ size }}" height="{{ size }}" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="lg-{{ size }}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#38bdf8"/><stop offset="55%" stop-color="#2563eb"/><stop offset="100%" stop-color="#22d3ee"/>
+      </linearGradient>
+    </defs>
+    <path d="M32 3 55.5 16.5v31L32 61 8.5 47.5v-31z" fill="url(#lg-{{ size }})" opacity=".16"/>
+    <path d="M32 3 55.5 16.5v31L32 61 8.5 47.5v-31z" fill="none" stroke="url(#lg-{{ size }})" stroke-width="2.4" stroke-linejoin="round"/>
+    <circle cx="32" cy="32" r="6.4" fill="url(#lg-{{ size }})"/>
+    <g stroke="url(#lg-{{ size }})" stroke-width="2.2" stroke-linecap="round">
+      <path d="M32 25.6V15M32 38.4V49M25.6 32H15M38.4 32H49"/>
+      <path d="M27 27l-7-7M37 37l7 7M37 27l7-7M27 37l-7 7" opacity=".7"/>
+    </g>
+    <circle cx="32" cy="14" r="3.1" fill="#22d3ee"><animate attributeName="r" values="2.6;3.6;2.6" dur="2.4s" repeatCount="indefinite"/></circle>
+    <circle cx="50" cy="32" r="2.7" fill="#38bdf8"/>
+    <circle cx="32" cy="50" r="2.7" fill="#38bdf8"/>
+    <circle cx="14" cy="32" r="3.1" fill="#22d3ee"><animate attributeName="opacity" values=".5;1;.5" dur="3s" repeatCount="indefinite"/></circle>
+  </svg>
+  <span class="brand-ripple"></span>
+</span>
+{%- endmacro %}
+
+{% macro brand_link(url, size=40, show_by=true) -%}
+<div class="brand">
+  {{ logo(size) }}
+  <div class="brand-text">
+    <a class="brand-name" href="{{ url }}">TIC<span>MASTER</span></a>
+    {% if show_by %}<a class="brand-by" href="{{ url_for('public.about') }}">#by_Myazirzk</a>{% endif %}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro avatar(person, size='md', online=None) -%}
+{%- set live = online if online is not none else (person.is_online() if person.is_online is defined and person.is_online is not boolean else person.is_online) -%}
+{%- set label = person.full_name or person.username or '?' -%}
+{%- set bits = label.replace('-', ' ').replace('_', ' ').split() -%}
+{%- set initials = (bits[0][:1] ~ (bits[-1][:1] if bits|length > 1 else bits[0][1:2]))|upper -%}
+<span class="avatar avatar--{{ size|replace('xl','xl') }} avatar--{{ 'admin' if person.is_admin else 'user' }}" title="{{ label }}">
+  <span class="avatar-initials">{{ initials }}</span>
+  {% if live %}<span class="avatar-dot avatar-dot--online"></span>{% endif %}
+</span>
+{%- endmacro %}
+
+{% macro role_badge(role) -%}
+{% set labels = {'super_admin': 'Super administrateur', 'admin': 'Administrateur', 'user': 'Utilisateur'} %}
+<span class="badge badge--role-{{ role }}">{{ icon('shield' if role != 'user' else 'user', 13) }}{{ labels.get(role, role) }}</span>
+{%- endmacro %}
+
+{% macro status_badge(status) -%}
+{% set labels = {'active': 'Actif', 'suspended': 'Suspendu', 'disabled': 'Désactivé'} %}
+<span class="badge badge--{{ status }}"><i class="dot"></i>{{ labels.get(status, status) }}</span>
+{%- endmacro %}
+
+{% macro progress(percent, label='') -%}
+<div class="progress-wrap" title="{{ label or (percent|round|int ~ ' %') }}">
+  <div class="progress"><span style="width:{{ [percent|float, 100]|min }}%"></span></div>
+  {% if label %}<span class="progress-label">{{ label }}</span>{% else %}<span class="progress-label">{{ percent|round|int }} %</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro stat(value, label, icon_name='chart', hint='', tone='') -%}
+<div class="statcard{{ ' statcard--' ~ tone if tone else '' }}">
+  <span class="statcard-icon">{{ icon(icon_name, 20) }}</span>
+  <div>
+    <div class="statcard-value">{{ value }}</div>
+    <div class="statcard-label">{{ label }}</div>
+    {% if hint %}<div class="statcard-hint">{{ hint }}</div>{% endif %}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro empty(title, text='', icon_name='info', action_url='', action_label='') -%}
+<div class="empty">
+  <span class="empty-icon">{{ icon(icon_name, 28) }}</span>
+  <h3>{{ title }}</h3>
+  {% if text %}<p>{{ text }}</p>{% endif %}
+  {% if action_url %}<a class="btn btn--primary btn--sm" href="{{ action_url }}">{{ action_label or 'Continuer' }}</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro field(name, label, value='', type='text', placeholder='', required=false, hint='', icon_name='') -%}
+<label class="field">
+  <span class="field-label">{{ label }}{% if required %} <em>*</em>{% endif %}</span>
+  <span class="input-shell">
+    {% if icon_name %}<span class="input-icon">{{ icon(icon_name, 18) }}</span>{% endif %}
+    <input id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}" placeholder="{{ placeholder }}" {% if required %}required{% endif %}>
+  </span>
+  {% if hint %}<span class="field-hint">{{ hint }}</span>{% endif %}
+</label>
+{%- endmacro %}
+
+{% macro page_head(title, subtitle='', icon_name='') -%}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">{% if icon_name %}{{ icon(icon_name, 26) }}{% endif %} {{ title }}</h1>
+    {% if subtitle %}<p class="page-sub">{{ subtitle }}</p>{% endif %}
+  </div>
+  {% if caller is defined %}<div class="page-actions">{{ caller() }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro pagination(page, pages, endpoint, args={}) -%}
+{% if pages and pages > 1 %}
+{% set extra = args or {} %}
+{% set prev_args = {} %}
+{% set _ = prev_args.update(extra) %}
+{% set _ = prev_args.update({'page': page - 1}) %}
+{% set next_args = {} %}
+{% set _ = next_args.update(extra) %}
+{% set _ = next_args.update({'page': page + 1}) %}
+<nav class="pager" aria-label="Pagination">
+  <a class="pager-btn{{ ' is-disabled' if page <= 1 }}" href="{{ url_for(endpoint, **prev_args) if page > 1 else '#' }}" {% if page <= 1 %}aria-disabled="true" tabindex="-1"{% endif %}>{{ icon('arrow-left', 16) }}<span>Précédent</span></a>
+  <span class="pager-info">Page {{ page }} / {{ pages }}</span>
+  <a class="pager-btn{{ ' is-disabled' if page >= pages }}" href="{{ url_for(endpoint, **next_args) if page < pages else '#' }}" {% if page >= pages %}aria-disabled="true" tabindex="-1"{% endif %}><span>Suivant</span>{{ icon('arrow-right', 16) }}</a>
+</nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro alert(kind, message, icon_name='info') -%}
+<div class="alert alert-{{ kind }}" role="alert">{{ icon(icon_name, 18) }}<div>{{ message }}</div></div>
+{%- endmacro %}
+
+{% macro dismissible_alert(kind, message, icon_name='info') -%}
+<div class="alert alert-{{ kind }}" role="alert">{{ icon(icon_name, 18) }}<div>{{ message }}</div><button type="button" class="alert-close" data-dismiss aria-label="Fermer">{{ icon('x', 16) }}</button></div>
+{%- endmacro %}
+
+{% macro confirm_form(action, label, question, kind='danger', icon_name='trash', csrf='', extra_class='', size='sm') -%}
+<form method="post" action="{{ action }}" class="inline-form" data-confirm="{{ question }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf or csrf_token() }}">
+  <button type="submit" class="btn btn--{{ kind }} btn--{{ size }}">{{ icon(icon_name, 15) }}<span>{{ label }}</span></button>
+</form>
+{%- endmacro %}
+
+{% macro attempt_badge(status) -%}
+{% set labels = {'in_progress': 'En cours', 'submitted': 'Terminé', 'eliminated': 'Éliminé', 'expired': 'Expiré'} %}
+<span class="badge badge--attempt-{{ status }}">{{ labels.get(status, status) }}</span>
+{%- endmacro %}
+
+{% macro score_ring(percent, label='') -%}
+{% set p = [[percent|float, 0]|max, 100]|min %}
+<span class="ring{% if p >= 80 %} ring--good{% elif p >= 50 %} ring--mid{% else %} ring--low{% endif %}" style="--p:{{ p }}" title="{{ label or p|round|int ~ ' %' }}">
+  <span class="ring-text">{{ p|round|int }}<small>%</small></span>
+</span>
+{%- endmacro %}
+
+{% macro toggle_theme() -%}
+<button type="button" class="icon-btn theme-btn" data-theme-toggle aria-label="Changer de thème" title="Changer de thème">
+  <span class="theme-btn-icon">{{ icon('moon', 18) }}</span>
+</button>
+{%- endmacro %}
+
+
+{# -------------------------------------------------------------------------
+   Alias / macros complémentaires utilisés par les gabarits
+   ------------------------------------------------------------------------- #}
+
+{% macro progress_bar(percent, label='') -%}
+{{ progress(percent, label) }}
+{%- endmacro %}
+
+{% macro badge(text, kind='neutral', icon_name='') -%}
+<span class="badge badge-{{ kind }}">{% if icon_name %}{{ icon(icon_name, 13) }}{% endif %}{{ text }}</span>
+{%- endmacro %}
+
+{% macro page_nav(pag, endpoint, args={}) -%}
+{{ pagination(pag.page, pag.pages, endpoint, args) }}
+{%- endmacro %}

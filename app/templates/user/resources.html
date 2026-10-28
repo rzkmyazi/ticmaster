@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+
+{% block title %}Ressources{% endblock %}
+{% block page_title %}Ressources téléchargeables{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Documents, supports et fiches pratiques</p>{% endblock %}
+
+{% block content %}
+{% set has_resources = modules|selectattr('resources')|list %}
+{% if has_resources %}
+<div class="stack">
+  {% for module in modules if module.resources %}
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">{{ icon(module.icon or 'book-open') }} {{ module.title }}</h2>
+      <a class="text-sm" href="{{ url_for('learning.module_detail', slug=module.slug) }}">Voir le module →</a>
+    </div>
+    <div class="card-body">
+      <div class="grid grid-2">
+        {% for resource in module.resources %}
+        <a class="lesson-item" href="{{ url_for('learning.download', filename=resource.filename) }}">
+          <span class="lesson-num">{{ icon('file') }}</span>
+          <span class="lesson-item-txt">
+            <strong>{{ resource.title }}</strong>
+            <small>{{ human_size(resource.size) }} · {{ fmt_date(resource.created_at) }}</small>
+          </span>
+          {{ icon('download') }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="card-body">
+  <div class="empty">
+    <div class="empty-icon">{{ icon('file') }}</div>
+    <h3>Aucune ressource disponible</h3>
+    <p>Les supports de cours téléchargeables seront publiés par l'administration.</p>
+    <a class="btn btn-outline mt-2" href="{{ url_for('learning.catalog') }}">Parcourir les cours</a>
+  </div>
+</div></div>
+{% endif %}
+{% endblock %}

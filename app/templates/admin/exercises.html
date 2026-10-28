@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+
+{% block title %}Exercices & examens{% endblock %}
+{% block page_title %}Exercices & examens{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ exercises|length }} évaluation(s)</p>{% endblock %}
+
+{% block content %}
+<div class="tabs">
+  <a class="tab {{ 'is-active' if not kind }}" href="{{ url_for('admin.exercises') }}">Tout</a>
+  <a class="tab {{ 'is-active' if kind == 'exercise' }}" href="{{ url_for('admin.exercises', kind='exercise') }}">Exercices</a>
+  <a class="tab {{ 'is-active' if kind == 'exam' }}" href="{{ url_for('admin.exercises', kind='exam') }}">Examens trimestriels</a>
+</div>
+
+<div class="grid" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);align-items:start">
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('clipboard') }} Évaluations</h2></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Titre</th><th>Type</th><th>Questions</th><th>Statut</th><th></th></tr></thead>
+        <tbody>
+          {% for exercise in exercises %}
+          <tr>
+            <td>
+              <strong>{{ exercise.title }}</strong>
+              <div class="text-xs text-muted">{{ exercise.module.title if exercise.module else 'Sans module' }}{% if exercise.term %} · {{ exercise.term }}{% endif %}</div>
+            </td>
+            <td>{% if exercise.kind == 'exam' %}<span class="badge badge-brand">Examen</span>{% else %}<span class="badge badge-info">Exercice</span>{% endif %}</td>
+            <td class="text-sm">{{ exercise.questions|length }}</td>
+            <td>{% if exercise.published %}<span class="badge badge-success">Publié</span>{% else %}<span class="badge badge-warning">Brouillon</span>{% endif %}</td>
+            <td class="row-actions">
+              <a class="btn btn-sm btn-ghost" href="{{ url_for('admin.exercise_edit', exercise_id=exercise.id) }}" aria-label="Modifier">{{ icon('edit') }}</a>
+              <form method="post" action="{{ url_for('admin.exercise_delete', exercise_id=exercise.id) }}" data-confirm="Supprimer cette évaluation et toutes ses questions ?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-ghost" type="submit" aria-label="Supprimer">{{ icon('trash') }}</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5"><div class="empty"><div class="empty-icon">{{ icon('clipboard') }}</div><h3>Aucune évaluation</h3></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('plus') }} Nouvelle évaluation</h2></div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('admin.exercise_new') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="title">Titre <span class="req">*</span></label>
+          <input id="title" type="text" name="title" required maxlength="190" placeholder="Ex. Évaluation — Internet et Web">
+        </div>
+        <div class="field">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" rows="2"></textarea>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="kind">Type</label>
+            <select id="kind" name="kind">
+              <option value="exercise">Exercice d'entraînement</option>
+              <option value="exam">Examen trimestriel</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="term">Trimestre</label>
+            <select id="term" name="term">
+              <option value="">—</option>
+              <option value="T1">T1</option>
+              <option value="T2">T2</option>
+              <option value="T3">T3</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="duration_minutes">Durée (min)</label>
+            <input id="duration_minutes" type="number" name="duration_minutes" min="5" max="240" value="20">
+          </div>
+          <div class="field">
+            <label for="pass_score">Seuil de réussite (%)</label>
+            <input id="pass_score" type="number" name="pass_score" min="10" max="100" value="50">
+          </div>
+        </div>
+        <div class="field">
+          <label for="module_id">Module associé</label>
+          <select id="module_id" name="module_id">
+            <option value="">Aucun</option>
+            {% for module in modules %}
+            <option value="{{ module.id }}">{{ module.title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">{{ icon('plus') }} Créer l'évaluation</button>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}

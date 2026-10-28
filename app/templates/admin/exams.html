@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+
+{% block title %}Surveillance des examens{% endblock %}
+{% block page_title %}Examen Trimestrielle — surveillance{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Éliminations, tentatives et réaffectations</p>{% endblock %}
+
+{% block content %}
+<div class="stats-grid mb-2">
+  <div class="stat"><span class="stat-label">Tentatives</span><div class="stat-value">{{ stats.total }}</div>{{ icon('clipboard', 'stat-icon') }}</div>
+  <div class="stat"><span class="stat-label">En cours</span><div class="stat-value">{{ stats.in_progress }}</div>{{ icon('clock', 'stat-icon') }}</div>
+  <div class="stat"><span class="stat-label">Éliminés</span><div class="stat-value">{{ stats.eliminated }}</div>{{ icon('ban', 'stat-icon') }}</div>
+</div>
+
+<div class="tabs">
+  <a class="tab {{ 'is-active' if not status }}" href="{{ url_for('admin.exams') }}">Toutes</a>
+  <a class="tab {{ 'is-active' if status == 'in_progress' }}" href="{{ url_for('admin.exams', status='in_progress') }}">En cours</a>
+  <a class="tab {{ 'is-active' if status == 'submitted' }}" href="{{ url_for('admin.exams', status='submitted') }}">Corrigées</a>
+  <a class="tab {{ 'is-active' if status == 'eliminated' }}" href="{{ url_for('admin.exams', status='eliminated') }}">Éliminées</a>
+</div>
+
+<section class="card">
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Apprenant</th><th>Examen</th><th>Statut</th><th>Score</th><th>Écarts</th><th>Démarré</th><th></th></tr></thead>
+      <tbody>
+        {% for attempt in attempts %}
+        <tr>
+          <td>
+            <div class="cell-user">
+              {{ avatar(attempt.user, 'sm', attempt.user.is_online()) }}
+              <div><strong>{{ attempt.user.full_name or attempt.user.username }}</strong><small>@{{ attempt.user.username }}</small></div>
+            </div>
+          </td>
+          <td class="text-sm">{{ attempt.exercise.title }}</td>
+          <td>
+            {% if attempt.status == 'eliminated' %}<span class="badge badge-danger">Éliminé</span>
+            {% elif attempt.status == 'submitted' %}<span class="badge badge-success">Corrigé</span>
+            {% else %}<span class="badge badge-warning">En cours</span>{% endif %}
+          </td>
+          <td>{{ attempt.percentage }}%</td>
+          <td>
+            {{ attempt.tab_violations or 0 }}
+            {% if attempt.elimination_reason %}<div class="text-xs text-muted">{{ attempt.elimination_reason|truncate(46) }}</div>{% endif %}
+          </td>
+          <td class="text-xs text-muted">{{ fmt_dt(attempt.started_at) }}</td>
+          <td class="row-actions">
+            {% if current_user.is_super_admin and attempt.status == 'eliminated' %}
+            <form method="post" action="{{ url_for('admin.exam_reassign', attempt_id=attempt.id) }}"
+                  data-confirm="Réaffecter cet examen à {{ attempt.user.username }} ? Le chronomètre repart à zéro et les réponses sont effacées.">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-primary" type="submit">{{ icon('refresh') }} Réaffecter</button>
+            </form>
+            {% endif %}
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('learning.result_detail', attempt_id=attempt.id) if attempt.status == 'submitted' else url_for('exam.exam_result', attempt_id=attempt.id) }}">Détail</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7"><div class="empty"><div class="empty-icon">{{ icon('shield') }}</div><h3>Aucune tentative</h3><p>Les examens passés apparaîtront ici.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="alert alert-info mt-2">
+  {{ icon('info') }}
+  <span>La sanction est individuelle : réaffecter une épreuve ne modifie que la tentative de l'apprenant concerné.
+  Chaque réaffectation est enregistrée dans le journal d'audit.</span>
+</div>
+{% endblock %}

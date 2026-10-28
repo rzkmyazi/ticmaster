@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Examen annulé{% endblock %}
+{% block page_title %}Examen annulé{% endblock %}
+{% block page_subtitle %}Tentative de fraude enregistrée{% endblock %}
+
+{% block content %}
+<section class="card fade-up" style="max-width:760px;margin:0 auto;text-align:center">
+  <div class="stat-icon tone-red" style="margin:0 auto 1rem;width:70px;height:70px">{{ icon('ban') }}</div>
+  <h1 style="color:var(--red)">Votre tentative a été annulée</h1>
+  <p class="muted">Épreuve : <strong>{{ attempt.exercise.title }}</strong></p>
+  <div class="alert alert-danger" style="text-align:left">
+    {{ icon('alert-triangle') }}
+    <div>
+      <strong>Motif enregistré :</strong> {{ attempt.elimination_reason or "Sortie de l'onglet Examen" }}<br>
+      <strong>Horodatage :</strong> {{ fmt_dt(attempt.submitted_at) }}<br>
+      <strong>Violations comptabilisées :</strong> {{ attempt.tab_violations }}
+    </div>
+  </div>
+  <p class="small muted">
+    Cette élimination ne concerne que votre tentative : les autres étudiants poursuivent normalement leur examen.
+    Si cette sortie n'était pas intentionnelle (coupure électrique, problème technique), contactez le
+    <strong>super administrateur</strong>, seul habilité à réaffecter l'épreuve.
+  </p>
+  <div class="row" style="justify-content:center;margin-top:1rem">
+    <a class="btn btn-primary" href="{{ url_for('social.messages') }}">{{ icon('message') }} Contacter l'administration</a>
+    <a class="btn btn-ghost" href="{{ url_for('exam.index') }}">{{ icon('arrow-left') }} Examens</a>
+  </div>
+  <div class="row" style="justify-content:center;margin-top:1.2rem">
+    <span class="chip">{{ badge('Statut', 'danger') }} Éliminé</span>
+    <span class="chip">{{ attempt.exercise.term or '—' }}</span>
+  </div>
+</section>
+{% endblock %}

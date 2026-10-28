@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+
+{% block title %}Messages{% endblock %}
+{% block page_title %}Message{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Salon général et conversations privées</p>{% endblock %}
+
+{% block content %}
+<div class="chat-layout" id="chat"
+     data-room="{{ room }}"
+     data-title="{{ title }}"
+     data-api="{{ url_for('social.api_messages') }}"
+     data-send="{{ url_for('social.api_send_message') }}"
+     data-dm-base="{{ url_for('social.messages') }}">
+
+  <aside class="chat-side">
+    <div class="chat-side-head">{{ icon('message') }} Conversations</div>
+    <div class="chat-rooms" style="overflow-y:auto">
+      <a class="chat-room {{ 'is-active' if room == 'general' }}" href="{{ url_for('social.messages', room='general') }}">
+        <span class="avatar" style="--hue:205"><span class="avatar-initials">{{ icon('globe') }}</span></span>
+        <span class="chat-room-txt"><strong>Salon général</strong><small>Tous les membres</small></span>
+      </a>
+
+      {% if conversations %}
+      <div class="nav-section" style="margin:.6rem .5rem .2rem">Messages privés</div>
+      {% for item in conversations %}
+      <a class="chat-room {{ 'is-active' if room == 'dm:' ~ ([current_user.id, item.user.id]|sort|join(':')) }}"
+         href="{{ url_for('social.messages', room='dm:' ~ ([current_user.id, item.user.id]|sort|join(':'))) }}">
+        {{ avatar(item.user, 'sm', true) }}
+        <span class="chat-room-txt">
+          <strong>{{ item.user.full_name or item.user.username }}</strong>
+          <small>{{ item.last.body|truncate(28) }}</small>
+        </span>
+      </a>
+      {% endfor %}
+      {% endif %}
+
+      <div class="nav-section" style="margin:.8rem .5rem .2rem">Membres</div>
+      {% for contact in contacts %}
+      <a class="chat-room" href="{{ url_for('social.messages', room='dm:' ~ ([current_user.id, contact.id]|sort|join(':'))) }}">
+        {{ avatar(contact, 'sm', contact.is_online()) }}
+        <span class="chat-room-txt">
+          <strong>{{ contact.full_name or contact.username }}</strong>
+          <small>{{ role_labels.get(contact.role) }}</small>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+  </aside>
+
+  <section class="chat-main">
+    <div class="chat-head">
+      <div>
+        <strong>{{ title }}</strong>
+        <div class="text-xs text-muted">
+          {% if room == 'general' %}Visible par tous les membres — supervisé par le super administrateur
+          {% else %}Conversation privée — supervisée par le super administrateur{% endif %}
+        </div>
+      </div>
+      <span class="spacer"></span>
+      <span class="badge badge-pink">{{ icon('shield') }} Supervisé</span>
+    </div>
+
+    <div class="chat-body" id="chat-body" aria-live="polite">
+      <div class="chat-empty">Chargement des messages…</div>
+    </div>
+
+    <form class="chat-form" id="chat-form">
+      <label class="sr-only" for="chat-input">Votre message</label>
+      <input type="text" id="chat-input" name="body" placeholder="Écrire un message…" autocomplete="off" maxlength="2000">
+      <button class="btn btn-primary" type="submit" aria-label="Envoyer">{{ icon('send') }}</button>
+    </form>
+  </section>
+</div>
+
+<p class="text-xs text-muted mt-2">
+  {{ icon('info') }} Restez courtois. Tous les messages peuvent être consultés par le super administrateur.
+</p>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base_exam.html" %}
+
+
+{% block title %}Résultat — {{ exercise.title }}{% endblock %}
+
+{% block content %}
+<div class="exam-shell">
+  <div class="row mb-2">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('exam.index') if attempt.user_id == current_user.id else url_for('admin.exams') }}">
+      {{ icon('arrow-left') }} Retour
+    </a>
+    <span class="spacer"></span>
+    <a class="author-link text-xs" href="{{ url_for('public.about') }}#super-admin">#by_Myazirzk</a>
+  </div>
+
+  {% if attempt.status == 'eliminated' %}
+  <section class="card exam-eliminated">
+    <div class="card-body">
+      <div class="result-hero">
+        <div class="empty-icon" style="width:72px;height:72px;background:rgba(248,113,113,.15);color:#fca5a5">{{ icon('ban') }}</div>
+        <div style="flex:1;min-width:240px">
+          <span class="exam-badge"><span class="dot dot-red"></span> Éliminé</span>
+          <h1 class="section-title mt-1">Examen éliminé pour fraude</h1>
+          <p class="mt-1">Motif enregistré : <strong>{{ attempt.elimination_reason or "Sortie de l'onglet Examen" }}</strong></p>
+          <p class="text-sm text-muted mt-1">
+            {{ exercise.title }} · {{ fmt_dt(attempt.submitted_at) }} · {{ attempt.tab_violations }} écart(s) détecté(s)
+          </p>
+        </div>
+      </div>
+
+      <div class="alert alert-danger mt-2">
+        {{ icon('info') }}
+        <span>
+          Cette sanction est <strong>strictement individuelle</strong> : elle ne concerne que votre tentative.
+          Seul le <strong>super administrateur</strong> peut réaffecter cet examen. Contactez l'administration si vous
+          estimez qu'il s'agit d'une erreur technique.
+        </span>
+      </div>
+
+      <div class="row mt-2">
+        <a class="btn btn-outline" href="{{ url_for('user.dashboard') }}">{{ icon('home') }} Mon espace</a>
+        <a class="btn btn-ghost" href="{{ url_for('user.announcements') }}">{{ icon('bell') }} Annonces</a>
+      </div>
+    </div>
+  </section>
+
+  {% else %}
+  <section class="card mb-2">
+    <div class="card-body">
+      <div class="result-hero">
+        <div class="score-ring" style="--pct: {{ attempt.percentage }}"><span>{{ attempt.percentage }}%</span></div>
+        <div style="flex:1;min-width:240px">
+          <span class="eyebrow">{{ icon('award') }} {{ exercise.term or 'Examen' }}</span>
+          <h1 class="section-title mt-1">{{ exercise.title }}</h1>
+          <p class="text-sm text-muted mt-1">{{ attempt.score }} / {{ attempt.max_score }} points · {{ fmt_dt(attempt.submitted_at) }}</p>
+          <div class="row mt-2">
+            {% if attempt.passed %}
+            <span class="badge badge-success">{{ icon('check-circle') }} Examen réussi</span>
+            {% else %}
+            <span class="badge badge-warning">{{ icon('alert') }} Seuil de {{ exercise.pass_score }}% non atteint</span>
+            {% endif %}
+            <span class="badge badge-neutral">{{ attempt.tab_violations or 0 }} écart(s)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="stack">
+    {% for question in exercise.questions %}
+    {% set answer = answers.get(question.id) %}
+    <section class="card">
+      <div class="card-body">
+        <div class="question-head">
+          <span class="q-index">{{ loop.index }}</span>
+          <div class="question-text">{{ question.text }}</div>
+          <span class="spacer"></span>
+          {% if answer and answer.is_correct %}<span class="badge badge-success">+{{ answer.points_awarded }}</span>
+          {% else %}<span class="badge badge-danger">0</span>{% endif %}
+        </div>
+        <div class="options">
+          {% for option in question.options %}
+          <div class="option {{ 'is-correct' if option.is_correct }} {{ 'is-wrong' if (answer and answer.option_id == option.id and not option.is_correct) }}">
+            <span class="option-letter">{{ ['A','B','C','D','E','F'][loop.index0] }}</span>
+            <span>{{ option.text }}</span>
+            {% if option.is_correct %}<span class="spacer"></span>{{ icon('check') }}{% endif %}
+            {% if answer and answer.option_id == option.id %}<span class="badge badge-neutral">Votre réponse</span>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% if question.explanation %}<p class="correction">{{ icon('sparkles') }} {{ question.explanation }}</p>{% endif %}
+      </div>
+    </section>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

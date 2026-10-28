@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+
+{% block title %}{{ lesson.title }}{% endblock %}
+{% block page_title %}{{ lesson.title }}{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ lesson.module.title }}</p>{% endblock %}
+
+{% block content %}
+<div class="row mb-2">
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.module_edit', module_id=lesson.module_id) }}">{{ icon('arrow-left') }} Retour au module</a>
+</div>
+
+{% if error %}<div class="auth-error mb-2">{{ icon('alert') }}<span>{{ error }}</span></div>{% endif %}
+
+<div class="grid" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);align-items:start">
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('edit') }} Contenu de la leçon</h2></div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="title">Titre <span class="req">*</span></label>
+          <input id="title" type="text" name="title" value="{{ lesson.title }}" required maxlength="190">
+        </div>
+        <div class="field">
+          <label for="content">Contenu pédagogique</label>
+          <textarea id="content" name="content" rows="18" style="font-family:var(--font-mono);font-size:.85rem">{{ lesson.content }}</textarea>
+          <span class="hint">
+            Mise en forme : <code>## Titre</code>, <code>**gras**</code>, <code>*italique*</code>,
+            <code>- liste</code>, <code>&gt; citation</code>, <code>`code`</code>, <code>[lien](https://…)</code>.
+            Le contenu est automatiquement échappé (protection XSS).
+          </span>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="estimated_minutes">Durée (min)</label>
+            <input id="estimated_minutes" type="number" name="estimated_minutes" min="1" max="300" value="{{ lesson.estimated_minutes }}">
+          </div>
+          <div class="field">
+            <label for="order_index">Ordre</label>
+            <input id="order_index" type="number" name="order_index" min="1" max="99" value="{{ lesson.order_index }}">
+          </div>
+          <div class="field">
+            <label for="video_url">Vidéo (URL)</label>
+            <input id="video_url" type="url" name="video_url" value="{{ lesson.video_url }}" placeholder="https://…">
+          </div>
+          <div class="field">
+            <label for="document_url">Document (URL)</label>
+            <input id="document_url" type="url" name="document_url" value="{{ lesson.document_url }}" placeholder="https://…">
+          </div>
+          <div class="field full">
+            <label for="image">Image d'illustration</label>
+            <input id="image" type="file" name="image" accept="image/*">
+            {% if lesson.image_url %}<span class="hint">Image actuelle : {{ lesson.image_url }}</span>{% endif %}
+          </div>
+        </div>
+        <label class="checkbox mb-2">
+          <input type="checkbox" name="published" value="1" {{ 'checked' if lesson.published }}>
+          <span>Leçon publiée (visible par les apprenants)</span>
+        </label>
+        <button class="btn btn-primary" type="submit">{{ icon('save') }} Enregistrer la leçon</button>
+      </form>
+    </div>
+  </section>
+
+  <aside class="stack">
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('eye') }} Aperçu</h2></div>
+      <div class="card-body">
+        <div class="lesson-body" style="font-size:.88rem">{{ render_content(lesson.content) }}</div>
+        {% if not lesson.content %}<p class="text-sm text-muted">Aucun contenu pour le moment.</p>{% endif %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('info') }} Informations</h2></div>
+      <div class="card-body text-sm">
+        <div class="row-between"><span class="text-muted">Module</span><strong>{{ lesson.module.title }}</strong></div>
+        <div class="row-between mt-1"><span class="text-muted">Créée le</span><strong>{{ fmt_date(lesson.created_at) }}</strong></div>
+        <div class="row-between mt-1"><span class="text-muted">Statut</span>
+          <strong>{{ 'Publiée' if lesson.published else 'Brouillon' }}</strong></div>
+        <a class="btn btn-outline btn-sm btn-block mt-2" href="{{ url_for('learning.lesson', slug=lesson.module.slug, lesson_id=lesson.id) }}">{{ icon('external') }} Voir côté apprenant</a>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

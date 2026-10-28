@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+
+{% block title %}Historique{% endblock %}
+{% block page_title %}Historique{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Toutes vos activités d'évaluation</p>{% endblock %}
+
+{% block content %}
+<div class="tabs">
+  <a class="tab {{ 'is-active' if not kind }}" href="{{ url_for('user.history') }}">Tout</a>
+  <a class="tab {{ 'is-active' if kind == 'exercise' }}" href="{{ url_for('user.history', type='exercise') }}">Exercices</a>
+  <a class="tab {{ 'is-active' if kind == 'exam' }}" href="{{ url_for('user.history', type='exam') }}">Examens</a>
+</div>
+
+<section class="card">
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Évaluation</th><th>Type</th><th>Démarrée</th><th>Statut</th><th>Score</th><th></th></tr></thead>
+      <tbody>
+        {% for attempt in attempts %}
+        <tr>
+          <td>{{ attempt.exercise.title }}</td>
+          <td>{% if attempt.exercise.kind == 'exam' %}<span class="badge badge-brand">Examen</span>{% else %}<span class="badge badge-info">Exercice</span>{% endif %}</td>
+          <td class="text-xs text-muted">{{ fmt_dt(attempt.started_at) }}</td>
+          <td>
+            {% if attempt.status == 'submitted' %}<span class="badge badge-success">Corrigé</span>
+            {% elif attempt.status == 'eliminated' %}<span class="badge badge-danger">Éliminé</span>
+            {% else %}<span class="badge badge-warning">En cours</span>{% endif %}
+          </td>
+          <td>{% if attempt.status == 'submitted' %}<strong>{{ attempt.percentage }}%</strong>{% else %}—{% endif %}</td>
+          <td class="row-actions">
+            {% if attempt.status == 'submitted' %}
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('learning.result_detail', attempt_id=attempt.id) }}">Détail</a>
+            {% elif attempt.status == 'eliminated' %}
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('exam.exam_result', attempt_id=attempt.id) }}">Détail</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">
+          <div class="empty">
+            <div class="empty-icon">{{ icon('clock') }}</div>
+            <h3>Aucune activité</h3>
+            <p>Vos exercices et examens passés s'afficheront ici.</p>
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

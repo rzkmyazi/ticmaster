@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+
+{% block title %}Demandes de mot de passe{% endblock %}
+{% block page_title %}Demandes de réinitialisation{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Validation manuelle par le super administrateur</p>{% endblock %}
+
+{% block content %}
+{% if reset_link %}
+<div class="card mb-2" style="border-color:rgba(52,211,153,.5)">
+  <div class="card-body">
+    <span class="badge badge-success mb-1">{{ icon('check-circle') }} Demande approuvée</span>
+    <h2 class="card-title mt-1">Lien de réinitialisation pour {{ reset_for }}</h2>
+    <p class="mono text-sm" style="word-break:break-all;margin:.6rem 0">{{ reset_link }}</p>
+    <div class="alert alert-warning">
+      {{ icon('alert') }}
+      <span>Lien valable 24 heures. Transmettez-le à l'utilisateur par un canal sûr. Il ne sera plus affiché ensuite.</span>
+    </div>
+    <button class="btn btn-outline btn-sm mt-2" type="button" data-copy="{{ reset_link }}">{{ icon('file') }} Copier le lien</button>
+  </div>
+</div>
+{% endif %}
+
+<section class="card">
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Utilisateur</th><th>Demandée le</th><th>Statut</th><th>Expire</th><th></th></tr></thead>
+      <tbody>
+        {% for item in requests %}
+        <tr>
+          <td>
+            <div class="cell-user">
+              {{ avatar(item.user, 'sm', item.user.is_online()) }}
+              <div><strong>{{ item.user.full_name or item.user.username }}</strong><small>@{{ item.user.username }} · {{ item.user.email or 'sans e-mail' }}</small></div>
+            </div>
+          </td>
+          <td class="text-xs text-muted">{{ fmt_dt(item.created_at) }}</td>
+          <td>
+            {% if item.status == 'pending' %}<span class="badge badge-warning">En attente</span>
+            {% elif item.status == 'approved' %}<span class="badge badge-info">Approuvée</span>
+            {% elif item.status == 'used' %}<span class="badge badge-success">Utilisée</span>
+            {% else %}<span class="badge badge-neutral">Rejetée</span>{% endif %}
+          </td>
+          <td class="text-xs text-muted">{{ fmt_dt(item.expires_at) if item.expires_at else '—' }}</td>
+          <td class="row-actions">
+            {% if item.status == 'pending' %}
+            <form method="post" action="{{ url_for('admin.reset_approve', request_id=item.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-primary" type="submit">{{ icon('check') }} Approuver</button>
+            </form>
+            <form method="post" action="{{ url_for('admin.reset_reject', request_id=item.id) }}" data-confirm="Rejeter cette demande ?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-ghost" type="submit">{{ icon('x') }} Rejeter</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5"><div class="empty"><div class="empty-icon">{{ icon('key') }}</div><h3>Aucune demande</h3><p>Les demandes « mot de passe oublié » des utilisateurs apparaîtront ici.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="alert alert-info mt-2">
+  {{ icon('info') }}
+  <span>Alternative immédiate : depuis la fiche d'un utilisateur, « Réinitialiser le mot de passe » génère un mot de passe temporaire et révoque ses sessions.</span>
+</div>
+{% endblock %}

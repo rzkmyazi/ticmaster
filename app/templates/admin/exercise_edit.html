@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+
+{% block title %}{{ exercise.title }}{% endblock %}
+{% block page_title %}{{ exercise.title }}{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ 'Examen trimestriel' if exercise.kind == 'exam' else 'Exercice' }} · {{ exercise.questions|length }} question(s)</p>{% endblock %}
+
+{% block content %}
+<div class="row-between mb-2">
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.exercises') }}">{{ icon('arrow-left') }} Évaluations</a>
+  <span class="badge {{ 'badge-brand' if exercise.kind == 'exam' else 'badge-info' }}">
+    {{ 'Surveillé — sortie d’onglet = élimination' if exercise.kind == 'exam' else 'Entraînement libre' }}
+  </span>
+</div>
+
+{% if error %}<div class="auth-error mb-2">{{ icon('alert') }}<span>{{ error }}</span></div>{% endif %}
+
+<div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);align-items:start">
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('settings') }} Paramètres</h2></div>
+    <div class="card-body">
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="title">Titre <span class="req">*</span></label>
+          <input id="title" type="text" name="title" value="{{ exercise.title }}" required maxlength="190">
+        </div>
+        <div class="field">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" rows="3">{{ exercise.description }}</textarea>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="kind">Type</label>
+            <select id="kind" name="kind">
+              <option value="exercise" {{ 'selected' if exercise.kind == 'exercise' }}>Exercice</option>
+              <option value="exam" {{ 'selected' if exercise.kind == 'exam' }}>Examen trimestriel</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="module_id">Module</label>
+            <select id="module_id" name="module_id">
+              <option value="">Aucun</option>
+              {% for module in modules %}
+              <option value="{{ module.id }}" {{ 'selected' if exercise.module_id == module.id }}>{{ module.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="duration_minutes">Durée (min)</label>
+            <input id="duration_minutes" type="number" name="duration_minutes" min="5" max="240" value="{{ exercise.duration_minutes }}">
+          </div>
+          <div class="field">
+            <label for="pass_score">Seuil (%)</label>
+            <input id="pass_score" type="number" name="pass_score" min="10" max="100" value="{{ exercise.pass_score }}">
+          </div>
+        </div>
+        <label class="checkbox mb-2">
+          <input type="checkbox" name="published" value="1" {{ 'checked' if exercise.published }}>
+          <span>Publier cette évaluation</span>
+        </label>
+        <button class="btn btn-primary btn-block" type="submit">{{ icon('save') }} Enregistrer</button>
+      </form>
+    </div>
+  </section>
+
+  <div class="stack">
+    {% for question in exercise.questions %}
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{{ icon('clipboard') }} Question {{ loop.index }}</h2>
+        <form method="post" action="{{ url_for('admin.question_delete', question_id=question.id) }}" data-confirm="Supprimer cette question ?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-ghost" type="submit" aria-label="Supprimer">{{ icon('trash') }}</button>
+        </form>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('admin.question_edit', question_id=question.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="field">
+            <label for="text-{{ question.id }}">Énoncé</label>
+            <textarea id="text-{{ question.id }}" name="text" rows="2" required>{{ question.text }}</textarea>
+          </div>
+          <div class="form-grid">
+            {% for option in question.options %}
+            <div class="field">
+              <label for="opt-{{ option.id }}">Proposition {{ loop.index }}</label>
+              <input id="opt-{{ option.id }}" type="text" name="option_{{ loop.index }}" value="{{ option.text }}" maxlength="400">
+            </div>
+            {% endfor %}
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label for="correct-{{ question.id }}">Bonne réponse</label>
+              <select id="correct-{{ question.id }}" name="correct">
+                {% for option in question.options %}
+                <option value="{{ loop.index }}" {{ 'selected' if option.is_correct }}>Proposition {{ loop.index }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field">
+              <label for="points-{{ question.id }}">Points</label>
+              <input id="points-{{ question.id }}" type="number" name="points" min="1" max="10" value="{{ question.points }}">
+            </div>
+          </div>
+          <div class="field">
+            <label for="expl-{{ question.id }}">Explication (affichée après correction)</label>
+            <input id="expl-{{ question.id }}" type="text" name="explanation" value="{{ question.explanation }}">
+          </div>
+          <button class="btn btn-outline btn-sm" type="submit">{{ icon('save') }} Mettre à jour</button>
+        </form>
+      </div>
+    </section>
+    {% else %}
+    <div class="card"><div class="card-body">
+      <div class="empty">
+        <div class="empty-icon">{{ icon('clipboard') }}</div>
+        <h3>Aucune question</h3>
+        <p>Ajoutez votre première question avec le formulaire ci-dessous.</p>
+      </div>
+    </div></div>
+    {% endfor %}
+
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('plus') }} Ajouter une question</h2></div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('admin.question_new', exercise_id=exercise.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="field">
+            <label for="new-text">Énoncé <span class="req">*</span></label>
+            <textarea id="new-text" name="text" rows="2" required placeholder="Quelle est la fonction du processeur ?"></textarea>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label for="o1">Proposition 1</label><input id="o1" type="text" name="option_1" required maxlength="400"></div>
+            <div class="field"><label for="o2">Proposition 2</label><input id="o2" type="text" name="option_2" required maxlength="400"></div>
+            <div class="field"><label for="o3">Proposition 3</label><input id="o3" type="text" name="option_3" maxlength="400"></div>
+            <div class="field"><label for="o4">Proposition 4</label><input id="o4" type="text" name="option_4" maxlength="400"></div>
+            <div class="field">
+              <label for="new-correct">Bonne réponse</label>
+              <select id="new-correct" name="correct">
+                <option value="1">Proposition 1</option>
+                <option value="2">Proposition 2</option>
+                <option value="3">Proposition 3</option>
+                <option value="4">Proposition 4</option>
+              </select>
+            </div>
+            <div class="field"><label for="new-points">Points</label><input id="new-points" type="number" name="points" min="1" max="10" value="1"></div>
+          </div>
+          <div class="field">
+            <label for="new-expl">Explication</label>
+            <input id="new-expl" type="text" name="explanation" placeholder="Pourquoi cette réponse est-elle correcte ?">
+          </div>
+          <button class="btn btn-primary" type="submit">{{ icon('plus') }} Ajouter la question</button>
+        </form>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

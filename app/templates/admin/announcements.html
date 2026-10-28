@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+
+{% block title %}Annonces{% endblock %}
+{% block page_title %}Annonces{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ announcements|length }} annonce(s)</p>{% endblock %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);align-items:start">
+  <div class="stack">
+    {% for item in announcements %}
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{{ icon('bell') }} {{ item.title }}</h2>
+        <div class="row">
+          {% if item.published %}<span class="badge badge-success">Publiée</span>{% else %}<span class="badge badge-warning">Brouillon</span>{% endif %}
+          <form method="post" action="{{ url_for('admin.announcement_delete', announcement_id=item.id) }}" data-confirm="Supprimer cette annonce ?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-ghost" type="submit" aria-label="Supprimer">{{ icon('trash') }}</button>
+          </form>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="lesson-body" style="font-size:.88rem">{{ render_content(item.body) }}</div>
+        <details class="mt-2">
+          <summary class="text-sm" style="cursor:pointer;color:var(--cyan)">Modifier</summary>
+          <form method="post" action="{{ url_for('admin.announcement_edit', announcement_id=item.id) }}" class="mt-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="field"><label for="t-{{ item.id }}">Titre</label><input id="t-{{ item.id }}" type="text" name="title" value="{{ item.title }}" required></div>
+            <div class="field"><label for="b-{{ item.id }}">Contenu</label><textarea id="b-{{ item.id }}" name="body" rows="4">{{ item.body }}</textarea></div>
+            <label class="checkbox mb-2"><input type="checkbox" name="published" value="1" {{ 'checked' if item.published }}><span>Publiée</span></label>
+            <button class="btn btn-outline btn-sm" type="submit">{{ icon('save') }} Enregistrer</button>
+          </form>
+        </details>
+        <div class="text-xs text-muted mt-2">{{ fmt_dt(item.created_at) }}{% if item.author %} · {{ item.author.full_name or item.author.username }}{% endif %}</div>
+      </div>
+    </section>
+    {% else %}
+    <div class="card"><div class="card-body">
+      <div class="empty"><div class="empty-icon">{{ icon('bell') }}</div><h3>Aucune annonce</h3><p>Publiez une annonce pour informer les apprenants.</p></div>
+    </div></div>
+    {% endfor %}
+  </div>
+
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('plus') }} Nouvelle annonce</h2></div>
+    <div class="card-body">
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="title">Titre <span class="req">*</span></label>
+          <input id="title" type="text" name="title" required maxlength="190" placeholder="Ex. Examen du 1er trimestre">
+        </div>
+        <div class="field">
+          <label for="body">Contenu <span class="req">*</span></label>
+          <textarea id="body" name="body" rows="7" required placeholder="Texte de l'annonce (Markdown simple accepté)"></textarea>
+        </div>
+        <label class="checkbox mb-2">
+          <input type="checkbox" name="published" value="1" checked>
+          <span>Publier immédiatement</span>
+        </label>
+        <button class="btn btn-primary btn-block" type="submit">{{ icon('send') }} Publier</button>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}

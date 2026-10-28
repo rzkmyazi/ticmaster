@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+
+{% block title %}{{ user.full_name or user.username }}{% endblock %}
+{% block page_title %}{{ user.full_name or user.username }}{% endblock %}
+{% block page_subtitle %}<p class="page-sub">@{{ user.username }} · {{ role_labels.get(user.role) }}</p>{% endblock %}
+
+{% block content %}
+<div class="row mb-2">
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.users') }}">{{ icon('arrow-left') }} Liste des utilisateurs</a>
+</div>
+
+{% if temp_password %}
+<div class="card mb-2" style="border-color:rgba(251,191,36,.5)">
+  <div class="card-body">
+    <span class="badge badge-warning mb-1">{{ icon('key') }} Mot de passe réinitialisé</span>
+    <h2 class="card-title mt-1">Nouveau mot de passe temporaire</h2>
+    <p class="mono" style="font-size:1.35rem;margin:.5rem 0">{{ temp_password }}</p>
+    <div class="alert alert-warning">
+      {{ icon('alert') }}
+      <span>Ce mot de passe ne sera plus jamais affiché. Toutes les sessions actives ont été révoquées. L'utilisateur devra le changer à sa prochaine connexion.</span>
+    </div>
+    <button class="btn btn-outline btn-sm mt-2" type="button" data-copy="{{ temp_password }}">{{ icon('file') }} Copier</button>
+  </div>
+</div>
+{% endif %}
+
+<div class="grid" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);align-items:start">
+  <div class="stack">
+    <section class="card">
+      <div class="card-body">
+        <div class="profile-card">
+          {{ avatar(user, 'xl', user.is_online()) }}
+          <div class="profile-meta">
+            <h2>{{ user.full_name or user.username }}</h2>
+            <span class="role-line">{{ role_badge(user.role) }} {{ status_badge(user.status) }}
+              {% if user.must_change_password %}<span class="badge badge-warning">MDP temporaire</span>{% endif %}
+            </span>
+            <div class="profile-list">
+              <span class="row">{{ icon('user') }} <span class="mono">@{{ user.username }}</span></span>
+              {% if user.email %}<span class="row">{{ icon('mail') }} <span>{{ user.email }}</span></span>{% endif %}
+              <span class="row">{{ icon('calendar') }} <span>Créé le {{ fmt_dt(user.created_at) }}</span></span>
+              <span class="row">{{ icon('clock') }} <span>Dernière connexion : {{ time_ago(user.last_login_at) }}</span></span>
+              <span class="row">{{ icon('activity') }} <span>Dernière activité : {{ time_ago(user.last_seen_at) }}</span></span>
+              <span class="row">{{ icon('book-open') }} <span>{{ lessons_done }} leçon(s) terminée(s)</span></span>
+            </div>
+            {% if user.bio %}<p class="text-sm mt-2">{{ user.bio }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('clipboard') }} Dernières évaluations</h2></div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Évaluation</th><th>Statut</th><th>Score</th><th>Date</th></tr></thead>
+          <tbody>
+            {% for attempt in attempts %}
+            <tr>
+              <td class="text-sm">{{ attempt.exercise.title }}</td>
+              <td>
+                {% if attempt.status == 'eliminated' %}<span class="badge badge-danger">Éliminé</span>
+                {% elif attempt.status == 'submitted' %}<span class="badge badge-success">Corrigé</span>
+                {% else %}<span class="badge badge-warning">En cours</span>{% endif %}
+              </td>
+              <td>{{ attempt.percentage }}%</td>
+              <td class="text-xs text-muted">{{ fmt_dt(attempt.started_at) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4"><p class="text-sm text-muted" style="padding:.6rem">Aucune évaluation.</p></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('shield') }} Sessions</h2></div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Créée</th><th>Dernière activité</th><th>Expire</th><th>IP</th><th>État</th></tr></thead>
+          <tbody>
+            {% for session in sessions %}
+            <tr>
+              <td class="text-xs">{{ fmt_dt(session.created_at) }}</td>
+              <td class="text-xs">{{ time_ago(session.last_seen_at) }}</td>
+              <td class="text-xs">{{ fmt_dt(session.expires_at) }}</td>
+              <td class="text-xs mono">{{ session.ip or '—' }}</td>
+              <td>{% if session.is_valid %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-neutral">Expirée</span>{% endif %}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5"><p class="text-sm text-muted" style="padding:.6rem">Aucune session.</p></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <aside class="stack">
+    {% if current_user.is_super_admin or user.role == 'user' %}
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('settings') }} Actions</h2></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:.5rem">
+        <a class="btn btn-outline btn-block" href="{{ url_for('admin.user_edit', user_id=user.id) }}">{{ icon('edit') }} Modifier le compte</a>
+
+        <form method="post" action="{{ url_for('admin.user_reset_password', user_id=user.id) }}"
+              data-confirm="Générer un nouveau mot de passe temporaire ? Toutes les sessions seront révoquées.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline btn-block" type="submit">{{ icon('key') }} Réinitialiser le mot de passe</button>
+        </form>
+
+        <form method="post" action="{{ url_for('admin.user_revoke_sessions', user_id=user.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-ghost btn-block" type="submit">{{ icon('shield') }} Révoquer les sessions</button>
+        </form>
+
+        {% if user.status == 'active' %}
+        <form method="post" action="{{ url_for('admin.user_status', user_id=user.id) }}"
+              data-confirm="Suspendre ce compte ? L'utilisateur sera déconnecté immédiatement.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="suspend">
+          <button class="btn btn-warning btn-block" type="submit">{{ icon('ban') }} Suspendre</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ url_for('admin.user_status', user_id=user.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="activate">
+          <button class="btn btn-success btn-block" type="submit">{{ icon('check') }} Réactiver</button>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if user.id != current_user.id %}
+    <section class="card" style="border-color:rgba(248,113,113,.4)">
+      <div class="card-head"><h2 class="card-title">{{ icon('trash') }} Suppression définitive</h2></div>
+      <div class="card-body">
+        <p class="text-sm">La suppression efface les données personnelles (RGPD). Les traces d'audit sont anonymisées.</p>
+        <form method="post" action="{{ url_for('admin.user_delete', user_id=user.id) }}"
+              data-confirm="Supprimer définitivement ce compte ? Cette action est irréversible.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="field">
+            <label for="confirm">Saisissez « {{ user.username }} » pour confirmer</label>
+            <input type="text" id="confirm" name="confirm" required autocomplete="off">
+          </div>
+          <button class="btn btn-danger btn-block" type="submit">{{ icon('trash') }} Supprimer le compte</button>
+        </form>
+      </div>
+    </section>
+    {% endif %}
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

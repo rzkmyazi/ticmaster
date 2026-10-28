@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+
+{% block title %}Battle — {{ room.name }}{% endblock %}
+{% block page_title %}{{ room.name }}{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ 'Battle solo' if room.mode == 'solo' else 'Battle en groupe' }} · code {{ room.code }}</p>{% endblock %}
+
+{% block content %}
+<div id="battle-room"
+     data-code="{{ room.code }}"
+     data-mode="{{ room.mode }}"
+     data-is-owner="{{ 'true' if room.owner_id == current_user.id else 'false' }}"
+     data-is-member="{{ 'true' if is_member else 'false' }}"
+     data-username="{{ current_user.full_name or current_user.username }}">
+
+  <div class="row-between mb-2">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('social.battle_home') }}">{{ icon('arrow-left') }} Toutes les battles</a>
+    <div class="row">
+      <span class="badge badge-brand mono">{{ room.code }}</span>
+      <button class="btn btn-sm btn-ghost" type="button" data-copy="{{ room.code }}">{{ icon('file') }} Copier le code</button>
+    </div>
+  </div>
+
+  {% if not is_member %}
+  <div class="card mb-2"><div class="card-body row-between">
+    <span class="text-sm">Vous n'êtes pas encore membre de cette battle.</span>
+    <button class="btn btn-primary" type="button" data-battle-join-inline>{{ icon('plus') }} Rejoindre</button>
+  </div></div>
+  {% endif %}
+
+  <div class="battle-room">
+    <section class="stack">
+      <div class="battle-question" id="battle-question">
+        <div class="row-between">
+          <span class="badge badge-warning">{{ icon('zap') }} <span id="battle-status">{{ 'Salon d’attente' if room.status == 'lobby' else ('En cours' if room.status == 'running' else 'Terminée') }}</span></span>
+          <span class="quiz-timer" id="battle-timer">{{ icon('clock') }} <span id="battle-timer-value">—</span></span>
+        </div>
+
+        <h2 id="battle-question-text" style="margin:1rem 0 .3rem;font-size:1.1rem">En attente du lancement…</h2>
+        <p class="text-xs text-muted" id="battle-question-progress"></p>
+
+        <div class="options mt-2" id="battle-options"></div>
+
+        <div id="battle-waiting" class="alert alert-info mt-2">
+          {{ icon('info') }} <span>Réponse envoyée. Attendez la question suivante…</span>
+        </div>
+
+        <div id="battle-lobby-actions" class="mt-2">
+          {% if room.mode == 'group' and room.owner_id == current_user.id %}
+          <div class="field">
+            <label for="room-name">Nom du groupe</label>
+            <div class="row">
+              <input id="room-name" type="text" value="{{ room.name }}" maxlength="120" style="flex:1">
+              <button class="btn btn-outline" type="button" data-battle-rename>{{ icon('save') }} Renommer</button>
+            </div>
+          </div>
+          {% endif %}
+          {% if room.owner_id == current_user.id %}
+          <button class="btn btn-primary btn-lg btn-block" type="button" data-battle-start {{ 'disabled' if room.status != 'lobby' }}>
+            {{ icon('play') }} Lancer la battle
+          </button>
+          {% else %}
+          <div class="alert alert-info">{{ icon('clock') }} <span>En attente du lancement par le créateur…</span></div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div id="battle-corrections" class="stack" hidden></div>
+    </section>
+
+    <aside class="stack">
+      <section class="card">
+        <div class="card-head"><h2 class="card-title">{{ icon('trophy') }} Classement</h2></div>
+        <div class="card-body">
+          <div class="battle-players" id="battle-players">
+            {% for member in room.members %}
+            <div class="battle-player {{ 'is-me' if member.user_id == current_user.id }}">
+              {{ avatar(member.user, 'sm', member.user.is_online()) }}
+              <span class="text-sm">{{ member.user.full_name or member.user.username }}</span>
+              <span class="score">{{ member.score or 0 }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2 class="card-title">{{ icon('info') }} Règles</h2></div>
+        <div class="card-body">
+          <ul class="text-sm" style="margin-left:1rem;color:var(--text-soft)">
+            <li>5 questions aléatoires du programme.</li>
+            <li>20 secondes par question.</li>
+            <li>1 point par bonne réponse.</li>
+            <li>Une seule réponse par question.</li>
+          </ul>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/battle.js') }}" defer></script>
+{% endblock %}

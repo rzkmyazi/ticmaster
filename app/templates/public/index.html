@@ -1,0 +1,172 @@
+{% extends "base_public.html" %}
+{% block title %}TIC MASTER — Apprendre les Technologies de l'Information et de la Communication{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-copy reveal">
+      <span class="hero-badge"><span class="pulse"></span> Plateforme éducative · {{ site_name }}</span>
+      <h1>Maîtrisez les <span class="grad">TIC</span>, du clavier à l'intelligence artificielle.</h1>
+      <p class="hero-sub">
+        Onze modules progressifs, des exercices corrigés instantanément, des examens trimestriels
+        surveillés et une communauté d'apprenants. Une seule plateforme pour toute la classe.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn--primary btn--lg" href="{{ url_for('auth.login') }}">{{ icon('lock', 18) }} Se connecter</a>
+        <a class="btn btn--outline btn--lg" href="#programme">{{ icon('book', 18) }} Découvrir le programme</a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><b><span data-count-to="{{ stats.modules }}">0</span></b><span>modules</span></div>
+        <div class="hero-stat"><b><span data-count-to="{{ stats.lessons }}">0</span></b><span>leçons</span></div>
+        <div class="hero-stat"><b><span data-count-to="{{ stats.questions }}">0</span></b><span>questions corrigées</span></div>
+        <div class="hero-stat"><b><span data-count-to="{{ stats.apprenants }}">0</span></b><span>apprenants</span></div>
+      </div>
+    </div>
+
+    <div class="hero-visual" aria-hidden="true">
+      <div class="orb">
+        <svg viewBox="0 0 120 120" width="118" height="118" fill="none" stroke="url(#heroGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <defs>
+            <linearGradient id="heroGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#38bdf8"/><stop offset="60%" stop-color="#2563eb"/><stop offset="100%" stop-color="#22d3ee"/>
+            </linearGradient>
+          </defs>
+          <rect x="22" y="30" width="76" height="50" rx="8"/>
+          <path d="M60 80v14M44 100h32"/>
+          <path d="M40 55h14M40 66h26" opacity=".8"/>
+          <circle cx="84" cy="55" r="6" fill="#22d3ee" stroke="none"/>
+          <path d="M22 30 10 18M98 30l12-12M60 30V12" opacity=".45"/>
+        </svg>
+        <span class="orb-chip orb-chip--1">{{ icon('cpu', 14) }} Matériel &amp; OS</span>
+        <span class="orb-chip orb-chip--2">{{ icon('globe', 14) }} Internet &amp; Web</span>
+        <span class="orb-chip orb-chip--3">{{ icon('shield', 14) }} Cybersécurité</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="programme">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <div class="eyebrow">Programme officiel</div>
+      <h2>Un parcours complet, module par module</h2>
+      <p>Chaque module combine des leçons illustrées, des ressources téléchargeables et des exercices corrigés côté serveur.</p>
+    </div>
+
+    <div class="module-grid">
+      {% for m in modules %}
+      <article class="module-card reveal">
+        <div class="module-card-top">
+          <span class="module-icon">{{ icon(m.icon or 'book', 20) }}</span>
+          <div>
+            <h3>{{ m.title }}</h3>
+            <div class="module-meta"><span>{{ m.category.name if m.category }}</span><span>· {{ m.level }}</span></div>
+          </div>
+        </div>
+        <p>{{ m.summary or m.description|striptags|truncate(120) }}</p>
+        <div class="module-meta">
+          <span>{{ icon('book', 13) }} {{ m.published_lessons|length }} leçons</span>
+          <span>{{ icon('clock', 13) }} {{ m.estimated_minutes }} min</span>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-2)">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <div class="eyebrow">Tout-en-un</div>
+      <h2>Ce que la plateforme apporte à la classe</h2>
+      <p>Des outils pensés pour apprendre, s'entraîner et s'évaluer dans un cadre sécurisé.</p>
+    </div>
+    <div class="feature-grid">
+      <article class="feature reveal">
+        <span class="feature-icon">{{ icon('book', 22) }}</span>
+        <h3>Leçons structurées</h3>
+        <p>Textes, images, documents et vidéos organisés en modules progressifs avec suivi de lecture.</p>
+      </article>
+      <article class="feature reveal reveal-2">
+        <span class="feature-icon">{{ icon('clipboard', 22) }}</span>
+        <h3>Exercices corrigés</h3>
+        <p>Correction immédiate, score, explication de chaque réponse et historique de vos tentatives.</p>
+      </article>
+      <article class="feature reveal reveal-3">
+        <span class="feature-icon">{{ icon('award', 22) }}</span>
+        <h3>Examens trimestriels</h3>
+        <p>Épreuves chronométrées en mode surveillé : toute sortie de l'onglet entraîne une élimination.</p>
+      </article>
+      <article class="feature reveal">
+        <span class="feature-icon">{{ icon('zap', 22) }}</span>
+        <h3>Battle</h3>
+        <p>Défiez la classe en solo ou en groupe : cinq questions, un chronomètre, un classement en direct.</p>
+      </article>
+      <article class="feature reveal reveal-2">
+        <span class="feature-icon">{{ icon('message', 22) }}</span>
+        <h3>Messagerie</h3>
+        <p>Salon général et messages privés, sous la supervision du super administrateur.</p>
+      </article>
+      <article class="feature reveal reveal-3">
+        <span class="feature-icon">{{ icon('chart', 22) }}</span>
+        <h3>Progression visible</h3>
+        <p>Pourcentage d'avancement, moyennes, résultats et historique détaillé à chaque connexion.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-inner">
+    <div class="grid grid-2" style="gap:2rem; align-items:center">
+      <div class="reveal">
+        <div class="eyebrow">Comment ça marche</div>
+        <h2 style="font-size:clamp(1.4rem,2.6vw,1.9rem)">Un accès encadré, sans inscription publique</h2>
+        <p class="muted" style="margin-top:.6rem">
+          Pour garantir la traçabilité des résultats et la sécurité des comptes, aucun formulaire
+          d'inscription n'est accessible publiquement. Les comptes sont créés par l'administration
+          de l'établissement, qui remet un identifiant et un mot de passe temporaire.
+        </p>
+        <ol class="list-clean" style="margin-top:1.2rem; counter-reset:step">
+          <li>{{ icon('check-circle', 18) }} <span>L'administration crée votre compte et vous remet vos identifiants.</span></li>
+          <li>{{ icon('key', 18) }} <span>À la première connexion, vous choisissez un mot de passe personnel.</span></li>
+          <li>{{ icon('book', 18) }} <span>Vous suivez les modules, passez les exercices et les examens trimestriels.</span></li>
+          <li>{{ icon('chart', 18) }} <span>Vos résultats et votre progression sont conservés dans votre espace.</span></li>
+        </ol>
+      </div>
+      <div class="card card--glow reveal reveal-2">
+        <div class="card-head">
+          <h3 class="card-title">{{ icon('shield', 18) }} Un cadre sécurisé</h3>
+          <span class="badge badge--active"><i class="dot"></i> Actif</span>
+        </div>
+        <ul class="list-clean">
+          <li>{{ icon('lock', 16) }} <span>Mots de passe hachés (Argon2id), jamais stockés en clair.</span></li>
+          <li>{{ icon('shield', 16) }} <span>Sessions révocables, protection CSRF et anti-force brute.</span></li>
+          <li>{{ icon('eye', 16) }} <span>Contrôle des accès côté serveur, journal d'audit complet.</span></li>
+          <li>{{ icon('user', 16) }} <span>Isolation des données : chaque apprenant ne voit que les siennes.</span></li>
+          <li>{{ icon('ban', 16) }} <span>Aucune inscription publique, aucun compte anonyme.</span></li>
+        </ul>
+        <div class="alert alert-info mt-2" style="margin-bottom:0">
+          {{ icon('info', 18) }}
+          <div>Vous avez perdu votre mot de passe ? Utilisez « Mot de passe oublié ? » sur la page de connexion : la demande est transmise à l'administration.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="section-inner">
+    <div class="cta-band reveal">
+      <div>
+        <h2 style="margin-bottom:.35rem">Prêt à commencer votre parcours TIC ?</h2>
+        <p class="muted" style="margin:0">Connectez-vous avec les identifiants remis par votre administration.</p>
+      </div>
+      <div class="row">
+        <a class="btn btn--primary btn--lg" href="{{ url_for('auth.login') }}">{{ icon('lock', 18) }} Se connecter</a>
+        <a class="btn btn--outline btn--lg" href="{{ url_for('public.about') }}">{{ icon('info', 18) }} En savoir plus</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

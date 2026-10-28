@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+
+{% block title %}Mes résultats{% endblock %}
+{% block page_title %}Mes résultats{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Historique de vos évaluations corrigées</p>{% endblock %}
+
+{% block content %}
+<div class="stats-grid mb-2">
+  <div class="stat">
+    <span class="stat-label">Évaluations</span>
+    <div class="stat-value">{{ attempts|length }}</div>
+    {{ icon('clipboard', 'stat-icon') }}
+  </div>
+  <div class="stat">
+    <span class="stat-label">Moyenne générale</span>
+    <div class="stat-value">{{ average }}<small>%</small></div>
+    {{ icon('chart', 'stat-icon') }}
+  </div>
+  <div class="stat">
+    <span class="stat-label">Réussies</span>
+    <div class="stat-value">{{ passed }}</div>
+    <div class="stat-foot">sur {{ attempts|length }}</div>
+    {{ icon('check-circle', 'stat-icon') }}
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2 class="card-title">{{ icon('chart') }} Détail des évaluations</h2>
+    <a class="btn btn-sm btn-outline" href="{{ url_for('learning.exercises') }}">Nouvel exercice</a>
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Évaluation</th><th>Type</th><th>Score</th><th>Résultat</th><th>Corrigée le</th><th></th></tr></thead>
+      <tbody>
+        {% for attempt in attempts %}
+        <tr>
+          <td><strong>{{ attempt.exercise.title }}</strong></td>
+          <td>{% if attempt.exercise.kind == 'exam' %}<span class="badge badge-brand">Examen</span>{% else %}<span class="badge badge-info">Exercice</span>{% endif %}</td>
+          <td><strong>{{ attempt.percentage }}%</strong> <span class="text-xs text-muted">{{ attempt.score }}/{{ attempt.max_score }}</span></td>
+          <td>
+            {% if attempt.passed %}<span class="badge badge-success">Réussi</span>
+            {% else %}<span class="badge badge-warning">À revoir</span>{% endif %}
+          </td>
+          <td class="text-xs text-muted">{{ fmt_dt(attempt.submitted_at) }}</td>
+          <td class="row-actions">
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('learning.result_detail', attempt_id=attempt.id) }}">Voir la correction</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">
+          <div class="empty">
+            <div class="empty-icon">{{ icon('chart') }}</div>
+            <h3>Aucun résultat</h3>
+            <p>Réalisez un exercice ou un examen pour consulter vos résultats ici.</p>
+            <a class="btn btn-primary mt-2" href="{{ url_for('learning.exercises') }}">Voir les exercices</a>
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

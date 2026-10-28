@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+
+{% block title %}Rôles & permissions{% endblock %}
+{% block page_title %}Rôles & permissions{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Matrice appliquée côté serveur à chaque requête</p>{% endblock %}
+
+{% block content %}
+<div class="stats-grid mb-2">
+  <div class="stat"><span class="stat-label">Super Admin</span><div class="stat-value">{{ counts.super_admin }}</div>{{ icon('award', 'stat-icon') }}</div>
+  <div class="stat"><span class="stat-label">Administrateurs</span><div class="stat-value">{{ counts.admin }}</div>{{ icon('shield', 'stat-icon') }}</div>
+  <div class="stat"><span class="stat-label">Utilisateurs</span><div class="stat-value">{{ counts.user }}</div>{{ icon('users', 'stat-icon') }}</div>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2 class="card-title">{{ icon('lock') }} Matrice des permissions</h2></div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Action</th><th class="center">Super Admin</th><th class="center">Admin</th><th class="center">Utilisateur</th></tr></thead>
+      <tbody>
+        {% set permissions = [
+          ('Consulter les cours, exercices et ressources', true, true, true),
+          ('Passer exercices et examens', true, true, true),
+          ('Participer aux battles et à la messagerie', true, true, true),
+          ('Modifier son propre profil et mot de passe', true, true, true),
+          ('Créer / modifier des modules et leçons', true, true, false),
+          ('Créer des exercices et questions', true, true, false),
+          ('Publier des annonces', true, true, false),
+          ('Créer des comptes UTILISATEUR', true, true, false),
+          ('Modifier / suspendre un UTILISATEUR', true, true, false),
+          ('Créer ou modifier un ADMIN', true, false, false),
+          ('Attribuer le rôle SUPER ADMIN', true, false, false),
+          ('Supprimer un compte', true, true, false),
+          ('Voir tous les messages', true, false, false),
+          ('Réaffecter un examen éliminé', true, false, false),
+          ('Consulter le journal d’audit', true, false, false),
+          ('Gérer les sessions et révoquer', true, false, false),
+          ('Exporter les sauvegardes', true, false, false),
+          ('Modifier les paramètres de la plateforme', true, false, false)
+        ] %}
+        {% for label, super_admin, admin, user in permissions %}
+        <tr>
+          <td class="text-sm">{{ label }}</td>
+          <td class="center">{% if super_admin %}<span class="badge badge-success">Oui</span>{% else %}<span class="badge badge-danger">Non</span>{% endif %}</td>
+          <td class="center">{% if admin %}<span class="badge badge-success">Oui</span>{% else %}<span class="badge badge-danger">Non</span>{% endif %}</td>
+          <td class="center">{% if user %}<span class="badge badge-success">Oui</span>{% else %}<span class="badge badge-danger">Non</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="grid grid-3 mt-2">
+  <div class="card"><div class="card-body">
+    <h3 class="card-title">{{ icon('award') }} Super Administrateur</h3>
+    <p class="text-sm mt-1">Contrôle total : comptes, rôles, contenus, examens, messagerie, audit, sauvegardes. Seul rôle autorisé à réaffecter un examen éliminé.</p>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <h3 class="card-title">{{ icon('shield') }} Administrateur</h3>
+    <p class="text-sm mt-1">Gestion des apprenants et des contenus. Ne peut ni créer d'administrateur, ni consulter les messages privés, ni modifier les paramètres sensibles.</p>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <h3 class="card-title">{{ icon('user') }} Utilisateur</h3>
+    <p class="text-sm mt-1">Accès aux cours, exercices, examens, battles, messagerie et à son propre suivi. Aucun accès à l'administration.</p>
+  </div></div>
+</div>
+
+<div class="alert alert-warning mt-2">
+  {{ icon('alert') }}
+  <span>Les rôles ne sont pas modifiables par l'utilisateur. Toute tentative d'élévation de privilèges est refusée côté serveur et journalisée.</span>
+</div>
+{% endblock %}

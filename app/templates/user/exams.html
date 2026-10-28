@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+
+{% block title %}Examen Trimestrielle{% endblock %}
+{% block page_title %}Examen Trimestrielle{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Épreuves surveillées — sortie d'onglet = élimination</p>{% endblock %}
+
+{% block content %}
+<div class="alert alert-danger mb-2">
+  {{ icon('shield') }}
+  <span><strong>Règle d'intégrité :</strong> pendant un examen, quitter l'onglet, revenir en arrière ou ouvrir une autre page
+  est enregistré comme tentative de fraude et entraîne l'élimination immédiate. La sanction est strictement individuelle ;
+  seul le super administrateur peut réaffecter l'épreuve.</span>
+</div>
+
+{% if exams %}
+<div class="grid grid-2">
+  {% for exam in exams %}
+  {% set attempts = history[exam.id] %}
+  {% set last = attempts[0] if attempts else None %}
+  <article class="card reveal" style="animation-delay: {{ loop.index0 * 50 }}ms">
+    <div class="card-body">
+      <div class="row-between">
+        <span class="eyebrow">{{ icon('award') }} {{ exam.term or 'Examen' }}</span>
+        {% if last %}
+          {% if last.status == 'eliminated' %}<span class="badge badge-danger">Éliminé</span>
+          {% elif last.status == 'submitted' %}<span class="badge {{ 'badge-success' if last.passed else 'badge-warning' }}">{{ last.percentage }}%</span>
+          {% else %}<span class="badge badge-warning">En cours</span>{% endif %}
+        {% else %}
+          <span class="badge badge-info">Disponible</span>
+        {% endif %}
+      </div>
+      <h2 style="font-size:1.05rem;margin:.5rem 0 .3rem">{{ exam.title }}</h2>
+      <p class="text-sm text-muted">{{ exam.description }}</p>
+
+      <div class="module-meta mt-2">
+        <span>{{ icon('clipboard') }} {{ exam.questions|length }} questions</span>
+        <span>{{ icon('clock') }} {{ exam.duration_minutes }} min</span>
+        <span>{{ icon('target') }} seuil {{ exam.pass_score }}%</span>
+      </div>
+
+      {% if last and last.status == 'eliminated' %}
+      <div class="alert alert-danger mt-2">{{ icon('ban') }}<span>Éliminé pour fraude le {{ fmt_dt(last.submitted_at) }}. Contactez le super administrateur pour une réaffectation.</span></div>
+      <a class="btn btn-outline btn-block mt-2" href="{{ url_for('exam.exam_result', attempt_id=last.id) }}">Voir le détail</a>
+      {% elif last and last.status == 'submitted' %}
+      <a class="btn btn-outline btn-block mt-2" href="{{ url_for('exam.exam_result', attempt_id=last.id) }}">{{ icon('chart') }} Consulter le résultat</a>
+      {% elif last and last.status == 'in_progress' %}
+      <a class="btn btn-primary btn-block mt-2" href="{{ url_for('exam.take_exam', attempt_id=last.id) }}">{{ icon('play') }} Reprendre l'examen</a>
+      {% else %}
+      <form method="post" action="{{ url_for('exam.start', exercise_id=exam.id) }}" class="mt-2"
+            data-confirm="Démarrer l'examen ? Toute sortie de l'onglet entraînera votre élimination.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-primary btn-block" type="submit">{{ icon('play') }} Passer l'examen</button>
+      </form>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="card-body">
+  <div class="empty">
+    <div class="empty-icon">{{ icon('award') }}</div>
+    <h3>Aucun examen publié</h3>
+    <p>Les évaluations trimestrielles apparaîtront ici dès leur publication.</p>
+  </div>
+</div></div>
+{% endif %}
+{% endblock %}

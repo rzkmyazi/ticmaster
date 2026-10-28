@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+
+{% block title %}Tableau de bord{% endblock %}
+{% block page_title %}Bonjour, {{ current_user.full_name.split(' ')[0] if current_user.full_name else current_user.username }}{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Voici l'état de votre progression</p>{% endblock %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns: minmax(0,1.6fr) minmax(0,1fr); gap:1rem; align-items:start">
+
+  <div class="stack">
+    <!-- Progression globale -->
+    <section class="card reveal" style="overflow:hidden">
+      <div style="padding:1.4rem 1.3rem; background:
+          radial-gradient(600px 240px at 0% -40%, rgba(59,130,246,.28), transparent 65%),
+          radial-gradient(500px 240px at 100% 140%, rgba(34,211,238,.16), transparent 62%)">
+        <div class="row-between">
+          <div>
+            <span class="eyebrow">{{ icon('target') }} Progression globale</span>
+            <h2 class="section-title mt-1" style="font-size:1.45rem">{{ stats.progress.percent }}% du programme parcouru</h2>
+            <p class="text-sm text-muted mt-1">
+              {{ stats.progress.done }} leçons terminées sur {{ stats.progress.total }}
+              · {{ stats.completed_modules }} module(s) validé(s)
+            </p>
+          </div>
+          <div class="score-ring" style="--pct: {{ stats.progress.percent }}">
+            <span>{{ stats.progress.percent }}%</span>
+          </div>
+        </div>
+        <div class="mt-2">
+          {{ progress_bar(stats.progress.percent, '') }}
+        </div>
+        <div class="row mt-2">
+          <a class="btn btn-primary" href="{{ url_for('learning.catalog') }}">{{ icon('book-open') }} Continuer les cours</a>
+          {% if next_exam %}
+          <a class="btn btn-outline" href="{{ url_for('exam.index') }}">{{ icon('award') }} Examen trimestriel</a>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <!-- Continuer -->
+    <section>
+      <div class="row-between mb-2">
+        <h2 class="card-title" style="font-size:1rem">{{ icon('play') }} Reprendre où vous en étiez</h2>
+        <a class="text-sm" href="{{ url_for('learning.catalog') }}">Tout le catalogue →</a>
+      </div>
+      <div class="module-grid">
+        {% for item in continue_list %}
+        <a class="module-card card-link reveal" style="animation-delay: {{ loop.index0 * 50 }}ms"
+           href="{{ url_for('learning.module_detail', slug=item.module.slug) }}">
+          <div class="module-cover">
+            <span class="module-num">{{ "%02d"|format(item.module.order_index) }}</span>
+            {{ icon(item.module.icon or 'book-open') }}
+          </div>
+          <div class="module-body">
+            <h3>{{ item.module.title }}</h3>
+            <div class="module-meta">
+              <span>{{ icon('layers') }} {{ item.progress.done }}/{{ item.progress.total }} leçons</span>
+              <span>{{ icon('clock') }} {{ item.module.estimated_minutes }} min</span>
+            </div>
+            <div class="mt-1">{{ progress_bar(item.progress.percent, '') }}</div>
+            {% if item.next_lesson %}
+            <span class="text-xs text-muted mt-1">Prochaine leçon : {{ item.next_lesson.title }}</span>
+            {% endif %}
+          </div>
+        </a>
+        {% else %}
+        <article class="card" style="grid-column:1/-1"><div class="card-body">
+          <div class="empty">
+            <div class="empty-icon">{{ icon('check-circle') }}</div>
+            <h3>Programme terminé !</h3>
+            <p>Vous avez parcouru toutes les leçons disponibles. Revenez régulièrement pour les nouveaux contenus.</p>
+          </div>
+        </div></article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Derniers résultats -->
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{{ icon('chart') }} Derniers résultats</h2>
+        <a class="text-sm" href="{{ url_for('learning.results') }}">Tout voir →</a>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Évaluation</th><th>Type</th><th>Score</th><th>Date</th><th></th></tr></thead>
+          <tbody>
+          {% for attempt in attempts %}
+            <tr>
+              <td>{{ attempt.exercise.title }}</td>
+              <td>{% if attempt.exercise.kind == 'exam' %}<span class="badge badge-brand">Examen</span>{% else %}<span class="badge badge-info">Exercice</span>{% endif %}</td>
+              <td>
+                {% if attempt.status == 'eliminated' %}<span class="badge badge-danger">Éliminé</span>
+                {% elif attempt.status == 'in_progress' %}<span class="badge badge-warning">En cours</span>
+                {% else %}<strong>{{ attempt.percentage }}%</strong> <span class="text-xs text-muted">({{ attempt.score }}/{{ attempt.max_score }})</span>{% endif %}
+              </td>
+              <td class="text-xs text-muted">{{ fmt_dt(attempt.submitted_at or attempt.started_at) }}</td>
+              <td class="row-actions">
+                {% if attempt.status == 'submitted' %}
+                <a class="btn btn-sm btn-ghost" href="{{ url_for('learning.result_detail', attempt_id=attempt.id) }}">Détail</a>
+                {% elif attempt.status == 'eliminated' %}
+                <a class="btn btn-sm btn-ghost" href="{{ url_for('exam.exam_result', attempt_id=attempt.id) }}">Détail</a>
+                {% else %}
+                <a class="btn btn-sm btn-ghost" href="{{ url_for('exam.take_exam', attempt_id=attempt.id) if attempt.exercise.kind == 'exam' else url_for('learning.take_exercise', attempt_id=attempt.id) }}">Reprendre</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5"><div class="empty"><div class="empty-icon">{{ icon('clipboard') }}</div><h3>Aucun résultat</h3><p>Réalisez un exercice pour voir apparaître vos scores.</p></div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- Colonne latérale -->
+  <div class="stack">
+    <div class="stats-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+      <div class="stat">
+        <span class="stat-label">Moyenne</span>
+        <div class="stat-value">{{ stats.average }}<small>%</small></div>
+        <div class="stat-foot">{{ stats.attempts }} évaluation(s)</div>
+        {{ icon('chart', 'stat-icon') }}
+      </div>
+      <div class="stat">
+        <span class="stat-label">En ligne</span>
+        <div class="stat-value">{{ online_count }}</div>
+        <div class="stat-foot">utilisateurs actifs</div>
+        {{ icon('users', 'stat-icon') }}
+      </div>
+    </div>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{{ icon('zap') }} Battle</h2>
+        <a class="text-sm" href="{{ url_for('social.battle_home') }}">Jouer →</a>
+      </div>
+      <div class="card-body">
+        <p class="text-sm">Défiez-vous en <strong>solo</strong> ou en <strong>groupe</strong> sur des questions du programme.</p>
+        <a class="btn btn-outline btn-block mt-2" href="{{ url_for('social.battle_home') }}">{{ icon('zap') }} Lancer une battle</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{{ icon('message') }} Messages</h2>
+        <a class="text-sm" href="{{ url_for('social.messages') }}">Ouvrir →</a>
+      </div>
+      <div class="card-body">
+        <p class="text-sm">Échangez avec les autres apprenants dans le salon général ou en privé.</p>
+        <a class="btn btn-outline btn-block mt-2" href="{{ url_for('social.messages') }}">{{ icon('message') }} Ouvrir la messagerie</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{{ icon('bell') }} Annonces</h2>
+        <a class="text-sm" href="{{ url_for('user.announcements') }}">Toutes →</a>
+      </div>
+      <div class="card-body">
+        {% for item in announcements %}
+        <article class="timeline-item">
+          <span class="timeline-dot"></span>
+          <div class="timeline-txt">
+            <strong>{{ item.title }}</strong>
+            <small>{{ time_ago(item.created_at) }}</small>
+          </div>
+        </article>
+        {% else %}
+        <p class="text-sm text-muted">Aucune annonce pour le moment.</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('users') }} Présence</h2></div>
+      <div class="card-body">
+        <div class="row-between">
+          <span class="text-sm row"><span class="dot dot-green"></span> En ligne</span>
+          <strong>{{ online_count }}</strong>
+        </div>
+        <a class="btn btn-ghost btn-sm btn-block mt-1" href="{{ url_for('user.online_users') }}">Voir les utilisateurs</a>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

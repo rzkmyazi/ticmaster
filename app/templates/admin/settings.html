@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+
+{% block title %}Paramètres{% endblock %}
+{% block page_title %}Paramètres{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Configuration de la plateforme</p>{% endblock %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);align-items:start">
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('settings') }} Plateforme</h2></div>
+    <div class="card-body">
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="site_tagline">Sous-titre de la plateforme</label>
+          <input id="site_tagline" type="text" name="site_tagline" value="{{ values.site_tagline }}" maxlength="200">
+        </div>
+        <div class="field">
+          <label for="support_email">E-mail de support</label>
+          <input id="support_email" type="email" name="support_email" value="{{ values.support_email }}" maxlength="190" placeholder="support@exemple.mg">
+          <span class="hint">Affiché aux utilisateurs dans les pages d'aide et de contact.</span>
+        </div>
+        <div class="field">
+          <label for="welcome_message">Message d'accueil (tableau de bord)</label>
+          <textarea id="welcome_message" name="welcome_message" rows="3" maxlength="1000">{{ values.welcome_message }}</textarea>
+        </div>
+        <div class="field">
+          <label for="retention_days">Conservation des données (jours)</label>
+          <input id="retention_days" type="number" name="retention_days" min="30" max="3650" value="{{ values.retention_days }}">
+          <span class="hint">Durée indicative appliquée à votre politique de conservation (RGPD).</span>
+        </div>
+        <button class="btn btn-primary" type="submit">{{ icon('save') }} Enregistrer</button>
+      </form>
+    </div>
+  </section>
+
+  <aside class="stack">
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('info') }} Configuration système</h2></div>
+      <div class="card-body text-sm">
+        <div class="row-between"><span class="text-muted">Environnement</span><strong>{{ config.ENV_NAME }}</strong></div>
+        <div class="row-between mt-1"><span class="text-muted">Base de données</span><strong>{{ 'PostgreSQL' if 'postgres' in config.SQLALCHEMY_DATABASE_URI else 'SQLite' }}</strong></div>
+        <div class="row-between mt-1"><span class="text-muted">Durée de session</span><strong>{{ config.AUTH_SESSION_HOURS }} h</strong></div>
+        <div class="row-between mt-1"><span class="text-muted">Tentatives avant verrouillage</span><strong>{{ config.LOGIN_MAX_ATTEMPTS }}</strong></div>
+        <div class="row-between mt-1"><span class="text-muted">Verrouillage</span><strong>{{ config.LOGIN_LOCK_MINUTES }} min</strong></div>
+        <div class="row-between mt-1"><span class="text-muted">Taille max. fichier</span><strong>{{ (config.MAX_CONTENT_LENGTH / 1048576)|round(0)|int }} Mo</strong></div>
+        <div class="row-between mt-1"><span class="text-muted">E-mails SMTP</span><strong>{{ 'Activés' if config.MAIL_ENABLED else 'Désactivés' }}</strong></div>
+        <div class="row-between mt-1"><span class="text-muted">Cookies Secure</span><strong>{{ 'Oui' if config.SESSION_COOKIE_SECURE else 'Non' }}</strong></div>
+        <p class="text-xs text-muted mt-2">Ces valeurs proviennent des variables d'environnement : aucun secret n'est stocké en base.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('lock') }} Sécurité</h2></div>
+      <div class="card-body text-sm">
+        <p>Le changement de ces paramètres se fait dans le fichier <span class="mono">.env</span> puis redémarrage du service.</p>
+        <a class="btn btn-outline btn-sm btn-block mt-2" href="{{ url_for('admin.audit') }}">{{ icon('activity') }} Journal d'audit</a>
+        <a class="btn btn-ghost btn-sm btn-block mt-1" href="{{ url_for('admin.sessions') }}">{{ icon('shield') }} Sessions actives</a>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

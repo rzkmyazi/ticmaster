@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+
+{% block title %}Annonces{% endblock %}
+{% block page_title %}Annonces{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Communications de l'administration</p>{% endblock %}
+
+{% block content %}
+<div class="stack">
+  {% for item in items %}
+  <article class="card reveal" style="animation-delay: {{ loop.index0 * 40 }}ms">
+    <div class="card-body">
+      <div class="row-between">
+        <h2 style="font-size:1.02rem">{{ item.title }}</h2>
+        <span class="text-xs text-muted">{{ time_ago(item.created_at) }}</span>
+      </div>
+      <div class="lesson-body mt-1" style="font-size:.9rem">{{ render_content(item.body) }}</div>
+      {% if item.author %}
+      <div class="row mt-2" style="gap:.45rem">
+        {{ avatar(item.author, 'sm') }}
+        <span class="text-xs text-muted">{{ item.author.full_name or item.author.username }} · {{ role_labels.get(item.author.role) }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </article>
+  {% else %}
+  <div class="card"><div class="card-body">
+    <div class="empty">
+      <div class="empty-icon">{{ icon('bell') }}</div>
+      <h3>Aucune annonce</h3>
+      <p>Les annonces publiées par l'administration apparaîtront ici.</p>
+    </div>
+  </div></div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+
+{% block title %}{{ lesson.title }}{% endblock %}
+{% block page_title %}{{ module.title }}{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Leçon {{ module.lessons.index(lesson) + 1 }} sur {{ module.lessons|length }}</p>{% endblock %}
+
+{% block content %}
+<div class="row mb-2 text-sm">
+  <a href="{{ url_for('learning.catalog') }}">Cours TIC</a>
+  <span class="text-muted">/</span>
+  <a href="{{ url_for('learning.module_detail', slug=module.slug) }}">{{ module.title }}</a>
+  <span class="text-muted">/</span>
+  <span class="text-muted">{{ lesson.title }}</span>
+</div>
+
+<div class="course-layout">
+  <article class="card">
+    <div class="card-body" style="padding:clamp(1.1rem,3vw,2rem)">
+      <div class="row-between mb-2">
+        <span class="badge badge-brand">Leçon {{ module.lessons.index(lesson) + 1 }}</span>
+        <span class="text-xs text-muted">{{ icon('clock') }} {{ lesson.estimated_minutes }} min de lecture</span>
+      </div>
+      <h1 style="font-size:clamp(1.3rem,3vw,1.7rem);margin-bottom:1rem">{{ lesson.title }}</h1>
+
+      {% if lesson.image_url %}
+      <img src="{{ lesson.image_url }}" alt="" style="border-radius:14px;margin-bottom:1rem">
+      {% endif %}
+
+      <div class="lesson-body">
+        {{ render_content(lesson.content) }}
+      </div>
+
+      {% if lesson.video_url %}
+      <div class="alert alert-info mt-2">
+        {{ icon('video') }}
+        <span>Vidéo complémentaire : <a href="{{ lesson.video_url }}" target="_blank" rel="noopener noreferrer">ouvrir la ressource</a></span>
+      </div>
+      {% endif %}
+      {% if lesson.document_url %}
+      <div class="alert mt-1">
+        {{ icon('file') }}
+        <span>Document : <a href="{{ lesson.document_url }}" target="_blank" rel="noopener noreferrer">télécharger</a></span>
+      </div>
+      {% endif %}
+
+      <hr class="divider">
+
+      <div class="row-between">
+        <div class="row">
+          {% if prev_lesson %}
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('learning.lesson', slug=module.slug, lesson_id=prev_lesson.id) }}">
+            {{ icon('arrow-left') }} Précédent
+          </a>
+          {% endif %}
+          {% if next_lesson %}
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('learning.lesson', slug=module.slug, lesson_id=next_lesson.id) }}">
+            Suivant {{ icon('arrow-right') }}
+          </a>
+          {% endif %}
+        </div>
+
+        {% if done %}
+        <span class="badge badge-success">{{ icon('check-circle') }} Leçon terminée</span>
+        {% else %}
+        <form method="post" action="{{ url_for('learning.complete_lesson', slug=module.slug, lesson_id=lesson.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-primary" type="submit">{{ icon('check') }} Marquer comme terminée</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </article>
+
+  <aside class="stack">
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('target') }} Progression</h2></div>
+      <div class="card-body">
+        {{ progress_bar(module_progress.percent, module_progress.done ~ ' / ' ~ module_progress.total ~ ' leçons') }}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('layers') }} Sommaire</h2></div>
+      <div class="card-body tight">
+        <div class="lesson-list">
+          {% for item in module.lessons %}
+          <a class="lesson-item {{ 'is-done' if item.id in module_progress.done_ids }} {{ 'is-current' if item.id == lesson.id }}"
+             href="{{ url_for('learning.lesson', slug=module.slug, lesson_id=item.id) }}">
+            <span class="lesson-num">{{ icon('check') if item.id in module_progress.done_ids else loop.index }}</span>
+            <span class="lesson-item-txt"><strong>{{ item.title }}</strong></span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

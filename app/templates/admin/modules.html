@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+
+{% block title %}Cours & exercices{% endblock %}
+{% block page_title %}Cours & modules{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ modules|length }} module(s)</p>{% endblock %}
+
+{% block content %}
+<div class="row-between mb-2">
+  <form method="get" class="row" style="gap:.5rem">
+    <div class="quick-search">
+      {{ icon('search') }}
+      <label class="sr-only" for="q">Rechercher</label>
+      <input id="q" type="search" name="q" value="{{ q }}" placeholder="Rechercher un module…">
+    </div>
+    <select name="status" aria-label="Statut">
+      <option value="">Tous</option>
+      <option value="published" {{ 'selected' if status == 'published' }}>Publiés</option>
+      <option value="draft" {{ 'selected' if status == 'draft' }}>Brouillons</option>
+      <option value="archived" {{ 'selected' if status == 'archived' }}>Archivés</option>
+    </select>
+    <button class="btn btn-sm btn-outline" type="submit">{{ icon('filter') }} Filtrer</button>
+  </form>
+  <a class="btn btn-sm btn-outline" href="{{ url_for('admin.exercises') }}">{{ icon('clipboard') }} Exercices & examens</a>
+</div>
+
+<div class="grid grid-2" style="align-items:start">
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('layers') }} Modules</h2></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Module</th><th>Leçons</th><th>Statut</th><th></th></tr></thead>
+        <tbody>
+          {% for module in modules %}
+          <tr>
+            <td>
+              <div class="row" style="gap:.5rem">
+                <span class="lesson-num">{{ "%02d"|format(module.order_index) }}</span>
+                <div>
+                  <strong>{{ module.title }}</strong>
+                  <div class="text-xs text-muted">{{ module.category.name if module.category else 'Sans catégorie' }} · {{ module.lessons|length }} leçons</div>
+                </div>
+              </div>
+            </td>
+            <td class="text-sm">{{ module.published_lessons|length }}</td>
+            <td>
+              {% if module.status == 'published' %}<span class="badge badge-success">Publié</span>
+              {% elif module.status == 'draft' %}<span class="badge badge-warning">Brouillon</span>
+              {% else %}<span class="badge badge-neutral">Archivé</span>{% endif %}
+            </td>
+            <td class="row-actions">
+              <a class="btn btn-sm btn-ghost" href="{{ url_for('admin.module_edit', module_id=module.id) }}" aria-label="Modifier">{{ icon('edit') }}</a>
+              <a class="btn btn-sm btn-ghost" href="{{ url_for('learning.module_detail', slug=module.slug) }}" aria-label="Aperçu">{{ icon('eye') }}</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4"><div class="empty"><div class="empty-icon">{{ icon('layers') }}</div><h3>Aucun module</h3><p>Créez votre premier module.</p></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('plus') }} Nouveau module</h2></div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('admin.module_new') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="title">Titre du module <span class="req">*</span></label>
+          <input id="title" type="text" name="title" required maxlength="190" placeholder="Ex. Introduction aux TIC">
+        </div>
+        <div class="field">
+          <label for="summary">Résumé court</label>
+          <textarea id="summary" name="summary" rows="2" maxlength="500" placeholder="Objectif pédagogique en une phrase"></textarea>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="category_id">Catégorie</label>
+            <select id="category_id" name="category_id">
+              <option value="">Sans catégorie</option>
+              {% for category in categories %}
+              <option value="{{ category.id }}">{{ category.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="icon">Icône</label>
+            <select id="icon" name="icon">
+              <option value="book-open">Livre</option>
+              <option value="cpu">Processeur</option>
+              <option value="settings">Système</option>
+              <option value="file">Document</option>
+              <option value="grid">Tableur</option>
+              <option value="presentation">Présentation</option>
+              <option value="globe">Internet</option>
+              <option value="mail">E-mail</option>
+              <option value="shield">Sécurité</option>
+              <option value="wifi">Réseaux</option>
+              <option value="code">Programmation</option>
+              <option value="sparkles">Intelligence artificielle</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="order_index">Ordre d'affichage</label>
+          <input id="order_index" type="number" name="order_index" min="1" max="99" value="{{ modules|length + 1 }}">
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">{{ icon('plus') }} Créer le module</button>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}

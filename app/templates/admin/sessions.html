@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+
+{% block title %}Sessions{% endblock %}
+{% block page_title %}Sessions actives{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ active_count }} session(s) valide(s)</p>{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-head">
+    <h2 class="card-title">{{ icon('shield') }} Sessions</h2>
+    <span class="text-xs text-muted">Les jetons ne sont jamais stockés en clair (SHA-256)</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Utilisateur</th><th>Créée</th><th>Dernière activité</th><th>Expire</th><th>IP</th><th>État</th><th></th></tr></thead>
+      <tbody>
+        {% for session in sessions %}
+        <tr>
+          <td>
+            <div class="cell-user">
+              {% if session.user %}{{ avatar(session.user, 'sm', session.user.is_online()) }}{% endif %}
+              <div><strong>{{ session.user.full_name or session.user.username if session.user else '—' }}</strong><small>@{{ session.user.username if session.user else '' }}</small></div>
+            </div>
+          </td>
+          <td class="text-xs">{{ fmt_dt(session.created_at) }}</td>
+          <td class="text-xs">{{ time_ago(session.last_seen_at) }}</td>
+          <td class="text-xs">{{ fmt_dt(session.expires_at) }}</td>
+          <td class="text-xs mono">{{ session.ip or '—' }}</td>
+          <td>{% if session.is_valid %}<span class="badge badge-success">Valide</span>{% else %}<span class="badge badge-neutral">Close</span>{% endif %}</td>
+          <td class="row-actions">
+            {% if session.is_valid %}
+            <form method="post" action="{{ url_for('admin.session_revoke', session_id=session.id) }}" data-confirm="Révoquer cette session ?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-ghost" type="submit">{{ icon('logout') }} Révoquer</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7"><div class="empty"><div class="empty-icon">{{ icon('shield') }}</div><h3>Aucune session</h3></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

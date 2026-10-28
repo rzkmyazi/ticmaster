@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+
+{% block title %}Messages des Utilisateurs{% endblock %}
+{% block page_title %}Messages des Utilisateurs{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Supervision de toutes les conversations — visible uniquement par le super administrateur</p>{% endblock %}
+
+{% block content %}
+<div class="alert alert-info mb-2">
+  {{ icon('shield') }}
+  <span>Vous consultez l'intégralité des messages (salon général et conversations privées). Ce pouvoir de supervision est réservé au super administrateur et journalisé.</span>
+</div>
+
+<section class="card">
+  <div class="filter-bar">
+    <form method="get" class="row" style="gap:.5rem;flex:1">
+      <div class="quick-search" style="flex:1;min-width:200px">
+        {{ icon('search') }}
+        <label class="sr-only" for="q">Rechercher dans les messages</label>
+        <input id="q" type="search" name="q" value="{{ q }}" placeholder="Rechercher un contenu…">
+      </div>
+      <select name="room" aria-label="Salon">
+        <option value="">Tous les salons</option>
+        <option value="general" {{ 'selected' if room == 'general' }}>Salon général</option>
+        {% for r in rooms if r and r != 'general' %}
+        <option value="{{ r }}" {{ 'selected' if room == r }}>{{ r }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-sm btn-outline" type="submit">{{ icon('filter') }} Filtrer</button>
+    </form>
+    <span class="text-xs text-muted">{{ pagination.total }} message(s)</span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Expéditeur</th><th>Salon</th><th>Message</th><th>Date</th><th></th></tr></thead>
+      <tbody>
+        {% for message in messages %}
+        <tr>
+          <td>
+            <div class="cell-user">
+              {% if message.sender %}{{ avatar(message.sender, 'sm', message.sender.is_online()) }}{% endif %}
+              <div>
+                <strong>{{ message.sender.full_name or message.sender.username if message.sender else 'Compte supprimé' }}</strong>
+                <small>{{ role_labels.get(message.sender.role) if message.sender else '' }}</small>
+              </div>
+            </div>
+          </td>
+          <td><span class="badge {{ 'badge-info' if message.room == 'general' else 'badge-pink' }}">{{ message.room }}</span></td>
+          <td class="text-sm" style="max-width:420px">
+            <span style="{{ 'opacity:.55;text-decoration:line-through' if message.deleted }}">{{ message.body|truncate(140) }}</span>
+          </td>
+          <td class="text-xs text-muted">{{ fmt_dt(message.created_at) }}</td>
+          <td class="row-actions">
+            {% if not message.deleted %}
+            <form method="post" action="{{ url_for('admin.message_hide', message_id=message.id) }}" data-confirm="Masquer ce message pour tous les utilisateurs ?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-ghost" type="submit">{{ icon('ban') }} Masquer</button>
+            </form>
+            {% else %}
+            <span class="badge badge-neutral">Masqué</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5"><div class="empty"><div class="empty-icon">{{ icon('message') }}</div><h3>Aucun message</h3><p>Aucune conversation ne correspond à ces critères.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ page_nav(pagination, 'admin.user_messages', args={'q': q, 'room': room}) }}
+</section>
+{% endblock %}

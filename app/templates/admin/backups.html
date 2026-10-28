@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+
+{% block title %}Sauvegardes{% endblock %}
+{% block page_title %}Sauvegardes{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Export et procédures de restauration</p>{% endblock %}
+
+{% block content %}
+<div class="stats-grid mb-2">
+  <div class="stat"><span class="stat-label">Base de données</span><div class="stat-value" style="font-size:1rem">{{ 'PostgreSQL' if 'postgres' in db_url else 'SQLite' }}</div><div class="stat-foot mono text-xs">{{ db_url|truncate(40) }}</div>{{ icon('database', 'stat-icon') }}</div>
+  <div class="stat"><span class="stat-label">Taille base</span><div class="stat-value">{{ human_size(db_size) if db_size else '—' }}</div>{{ icon('chart', 'stat-icon') }}</div>
+  <div class="stat"><span class="stat-label">Fichiers</span><div class="stat-value">{{ upload_count }}</div><div class="stat-foot">{{ human_size(upload_size) }}</div>{{ icon('file', 'stat-icon') }}</div>
+</div>
+
+<div class="grid grid-2" style="align-items:start">
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('download') }} Export immédiat</h2></div>
+    <div class="card-body">
+      <p class="text-sm">L'export JSON contient les comptes (sans mots de passe), les modules, leçons, exercices et annonces. Il sert d'archive portable et de base pour une restauration manuelle.</p>
+      <a class="btn btn-primary mt-2" href="{{ url_for('admin.backup_export') }}">{{ icon('download') }} Télécharger la sauvegarde JSON</a>
+      <a class="btn btn-outline mt-1" href="{{ url_for('admin.users_export') }}">{{ icon('file') }} Exporter les comptes (CSV)</a>
+      <div class="alert alert-info mt-2">
+        {{ icon('shield') }}
+        <span>Les mots de passe ne figurent jamais dans les exports : uniquement des empreintes Argon2id dans la base.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2 class="card-title">{{ icon('database') }} Sauvegarde serveur</h2></div>
+    <div class="card-body">
+      <p class="text-sm mb-1"><strong>PostgreSQL</strong> (recommandé en production) :</p>
+      <pre class="mono text-xs" style="white-space:pre-wrap;background:rgba(0,0,0,.25);padding:.7rem;border-radius:10px">pg_dump "$DATABASE_URL" -Fc -f backup-$(date +%F).dump
+pg_restore -d "$DATABASE_URL" --clean backup-2026-01-01.dump</pre>
+      <p class="text-sm mb-1 mt-2"><strong>SQLite</strong> (local) :</p>
+      <pre class="mono text-xs" style="white-space:pre-wrap;background:rgba(0,0,0,.25);padding:.7rem;border-radius:10px">sqlite3 instance/ticmaster.db ".backup backup.db"
+tar czf uploads-$(date +%F).tar.gz instance/uploads</pre>
+      <p class="text-xs text-muted mt-2">Politique recommandée : 3 copies, 2 supports, 1 hors site. Fréquence quotidienne + avant chaque déploiement.</p>
+    </div>
+  </section>
+</div>
+
+<section class="card mt-2">
+  <div class="card-head"><h2 class="card-title">{{ icon('info') }} Procédure de restauration</h2></div>
+  <div class="card-body">
+    <ol class="text-sm" style="margin-left:1.2rem;color:var(--text-soft);line-height:1.9">
+      <li>Placer la plateforme en maintenance (ou suspendre le trafic).</li>
+      <li>Restaurer la base avec la commande correspondante ci-dessus.</li>
+      <li>Restaurer le dossier <span class="mono">instance/uploads</span> à l'identique.</li>
+      <li>Redémarrer le service et vérifier <span class="mono">/sante</span>.</li>
+      <li>Se connecter avec le super administrateur et vérifier le journal d'audit.</li>
+    </ol>
+  </div>
+</section>
+{% endblock %}

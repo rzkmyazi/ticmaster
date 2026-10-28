@@ -1,0 +1,34 @@
+# Secrets
+.env
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.Python
+*.egg-info/
+
+# Base locale et fichiers utilisateurs
+instance/*.db
+instance/uploads/*
+!instance/uploads/.gitkeep
+
+# Tests / outils
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Éditeurs / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Journaux
+*.log

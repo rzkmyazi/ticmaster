@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+
+{% block title %}{{ exercise.title }}{% endblock %}
+{% block page_title %}Exercice en cours{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ exercise.title }}</p>{% endblock %}
+
+{% block content %}
+<div class="exam-shell" id="quiz-app" data-remaining="{{ remaining }}">
+  <div class="exam-top">
+    <div>
+      <strong>{{ exercise.title }}</strong>
+      <div class="text-xs text-muted">{{ questions|length }} questions · seuil {{ exercise.pass_score }}%</div>
+    </div>
+    <span class="spacer"></span>
+    <span class="quiz-timer" data-timer>
+      {{ icon('clock') }} <span data-timer-value>{{ (remaining // 60) }}:{{ "%02d"|format(remaining % 60) }}</span>
+    </span>
+    <span class="badge badge-info" data-progress>0 / {{ questions|length }} répondues</span>
+  </div>
+
+  <form method="post" action="{{ url_for('learning.submit_exercise', attempt_id=attempt.id) }}" id="quiz-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    {% for question in questions %}
+    <fieldset class="question" style="border:1px solid var(--border)">
+      <legend class="sr-only">Question {{ loop.index }}</legend>
+      <div class="question-head">
+        <span class="q-index">{{ loop.index }}</span>
+        <div class="question-text">{{ question.text }}</div>
+      </div>
+      <div class="options">
+        {% for option in question.options %}
+        <label class="option">
+          <input type="radio" name="q_{{ question.id }}" value="{{ option.id }}" data-answer>
+          <span class="option-letter">{{ 'ABCD'[loop.index0] }}</span>
+          <span>{{ option.text }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    {% endfor %}
+
+    <div class="card mt-2">
+      <div class="card-body row-between">
+        <span class="text-sm text-muted">{{ icon('info') }} Vous pouvez revenir en arrière avant de soumettre.</span>
+        <button class="btn btn-primary btn-lg" type="submit" data-loading="Correction…">
+          {{ icon('check') }} Soumettre mes réponses
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/exam.js') }}" defer></script>
+{% endblock %}

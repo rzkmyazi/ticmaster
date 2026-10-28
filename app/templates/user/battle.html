@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+
+{% block title %}Battle{% endblock %}
+{% block page_title %}Battle{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Défiez-vous sur le programme TIC</p>{% endblock %}
+
+{% block content %}
+<section class="battle-hero mb-2">
+  <h2><span class="zap-anim">{{ icon('zap') }}</span> Lancez une battle de connaissances</h2>
+  <p class="section-sub mt-1">5 questions tirées au hasard dans le programme, 20 secondes par question. Le score compte dès la première bonne réponse.</p>
+
+  <div class="mode-grid" id="battle-launcher">
+    <div class="mode-card">
+      <h3>{{ icon('user') }} Battle solo</h3>
+      <p>Votre nom de battle correspond automatiquement à votre nom d'utilisateur : <strong>{{ current_user.full_name or current_user.username }}</strong>.</p>
+      <button class="btn btn-primary btn-sm mt-1" type="button" data-battle-create="solo">
+        {{ icon('play') }} Démarrer en solo
+      </button>
+    </div>
+
+    <div class="mode-card">
+      <h3>{{ icon('users') }} Battle en groupe</h3>
+      <p>Créez un groupe, partagez le code à 6 caractères, puis lancez la partie. Le nom du groupe est modifiable à tout moment.</p>
+      <div class="field">
+        <label for="group-name">Nom du groupe</label>
+        <input type="text" id="group-name" placeholder="Ex. Les As du clavier" maxlength="120">
+      </div>
+      <button class="btn btn-primary btn-sm" type="button" data-battle-create="group">
+        {{ icon('plus') }} Créer le groupe
+      </button>
+    </div>
+
+    <div class="mode-card">
+      <h3>{{ icon('key') }} Rejoindre</h3>
+      <p>Saisissez le code communiqué par le créateur de la battle.</p>
+      <div class="field">
+        <label for="join-code">Code de la battle</label>
+        <input type="text" id="join-code" placeholder="ABC123" maxlength="6" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:.18em;font-family:var(--font-mono)">
+      </div>
+      <button class="btn btn-outline btn-sm" type="button" data-battle-join>
+        {{ icon('arrow-right') }} Rejoindre
+      </button>
+    </div>
+  </div>
+</section>
+
+{% if my_rooms %}
+<section class="card mb-2">
+  <div class="card-head"><h2 class="card-title">{{ icon('clock') }} Mes battles</h2></div>
+  <div class="card-body">
+    <div class="grid grid-3">
+      {% for room in my_rooms %}
+      <a class="lesson-item" href="{{ url_for('social.battle_room', code=room.code) }}">
+        <span class="lesson-num">{{ icon('zap') }}</span>
+        <span class="lesson-item-txt">
+          <strong>{{ room.name }}</strong>
+          <small>{{ 'Solo' if room.mode == 'solo' else 'Groupe' }} · {{ room.status }}</small>
+        </span>
+        {{ icon('arrow-right') }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="card">
+  <div class="card-head"><h2 class="card-title">{{ icon('users') }} Groupes ouverts</h2></div>
+  <div class="card-body">
+    {% if open_rooms %}
+    <div class="grid grid-2">
+      {% for room in open_rooms %}
+      <div class="person">
+        {{ avatar(room.owner, 'sm') }}
+        <div class="person-txt">
+          <strong>{{ room.name }}</strong>
+          <small>{{ 'Solo' if room.mode == 'solo' else 'Groupe' }} · code {{ room.code }} · {{ room.members|length }} joueur(s)</small>
+        </div>
+        <a class="btn btn-sm btn-outline" href="{{ url_for('social.battle_room', code=room.code) }}">Ouvrir</a>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+      <div class="empty-icon">{{ icon('zap') }}</div>
+      <h3>Aucune battle ouverte</h3>
+      <p>Créez la première battle et invitez vos camarades avec le code de la salle.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/battle.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+
+{% block title %}Correction — {{ exercise.title }}{% endblock %}
+{% block page_title %}Correction{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ exercise.title }}</p>{% endblock %}
+
+{% block content %}
+<div class="exam-shell">
+  <section class="card mb-2">
+    <div class="card-body">
+      <div class="result-hero">
+        <div class="score-ring" style="--pct: {{ attempt.percentage }}">
+          <span>{{ attempt.percentage }}%</span>
+        </div>
+        <div style="flex:1;min-width:220px">
+          <span class="eyebrow">{{ icon('award') }} Résultat</span>
+          <h1 class="section-title mt-1">{{ exercise.title }}</h1>
+          <p class="text-sm text-muted mt-1">
+            {{ attempt.score }} / {{ attempt.max_score }} points · corrigé le {{ fmt_dt(attempt.submitted_at) }}
+          </p>
+          <div class="row mt-2">
+            {% if attempt.passed %}
+            <span class="badge badge-success">{{ icon('check-circle') }} Objectif atteint</span>
+            {% else %}
+            <span class="badge badge-warning">{{ icon('alert') }} Seuil de {{ exercise.pass_score }}% non atteint</span>
+            {% endif %}
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('learning.exercise_detail', exercise_id=exercise.id) }}">{{ icon('refresh') }} Refaire</a>
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('learning.results') }}">Tous mes résultats</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="stack">
+    {% for question in exercise.questions %}
+    {% set answer = answers.get(question.id) %}
+    {% set correct = question.correct_option %}
+    <section class="card">
+      <div class="card-body">
+        <div class="question-head">
+          <span class="q-index">{{ loop.index }}</span>
+          <div class="question-text">{{ question.text }}</div>
+          <span class="spacer"></span>
+          {% if answer and answer.is_correct %}
+            <span class="badge badge-success">+{{ answer.points_awarded }}</span>
+          {% else %}
+            <span class="badge badge-danger">0</span>
+          {% endif %}
+        </div>
+        <div class="options">
+          {% for option in question.options %}
+          <div class="option {{ 'is-correct' if option.is_correct }} {{ 'is-wrong' if (answer and answer.option_id == option.id and not option.is_correct) }}">
+            <span class="option-letter">{{ ['A','B','C','D','E','F'][loop.index0] }}</span>
+            <span>{{ option.text }}</span>
+            {% if option.is_correct %}<span class="spacer"></span>{{ icon('check') }}{% endif %}
+            {% if answer and answer.option_id == option.id %}<span class="badge badge-neutral">Votre réponse</span>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% if not answer or not answer.option_id %}
+        <p class="correction">{{ icon('info') }} Vous n'avez pas répondu à cette question.</p>
+        {% endif %}
+        {% if question.explanation %}
+        <p class="correction">{{ icon('sparkles') }} {{ question.explanation }}</p>
+        {% endif %}
+      </div>
+    </section>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

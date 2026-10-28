@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+
+{% block title %}Mon profil{% endblock %}
+{% block page_title %}Mon profil{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Vos informations personnelles</p>{% endblock %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns:minmax(0,1fr) 320px;align-items:start;gap:1rem">
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">{{ icon('user') }} Informations</h2>
+      {{ role_badge(user.role) }}
+    </div>
+    <div class="card-body">
+      <div class="row mb-2" style="gap:.8rem">
+        {{ avatar(user, 'xl', true) }}
+        <div>
+          <strong style="font-size:1.1rem">{{ user.full_name or user.username }}</strong>
+          <div class="text-sm text-muted">@{{ user.username }}</div>
+          <div class="text-xs text-muted mt-1">{{ icon('calendar') }} Membre depuis {{ fmt_date(user.created_at) }}</div>
+        </div>
+      </div>
+
+      {% if error %}<div class="auth-error">{{ icon('alert') }}<span>{{ error }}</span></div>{% endif %}
+
+      <form method="post" action="{{ url_for('user.profile') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-grid">
+          <div class="field">
+            <label for="full_name">Nom complet</label>
+            <input type="text" id="full_name" name="full_name" value="{{ user.full_name }}" required>
+          </div>
+          <div class="field">
+            <label for="email">Adresse e-mail</label>
+            <input type="email" id="email" name="email" value="{{ user.email or '' }}" placeholder="prenom.nom@exemple.mg">
+            <span class="hint">Utilisée pour la récupération de compte.</span>
+          </div>
+          <div class="field full">
+            <label for="bio">Présentation</label>
+            <textarea id="bio" name="bio" rows="3" maxlength="1000" placeholder="Quelques mots sur vous, vos objectifs…">{{ user.bio }}</textarea>
+          </div>
+        </div>
+        <div class="alert alert-info mb-2">
+          {{ icon('lock') }}
+          <span>Votre identifiant et votre rôle ne peuvent pas être modifiés depuis cet écran. Toute modification de rôle relève de l'administration.</span>
+        </div>
+        <button class="btn btn-primary" type="submit">{{ icon('check') }} Enregistrer</button>
+        <a class="btn btn-ghost" href="{{ url_for('auth.change_password') }}">{{ icon('key') }} Changer de mot de passe</a>
+      </form>
+    </div>
+  </section>
+
+  <aside class="stack">
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('chart') }} Mes statistiques</h2></div>
+      <div class="card-body">
+        {{ progress_bar(stats.progress.percent, stats.progress.done ~ ' / ' ~ stats.progress.total ~ ' leçons') }}
+        <hr class="divider">
+        <div class="row-between text-sm"><span class="text-muted">Évaluations corrigées</span><strong>{{ stats.attempts }}</strong></div>
+        <div class="row-between text-sm mt-1"><span class="text-muted">Réussies</span><strong>{{ stats.passed }}</strong></div>
+        <div class="row-between text-sm mt-1"><span class="text-muted">Meilleur score</span><strong>{{ stats.best }}%</strong></div>
+        <div class="row-between text-sm mt-1"><span class="text-muted">Dernière connexion</span><strong>{{ time_ago(user.last_login_at) }}</strong></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('shield') }} Sécurité</h2></div>
+      <div class="card-body">
+        <p class="text-sm">Mot de passe modifié : <strong>{{ time_ago(user.password_changed_at) }}</strong></p>
+        <div class="row mt-2">
+          <a class="btn btn-outline btn-sm" href="{{ url_for('auth.change_password') }}">{{ icon('key') }} Modifier</a>
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('auth.logout') }}">{{ icon('logout') }} Se déconnecter</a>
+        </div>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}
