@@ -1295,14 +1295,19 @@ def grades_export():
     output = io.StringIO()
     writer = csv.writer(output, delimiter=";")
     writer.writerow([
-        "rang", "identifiant", "nom_complet", "statut", "progression_%", "exercices",
+        "rang", "numero_classe", "identifiant", "nom_complet", "nom", "prenom", "pseudo",
+        "niveau_etude", "groupe", "sexe", "statut", "progression_%", "exercices",
         "moyenne_exercices_%", "examens", "moyenne_examens_%", "moyenne_generale_%",
         "note_sur_20", "mention", "eliminations", "derniere_activite",
     ])
     for row in rows:
         label = mention_for(row["note"])[0] if row["note"] is not None else "Non noté"
         writer.writerow([
-            row["rank"] or "", row["user"].username, row["user"].full_name or "",
+            row["rank"] or "", row["user"].class_number or "", row["user"].username,
+            row["user"].full_name or "", row["user"].last_name or "",
+            row["user"].first_name or "", row["user"].pseudo or "",
+            row["user"].study_level or "", row["user"].group_label,
+            row["user"].gender_label,
             row["user"].status, row["progress"], row["exercises"],
             row["avg_exos"] if row["avg_exos"] is not None else "",
             row["exams"], row["avg_exams"] if row["avg_exams"] is not None else "",
@@ -1328,6 +1333,29 @@ def student_sheet(user_id: int):
     log_audit("grades.viewed", target=report["user"].username)
     return render_template(
         "admin/student_sheet.html", r=report, mention_for=mention_for, note20=note20,
+    )
+
+
+@bp.route("/classe")
+@super_admin_required
+def class_list():
+    """Liste de classe imprimable : groupe, numéro, identité et note /20."""
+    rows = student_rows(sort="groupe")
+    grouped = []
+    for group in GROUPS:
+        members = [r for r in rows if r["user"].class_group == group]
+        if members:
+            grouped.append({"label": f"Groupe {group}", "rows": members})
+    without = [r for r in rows if not r["user"].class_group]
+    if without:
+        grouped.append({"label": "Sans groupe", "rows": without})
+    return render_template(
+        "admin/class_list.html", grouped=grouped, total=len(rows), mention_for=mention_for,
+        stats={
+            "filles": sum(1 for r in rows if r["user"].gender == "fille"),
+            "garcons": sum(1 for r in rows if r["user"].gender == "garcon"),
+            "notes": sum(1 for r in rows if r["note"] is not None),
+        },
     )
 
 

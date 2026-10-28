@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+
+{% block title %}Liste de classe{% endblock %}
+{% block page_title %}Liste de classe{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ total }} élève(s) répartis par groupe — prête à imprimer</p>{% endblock %}
+
+{% block content %}
+<div class="page-actions no-print">
+  <a class="btn btn-ghost" href="{{ url_for('admin.users', role='user', sort='numero') }}">{{ icon('users', 16) }} Gérer les élèves</a>
+  <a class="btn btn-outline" href="{{ url_for('admin.grades') }}">{{ icon('award', 16) }} Notes des élèves</a>
+  <button class="btn btn-primary" type="button" data-print>{{ icon('download', 16) }} Imprimer / PDF</button>
+</div>
+
+<div class="statgrid">
+  {{ stat(total, 'Élèves inscrits', 'users', 'toutes classes') }}
+  {{ stat(stats.garcons, 'Garçons', 'user', 'dossier renseigné') }}
+  {{ stat(stats.filles, 'Filles', 'user', 'dossier renseigné') }}
+  {{ stat(stats.notes ~ '/' ~ total, 'Élèves notés', 'award', 'note sur 20 disponible') }}
+</div>
+
+{% if grouped %}
+{% for block in grouped %}
+<section class="card mb-2 roster-card">
+  <div class="card-head">
+    <h2 class="card-title">{{ icon('layers') }} {{ block.label }}</h2>
+    <span class="badge badge-info">{{ block.rows|length }} élève{{ 's' if block.rows|length > 1 }}</span>
+  </div>
+  <div class="table-wrap table-wrap--flush">
+    <table class="table table--compact roster">
+      <thead>
+        <tr>
+          <th style="width:64px">N°</th>
+          <th>Élève</th>
+          <th>Pseudo</th>
+          <th>Niveau</th>
+          <th>Sexe</th>
+          <th class="num">Note /20</th>
+          <th>Mention</th>
+          <th class="no-print"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in block.rows %}
+        <tr>
+          <td class="num">{{ row.user.class_number or '—' }}</td>
+          <td>
+            <div class="cell-user">
+              {{ avatar(row.user, 'sm') }}
+              <div>
+                <div class="cell-name">{{ row.user.display_name }}</div>
+                <div class="cell-sub">@{{ row.user.username }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="text-sm">{{ row.user.pseudo or '—' }}</td>
+          <td class="text-sm">{{ row.user.study_level or '—' }}</td>
+          <td class="text-sm">{{ row.user.gender_label or '—' }}</td>
+          <td class="num">
+            {% if row.note is not none %}
+            <span class="note note--{{ 'good' if row.note >= 14 else ('mid' if row.note >= 10 else 'low') }}">{{ row.note }}</span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td class="text-xs">
+            {% if row.note is not none %}{{ mention_for(row.note)[0] }}{% else %}<span class="text-muted">Non noté</span>{% endif %}
+          </td>
+          <td class="actions no-print">
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('admin.student_sheet', user_id=row.user.id) }}" aria-label="Bulletin">{{ icon('eye') }}</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endfor %}
+{% else %}
+<div class="empty">
+  <div class="empty-icon">{{ icon('users') }}</div>
+  <h3>Aucun élève inscrit</h3>
+  <p>Inscrivez un élève depuis « Utilisateurs → Inscrire un élève » : son nom, son numéro et son groupe apparaîtront ici.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+  document.querySelectorAll("[data-print]").forEach(function (btn) {
+    btn.addEventListener("click", function () { window.print(); });
+  });
+</script>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  @media print {
+    .sidebar, .topbar, .no-print, .nav-toggle, .toast-stack, .flash-stack { display: none !important; }
+    body { background: #fff !important; color: #000 !important; }
+    .app-shell, .main, .content { display: block !important; margin: 0 !important; padding: 0 !important; }
+    .card { border: 1px solid #999 !important; box-shadow: none !important; break-inside: avoid; background: #fff !important; }
+    .statgrid { display: none !important; }
+    .table th, .table td { color: #000 !important; border-color: #bbb !important; }
+    .badge, .note { border: 1px solid #999 !important; color: #000 !important; background: none !important; }
+  }
+</style>
+{% endblock %}

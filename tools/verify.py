@@ -310,6 +310,21 @@ def main() -> int:
     ok("un élève ne peut pas ouvrir une fiche d'administration", r.status_code in (403, 302),
        str(r.status_code))
 
+    page = sa.get(BASE + "/admin/classe")
+    ok("liste de classe accessible au super administrateur", page.status_code == 200,
+       str(page.status_code))
+    ok("liste de classe : groupes et impression",
+       "Groupe 1" in page.text and "Imprimer" in page.text)
+    ok("liste de classe : élève présent avec son numéro",
+       "Andriamana Soa" in page.text and "SoaDuTIC" in page.text)
+
+    body = sa.get(BASE + "/admin/notes/export.csv").text
+    ok("export des notes avec les colonnes de classe",
+       "numero_classe" in body and "niveau_etude" in body and "groupe" in body)
+
+    r = u.get(BASE + "/admin/classe", allow_redirects=False)
+    ok("liste de classe interdite à un élève", r.status_code in (403, 302), str(r.status_code))
+
     # ------------------------------------------- compte jetable pour les tests
     print("▸ Création d'un compte de test (super admin)")
     probe_name = "verif." + rand_suffix(6)

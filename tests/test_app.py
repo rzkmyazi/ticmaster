@@ -832,3 +832,55 @@ def test_schema_ajoute_les_colonnes_manquantes(app):
         assert "pseudo" in columns
 
         assert ensure_schema() == []      # idempotent
+
+
+# ---------------------------------------------------------------------------
+# Liste de classe imprimable
+# ---------------------------------------------------------------------------
+def test_liste_de_classe(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    _make_user(app, "eleve", role=ROLE_USER)
+    with app.app_context():
+        student = User.query.filter_by(username="eleve").one()
+        student.full_name = "Rakoto Miora"
+        student.last_name, student.first_name = "Rakoto", "Miora"
+        student.pseudo = "Miora_88"
+        student.class_number = 2
+        student.study_level = "Terminale"
+        student.class_group = 1
+        student.gender = "fille"
+        db.session.commit()
+
+    chief = app.test_client()
+    _login(chief, "chef", "MotDePasse2026!")
+    page = chief.get("/admin/classe")
+    html = page.get_data(as_text=True)
+    assert page.status_code == 200
+    assert "Liste de classe" in html
+    assert "Groupe 1" in html
+    assert "Rakoto Miora" in html and "Miora_88" in html and "Terminale" in html
+    assert "Imprimer" in html
+
+    # réservé au super administrateur
+    student_client = app.test_client()
+    _login(student_client, "eleve", "MotDePasse2026!")
+    assert student_client.get("/admin/classe").status_code == 403
+
+
+def test_export_des_notes_contient_la_classe(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    with app.app_context():
+        student = User(username="note.eleve", full_name="Rasoa Marie", role=ROLE_USER,
+                       status=STATUS_ACTIVE, must_change_password=False,
+                       last_name="Rasoa", first_name="Marie", pseudo="Mimi",
+                       class_number=4, study_level="Terminale", gender="fille",
+                       class_group=2)
+        student.set_password("MotDePasse2026!")
+        db.session.add(student)
+        db.session.commit()
+
+    chief = app.test_client()
+    _login(chief, "chef", "MotDePasse2026!")
+    body = chief.get("/admin/notes/export.csv").get_data(as_text=True)
+    assert "numero_classe" in body and "niveau_etude" in body and "groupe" in body
+    assert "Rasoa;Marie;Mimi;Terminale;Groupe 2;Fille" in body
