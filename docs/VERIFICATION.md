@@ -169,4 +169,28 @@ Les comptes de test créés par la vérification ont été supprimés.
 
 ---
 
+## 9. Vérification de la seconde installation (PythonAnywhere)
+
+**URL :** <https://myazirzk1.pythonanywhere.com> · compte `myazirzk1`, Python 3.12
+**Base :** SQLite `~/ticmaster/instance/ticmaster.db` (indépendante de Render)
+
+| Contrôle | Résultat |
+|---|---|
+| `/sante` | `{"app":"TIC MASTER","database":true,"status":"ok"}` ✔ |
+| `/`, `/a-propos`, `/auth/connexion` | 200 ✔ |
+| `/inscription` | **404** ✔ |
+| Feuilles de style et scripts | `app.css` 76 982 o, `app.js` 14 597 o ✔ |
+| Connexion `Myazirzk` | 302 → `/admin/` ✔ |
+| Tableau de bord et 4 pages d'administration | 200 ✔ |
+| Contenu installé | **12 modules** ✔ |
+| HTTP → HTTPS | 302 vers `https://` ✔ |
+| HSTS + CSP + X-Frame-Options | présents ✔ |
+
+**Particularité :** aucun `pip install` n'a été nécessaire — Flask, Flask-SQLAlchemy,
+argon2-cffi et python-dotenv sont préinstallés dans le Python 3.12 de PythonAnywhere.
+Le fichier WSGI (`pythonanywhere_wsgi.py`) réalise l'amorçage au premier appel, puis
+sert l'application ; il est idempotent grâce au marqueur `~/.tic_bootstrap_done`.
+
+---
+
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*

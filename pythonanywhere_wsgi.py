@@ -1,36 +1,75 @@
 # -*- coding: utf-8 -*-
 """
-Configuration WSGI pour PythonAnywhere — TIC MASTER #by_Myazirzk
-==============================================================
+TIC MASTER #by_Myazirzk — point d'entrée WSGI pour PythonAnywhere.
+===============================================================
 
-À coller **tel quel** dans l'onglet « Web » de PythonAnywhere, dans le fichier
-WSGI (bouton « WSGI configuration file »), en remplaçant tout son contenu.
+Fichier **réellement déployé** sur https://myazirzk1.pythonanywhere.com
+(emplacement : /var/www/myazirzk1_pythonanywhere_com_wsgi.py).
 
-    import os, sys
-    path = os.path.expanduser("~/ticmaster")
-    ...
+Il est auto-suffisant : au premier appel de l'application web, il
+  • crée le fichier `.env` (clé secrète aléatoire, super administrateur),
+  • lance `python seed.py bootstrap` (tables + 12 modules + compte Myazirzk),
+  • pose un marqueur pour ne plus jamais recommencer,
+puis sert l'application Flask normale.
 
-Aucune modification n'est nécessaire si le projet est bien dans ~/ticmaster.
-Si vous l'avez placé ailleurs, changez seulement la variable PROJECT_DIR.
+Sur PythonAnywhere gratuit il n'y a pas de PostgreSQL : la base est SQLite,
+dans /home/<utilisateur>/ticmaster/instance/ticmaster.db.
+
+Pour adapter à un autre compte, changez seulement les deux constantes ci-dessous.
 """
+import json
 import os
+import secrets
+import shutil
+import subprocess
 import sys
 
-PROJECT_DIR = os.path.expanduser("~/ticmaster")
+USER_HOME = os.path.expanduser("~")
+PROJ = os.path.join(USER_HOME, "ticmaster")
+MARK = os.path.join(USER_HOME, ".tic_bootstrap_done")
+ENVFILE = os.path.join(PROJ, ".env")
 
-# 1) Le projet doit être importable
-if PROJECT_DIR not in sys.path:
-    sys.path.insert(0, PROJECT_DIR)
-os.chdir(PROJECT_DIR)
+sys.path.insert(0, PROJ)
+os.chdir(PROJ)
 
-# 2) Variables d'environnement de production
-#    (SECRET_KEY est lue depuis ~/ticmaster/.env si le fichier existe)
-os.environ.setdefault("FLASK_ENV", "production")
-os.environ.setdefault("COOKIE_SECURE", "1")
-os.environ.setdefault("SITE_NAME", "TIC MASTER")
-# Sur PythonAnywhere gratuit, pas de PostgreSQL : on reste sur SQLite (~/ticmaster/instance)
-if not os.path.exists(os.path.join(PROJECT_DIR, ".env")):
-    os.environ.setdefault("SECRET_KEY", "changez-cette-cle-dans-le-fichier-env")
+STATUS = {"done": os.path.exists(MARK)}
 
-# 3) Application Flask (wsgi.py expose « app » et « application »)
-from wsgi import app as application  # noqa: E402
+
+def _write_env():
+    """Crée .env une seule fois, avec une clé secrète aléatoire."""
+    if os.path.exists(ENVFILE):
+        return
+    with open(ENVFILE, "w", encoding="utf-8") as f:
+        f.write("FLASK_ENV=production\n")
+        f.write("COOKIE_SECURE=1\n")
+        f.write("SITE_NAME=TIC MASTER\n")
+        f.write("SECRET_KEY=%s\n" % secrets.token_hex(32))
+        f.write("SUPER_ADMIN_USERNAME=Myazirzk\n")
+        f.write("SUPER_ADMIN_PASSWORD=Fiaram131213!!\n")
+        f.write("AUTH_SESSION_HOURS=8\n")
+        f.write("LOGIN_MAX_ATTEMPTS=5\n")
+        f.write("LOGIN_LOCK_MINUTES=15\n")
+
+
+if not STATUS["done"]:
+    try:
+        _write_env()
+        py = shutil.which("python3.12") or "/usr/local/bin/python3.12"
+        r = subprocess.run([py, "seed.py", "bootstrap"], cwd=PROJ,
+                           capture_output=True, text=True, timeout=150)
+        STATUS["rc"] = r.returncode
+        STATUS["out"] = (r.stdout or "")[-2000:]
+        STATUS["err"] = (r.stderr or "")[-2000:]
+        if r.returncode == 0 and os.path.exists(os.path.join(PROJ, "instance", "ticmaster.db")):
+            with open(MARK, "w") as m:
+                m.write("ok")
+            STATUS["done"] = True
+    except Exception as exc:  # noqa: BLE001
+        STATUS["error"] = "%s: %s" % (type(exc).__name__, exc)
+
+if STATUS["done"]:
+    from wsgi import app as application          # noqa: E402
+else:
+    def application(environ, start_response):
+        start_response("200 OK", [("Content-Type", "application/json; charset=utf-8")])
+        return [json.dumps(STATUS, indent=1, ensure_ascii=False).encode("utf-8")]

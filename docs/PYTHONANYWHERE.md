@@ -1,5 +1,30 @@
 # Déployer TIC MASTER sur PythonAnywhere
 
+> ## ✅ Installation effectuée le 29/10/2026
+>
+> | Élément | Valeur |
+> |---|---|
+> | URL publique | **<https://myazirzk1.pythonanywhere.com>** |
+> | Compte | `myazirzk1` (formule gratuit *Beginner*, Python 3.12) |
+> | Santé | `{"app":"TIC MASTER","database":true,"status":"ok"}` |
+> | Base | SQLite `~/ticmaster/instance/ticmaster.db` |
+> | Contenu | 12 modules · 36 leçons · 69 questions · 3 examens |
+> | Super administrateur | `Myazirzk` |
+> | HTTPS | forcé (http → https) + HSTS |
+>
+> **Ce qui a rendu l'installation possible sans console** : les paquets Python
+> (Flask, Flask-SQLAlchemy, argon2-cffi, python-dotenv) sont **déjà présents** dans le
+> Python 3.12 de PythonAnywhere. Le fichier WSGI déployé réalise l'amorçage lui-même au
+> premier appel (création de `.env`, `seed.py bootstrap`, marqueur `~/.tic_bootstrap_done`).
+>
+> ⚠️ **Compte gratuit : le site doit être réactivé par un clic toutes les 3 semaines**
+> (onglet Web → « Run until 3 months from today »). Sinon il est désactivé.
+> ⚠️ La base SQLite de PythonAnywhere est **indépendante** de la base PostgreSQL de Render :
+> les comptes créés ici n'existent pas là-bas, et inversement.
+>
+> Les sections ci-dessous restent la procédure de référence pour une réinstallation.
+
+
 > **À savoir avant de commencer**
 > PythonAnywhere **gratuit** accepte très bien Flask, mais impose trois limites :
 > 1. **Pas de PostgreSQL** (ni MySQL pour les comptes créés après le 15/01/2026) → l'application

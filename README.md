@@ -3,6 +3,7 @@
 **#by_Myazirzk**
 
 > 🌐 **Application en ligne : <https://ticmaster.onrender.com>**
+> 🇲🇬 Seconde adresse (secours) : <https://myazirzk1.pythonanywhere.com>
 > Dépôt : <https://github.com/rzkmyazi/ticmaster>
 
 
