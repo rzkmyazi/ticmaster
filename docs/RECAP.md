@@ -122,7 +122,7 @@ Deux améliorations liées :
 |---|---|
 | `pytest -q` | **42 tests réussis** |
 | `tools/verify.py` (local) | **131 contrôles conformes** |
-| `tools/verify.py` sur Render | **137 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | **132 contrôles conformes, 0 échec** |
 | PythonAnywhere | pages identiques, `/sante` ok, base migrée automatiquement |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
