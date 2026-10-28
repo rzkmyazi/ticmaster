@@ -23,6 +23,10 @@ def _database_uri() -> str:
     # Render/Heroku fournissent parfois "postgres://" (non supporté par SQLAlchemy 2)
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
+    # SQLAlchemy 2.1 utilise psycopg (v3) par défaut ; on force le pilote psycopg2,
+    # seul présent dans requirements.txt (évite « No module named 'psycopg' »).
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg2://" + url[len("postgresql://"):]
     return url
 
 

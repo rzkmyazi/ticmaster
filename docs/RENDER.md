@@ -1,5 +1,20 @@
 # Déployer sur Render — pas à pas (mobile ou ordinateur)
 
+> ## ✅ Déploiement effectué le 29/10/2026
+>
+> | Élément | Valeur |
+> |---|---|
+> | URL publique | **<https://ticmaster.onrender.com>** |
+> | Santé | `{"app":"TIC MASTER","database":true,"status":"ok"}` |
+> | Service Render | `srv-dbh6u7jbc2fs73fohv20` (Francfort, plan Free) |
+> | Base PostgreSQL | `ticmaster-db` (plan Free) |
+> | Contenu installé | 12 modules · 36 leçons · 69 questions · 3 examens |
+> | Super administrateur | `Myazirzk` |
+>
+> Les sections ci-dessous restent la procédure de référence (nouveau déploiement,
+> autre compte, ou redéploiement après suppression).
+
+
 Le dépôt est prêt : <https://github.com/rzkmyazi/ticmaster>
 Tout l'amorçage (tables, super administrateur, 12 modules, 69 questions) est **automatique**.
 Vous n'aurez aucune commande à taper, ni Shell, ni SQL.
