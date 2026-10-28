@@ -193,6 +193,7 @@ révocation de session.
 
 **Mise en ligne en 3 écrans, sans aucune commande** : guide illustré → [`docs/RENDER.md`](docs/RENDER.md)
 Procédure détaillée (GitHub, Render, Cloudflare, PythonAnywhere) → [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+Seconde installation, gratuite, sur PythonAnywhere → [`docs/PYTHONANYWHERE.md`](docs/PYTHONANYWHERE.md)
 
 1. **GitHub** — dépôt : <https://github.com/rzkmyazi/ticmaster>
 2. **Render** — cliquer sur le bouton ci-dessus, se connecter avec GitHub, saisir
