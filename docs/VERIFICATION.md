@@ -301,7 +301,15 @@ sert l'application ; il est idempotent grâce au marqueur `~/.tic_bootstrap_done
 
 - `pytest -q` → **40 tests réussis** (8 nouveaux : rôles, dossier scolaire, validations, groupe modifiable,
   filtres, export CSV, profil, migration de schéma).
-- `tools/verify.py` → **97 contrôles conformes** en local et en production après déploiement.
+- `tools/verify.py` → **127 contrôles conformes** en local et en production après déploiement.
+
+### Déploiement
+
+| Cible | État |
+|---|---|
+| GitHub `rzkmyazi/ticmaster` | commit `1399259` poussé sur `main` |
+| Render (principale) | déploiement `live` — 127 contrôles conformes, 0 échec |
+| PythonAnywhere | 29 fichiers synchronisés + rechargement (`200 OK`), `/sante` ok |
 
 ### Points d'attention
 
