@@ -252,6 +252,14 @@ sert l'application ; il est idempotent grâce au marqueur `~/.tic_bootstrap_done
 | Édition des cours | super administrateur : modification d'un module et d'une leçon → **302** + données enregistrées | ✔ |
 | | apprenant → **403** | ✔ |
 
+### Déploiement
+
+| Cible | État |
+|---|---|
+| GitHub `rzkmyazi/ticmaster` | commit `c00dbcd` poussé sur `main` |
+| Render (principale) | déploiement `live` sur <https://ticmaster.onrender.com> — 82 contrôles conformes |
+| PythonAnywhere | 21 fichiers synchronisés + rechargement (`200 OK`), `/sante` ok |
+
 ### Résultats des tests
 
 - `pytest -q` → **32 tests réussis** (10 nouveaux : fil social, photos falsifiées, réactions, commentaires,
