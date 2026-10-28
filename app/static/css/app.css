@@ -1524,3 +1524,12 @@ table.data tbody tr:hover { background: var(--surface-3); }
 }
 [data-theme="light"] .callout-badge { color: #b45309; }
 .callout-actions { display: flex; gap: .45rem; flex-wrap: wrap; }
+
+/* ---------- 18.11 Ajustements d'affichage ---------- */
+.statcard--hero .statcard-value { font-size: 1.15rem; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.statcard { min-width: 0; }
+.statcard > div { min-width: 0; }
+.table--grades .cell-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
+@media (prefers-reduced-motion: reduce) {
+  .tab-dot, .mb-pulse, .pill-status--on i, .mp-track > span { animation: none !important; }
+}

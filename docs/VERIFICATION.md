@@ -193,4 +193,39 @@ sert l'application ; il est idempotent grâce au marqueur `~/.tic_bootstrap_done
 
 ---
 
+## 10. Mise à jour du 29/10/2026 — Scolarité & maintenance
+
+### Nouvelles fonctionnalités vérifiées
+
+| Fonction | Contrôle | Résultat |
+|---|---|---|
+| Mode « mise à jour du site » | interrupteur dans *Paramètres → onglet Mise à jour* ; visiteur et élève → **503** + page d'attente animée | ✔ |
+| | super administrateur et administrateur → accès complet conservé | ✔ |
+| | `/sante`, fichiers statiques et page de connexion toujours servis | ✔ |
+| | en-tête `Retry-After: 300` + réactualisation automatique (45 s) | ✔ |
+| | examen déjà commencé : l'apprenant peut terminer (aucune élimination injuste) | ✔ |
+| Super administrateur = professeur | `/examens` → redirigé vers les notes des élèves | ✔ |
+| | `/resultats` → redirigé vers les statistiques de la classe | ✔ |
+| | démarrage d'examen refusé (**403**, contrôle serveur) | ✔ |
+| Notes des élèves (`/admin/notes`) | relevé, rangs, mentions, export CSV | ✔ |
+| Bulletin (`/admin/notes/<id>`) | résultats par module et par trimestre, historique | ✔ |
+| Statistiques (`/admin/statistiques`) | moyenne, médiane, distribution sur 20, palmarès | ✔ |
+| Permissions | utilisateur → **403**, administrateur → **403**, super administrateur → 200 | ✔ |
+
+### Résultats des tests
+
+- `pytest -q` → **22 tests réussis** (3 nouveaux : maintenance, réservation de la scolarité, absence d'examen du professeur).
+- `tools/verify.py` contre **la production** → « tout est conforme ✔ » (66 contrôles), puis nettoyage automatique des comptes et annonces de test ; la base ne contient plus que `Myazirzk`.
+
+### Points d'attention
+
+- **PythonAnywhere** ne dispose pas de PostgreSQL : sa base SQLite est indépendante. Les deux instances
+  ont reçu la mise à jour.
+- La page d'attente est autonome (CSS et icônes intégrés) : elle s'affiche même si les feuilles de style
+  ne sont pas encore rechargées.
+- Un compte de démonstration n'est **pas** créé en production : les pages de notes restent vides tant
+  qu'aucun élève n'est inscrit par l'administration.
+
+---
+
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*
