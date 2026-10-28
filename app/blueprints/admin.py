@@ -17,7 +17,8 @@ from ..extensions import db
 from ..models import (
     Announcement, Answer, Attempt, AuditLog, AuthSession, BattleRoom, Category, Exercise,
     Lesson, LessonProgress, Message, Module, Option, PasswordResetRequest, Question, Resource,
-    Setting, User, utcnow, ROLE_ADMIN, ROLE_SUPER_ADMIN, ROLE_USER, ROLE_LABELS,
+    DEFAULT_LEVELS, GENDERS, GROUPS, Setting, User, utcnow,
+    ROLE_ADMIN, ROLE_SUPER_ADMIN, ROLE_USER, ROLE_LABELS,
     STATUS_ACTIVE, STATUS_SUSPENDED, STATUS_DISABLED,
 )
 from ..security.core import (
@@ -130,6 +131,8 @@ def users():
     q = (request.args.get("q") or "").strip()
     role = request.args.get("role") or ""
     status = request.args.get("status") or ""
+    level = (request.args.get("niveau") or "").strip()
+    group = request.args.get("groupe", type=int)
     sort = request.args.get("sort") or "recent"
     page = request.args.get("page", type=int) or 1
 
@@ -145,18 +148,28 @@ def users():
         query = query.filter(User.role == role)
     if status in (STATUS_ACTIVE, STATUS_SUSPENDED, STATUS_DISABLED):
         query = query.filter(User.status == status)
+    if level:
+        query = query.filter(User.study_level == level)
+    if group in GROUPS:
+        query = query.filter(User.class_group == group)
 
     ordering = {
         "recent": User.created_at.desc(),
         "oldest": User.created_at.asc(),
         "name": User.full_name.asc(),
         "login": User.last_login_at.desc().nullslast(),
+        "numero": User.class_number.asc().nullslast(),
     }.get(sort, User.created_at.desc())
 
     pagination = paginate(query.order_by(ordering), page, per_page=15)
+    levels = [row[0] for row in db.session.query(User.study_level)
+              .filter(User.study_level.isnot(None), User.study_level != "")
+              .distinct().order_by(User.study_level).all()]
     return render_template(
         "admin/users.html", pagination=pagination, users=pagination.items,
-        q=q, role=role, status=status, sort=sort,
+        q=q, role=role, status=status, sort=sort, level=level, group=group,
+        levels=levels or list(DEFAULT_LEVELS), groups=GROUPS,
+        role_labels=ROLE_LABELS,
     )
 
 
@@ -169,8 +182,26 @@ def _read_user_form(user: User | None):
     status = request.form.get("status") or STATUS_ACTIVE
     bio = (request.form.get("bio") or "").strip()[:1000]
 
+    # ---- dossier scolaire de l'élève ----
+    last_name = (request.form.get("last_name") or "").strip()[:80]
+    first_name = (request.form.get("first_name") or "").strip()[:80]
+    pseudo = (request.form.get("pseudo") or "").strip()[:64]
+    study_level = (request.form.get("study_level") or "").strip()[:60]
+    gender = (request.form.get("gender") or "").strip().lower()
+    group_raw = (request.form.get("class_group") or "").strip()
+    number_raw = (request.form.get("class_number") or "").strip()
+
+    if not full_name and (last_name or first_name):
+        full_name = f"{last_name} {first_name}".strip()[:160]
+
     if len(full_name) < 2:
         return False, "Le nom complet est obligatoire (2 caractères minimum).", user
+    if gender not in ("", "garcon", "fille"):
+        return False, "Sexe invalide : choisissez Garçon ou Fille.", user
+    if group_raw and group_raw not in {str(g) for g in GROUPS}:
+        return False, "Le groupe doit être 1, 2 ou 3.", user
+    if number_raw and not (number_raw.isdigit() and 1 <= int(number_raw) <= 999):
+        return False, "Le numéro en classe doit être un nombre entre 1 et 999.", user
     if role not in (ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_USER):
         return False, "Rôle invalide.", user
     if status not in (STATUS_ACTIVE, STATUS_SUSPENDED, STATUS_DISABLED):
@@ -207,6 +238,13 @@ def _read_user_form(user: User | None):
     user.role = role
     user.status = status
     user.bio = bio
+    user.last_name = last_name
+    user.first_name = first_name
+    user.pseudo = pseudo
+    user.study_level = study_level
+    user.gender = gender
+    user.class_group = int(group_raw) if group_raw else None
+    user.class_number = int(number_raw) if number_raw else None
     if user.id is None or not user.password_hash:
         temp_password = generate_password()
         user.set_password(temp_password)
@@ -220,7 +258,11 @@ def _read_user_form(user: User | None):
 def user_new():
     error = None
     created = None
-    form = {k: request.form.get(k, "") for k in ("full_name", "username", "email", "role", "status", "bio")}
+    form = {k: request.form.get(k, "") for k in (
+        "full_name", "username", "email", "role", "status", "bio",
+        "last_name", "first_name", "pseudo", "study_level", "gender",
+        "class_group", "class_number",
+    )}
 
     if request.method == "POST":
         # Mot de passe : généré ou imposé par l'administrateur
@@ -247,7 +289,8 @@ def user_new():
                 }
 
     return render_template(
-        "admin/user_form.html", mode="create", user=None, error=error, form=form, created=created
+        "admin/user_form.html", mode="create", user=None, error=error, form=form,
+        created=created, levels=list(DEFAULT_LEVELS), genders=GENDERS, groups=GROUPS,
     )
 
 
@@ -290,9 +333,42 @@ def user_edit(user_id: int):
 
     return render_template(
         "admin/user_form.html", mode="edit", user=user, error=error,
-        form={k: (getattr(user, k) or "") for k in ("full_name", "username", "email", "role", "status", "bio")},
+        form={k: (getattr(user, k) if getattr(user, k) is not None else "")
+              for k in ("full_name", "username", "email", "role", "status", "bio",
+                        "last_name", "first_name", "pseudo", "study_level", "gender",
+                        "class_group", "class_number")},
+        levels=list(DEFAULT_LEVELS), genders=GENDERS, groups=GROUPS,
         created=None,
     )
+
+
+@bp.route("/utilisateurs/<int:user_id>/classe", methods=["POST"])
+@admin_required
+def user_class(user_id: int):
+    """Modification rapide du groupe / niveau / numéro depuis la fiche élève."""
+    user = db.session.get(User, user_id) or abort(404)
+    if not can_manage_user(g.user, user):
+        abort(403)
+
+    group_raw = (request.form.get("class_group") or "").strip()
+    number_raw = (request.form.get("class_number") or "").strip()
+    level = (request.form.get("study_level") or "").strip()[:60]
+
+    if group_raw and group_raw not in {str(g) for g in GROUPS}:
+        flash("Le groupe doit être 1, 2 ou 3.", "danger")
+        return redirect(url_for("admin.user_detail", user_id=user.id))
+    if number_raw and not (number_raw.isdigit() and 1 <= int(number_raw) <= 999):
+        flash("Le numéro en classe doit être un nombre entre 1 et 999.", "danger")
+        return redirect(url_for("admin.user_detail", user_id=user.id))
+
+    user.class_group = int(group_raw) if group_raw else None
+    user.class_number = int(number_raw) if number_raw else None
+    user.study_level = level
+    db.session.commit()
+    log_audit("user.class_updated", target=user.username,
+              details=f"groupe={user.class_group} numero={user.class_number} niveau={level}")
+    flash("Informations de classe mises à jour.", "success")
+    return redirect(url_for("admin.user_detail", user_id=user.id))
 
 
 @bp.route("/utilisateurs/<int:user_id>/statut", methods=["POST"])
@@ -390,11 +466,16 @@ def user_delete(user_id: int):
 def users_export():
     output = io.StringIO()
     writer = csv.writer(output, delimiter=";")
-    writer.writerow(["identifiant", "nom_complet", "email", "role", "statut",
+    writer.writerow(["identifiant", "nom_complet", "nom", "prenom", "pseudo",
+                     "numero_classe", "niveau_etude", "sexe", "groupe",
+                     "email", "role", "statut",
                      "cree_le", "derniere_connexion", "mot_de_passe_a_changer"])
     for user in User.query.order_by(User.created_at).all():
         writer.writerow([
-            user.username, user.full_name, user.email or "", user.role, user.status,
+            user.username, user.full_name, user.last_name or "", user.first_name or "",
+            user.pseudo or "", user.class_number or "", user.study_level or "",
+            user.gender_label, user.group_label,
+            user.email or "", user.role, user.status,
             user.created_at.strftime("%Y-%m-%d %H:%M"), 
             user.last_login_at.strftime("%Y-%m-%d %H:%M") if user.last_login_at else "",
             "oui" if user.must_change_password else "non",

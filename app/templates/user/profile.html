@@ -22,8 +22,8 @@
       <div class="row mb-2" style="gap:.8rem">
         {{ avatar(user, 'xl', true) }}
         <div>
-          <strong style="font-size:1.1rem">{{ user.full_name or user.username }}</strong>
-          <div class="text-sm text-muted">@{{ user.username }}</div>
+          <strong style="font-size:1.1rem">{{ user.display_name }}</strong>
+          <div class="text-sm text-muted">@{{ user.username }}{% if user.pseudo %} · « {{ user.pseudo }} »{% endif %}</div>
           <div class="text-xs text-muted mt-1">{{ icon('calendar') }} Membre depuis {{ fmt_date(user.created_at) }}</div>
         </div>
       </div>
@@ -58,6 +58,28 @@
   </section>
 
   <aside class="stack">
+    {% if user.role == 'user' %}
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{{ icon('books') }} Ma scolarité</h2>
+        {% if user.class_group %}<span class="badge badge-info">Groupe {{ user.class_group }}</span>{% endif %}
+      </div>
+      <div class="card-body">
+        {% if user.has_class_record %}
+        <div class="row-between text-sm"><span class="text-muted">Nom</span><strong>{{ user.last_name or '—' }}</strong></div>
+        <div class="row-between text-sm mt-1"><span class="text-muted">Prénom</span><strong>{{ user.first_name or '—' }}</strong></div>
+        <div class="row-between text-sm mt-1"><span class="text-muted">Pseudo</span><strong>{{ user.pseudo or '—' }}</strong></div>
+        <div class="row-between text-sm mt-1"><span class="text-muted">Numéro en classe</span><strong>{{ user.class_number or '—' }}</strong></div>
+        <div class="row-between text-sm mt-1"><span class="text-muted">Niveau d'étude</span><strong>{{ user.study_level or '—' }}</strong></div>
+        <div class="row-between text-sm mt-1"><span class="text-muted">Sexe</span><strong>{{ user.gender_label or '—' }}</strong></div>
+        <p class="text-xs text-muted mt-2" style="margin-bottom:0">Informations gérées par l'administration.</p>
+        {% else %}
+        <p class="text-sm text-muted" style="margin:0">Votre dossier scolaire sera complété par l'administration.</p>
+        {% endif %}
+      </div>
+    </section>
+    {% endif %}
+
     <section class="card">
       <div class="card-head"><h2 class="card-title">{{ icon('chart') }} Mes statistiques</h2></div>
       <div class="card-body">

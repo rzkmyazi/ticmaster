@@ -628,3 +628,207 @@ def test_dashboard_shows_individual_notes(app):
     _make_user(app, "modo", role=ROLE_ADMIN)
     _login(modo, "modo", "MotDePasse2026!")
     assert "Notes individuelles (sur 20)" not in modo.get("/admin/").get_data(as_text=True)
+
+
+# ---------------------------------------------------------------------------
+# Rôles : trois seulement (Super Admin, Admin, Élève)
+# ---------------------------------------------------------------------------
+def test_only_three_roles_with_eleve_label(app):
+    from app.models import ROLE_LABELS, ROLES
+    assert set(ROLES) == {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_USER}
+    assert ROLE_LABELS[ROLE_USER] == "Élève"
+    assert ROLE_LABELS[ROLE_ADMIN] == "Admin"
+    assert ROLE_LABELS[ROLE_SUPER_ADMIN] == "Super Admin"
+    assert "Utilisateur" not in ROLE_LABELS.values()
+
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    client = app.test_client()
+    _login(client, "chef", "MotDePasse2026!")
+    page = client.get("/admin/utilisateurs/nouveau").get_data(as_text=True)
+    assert 'value="user"' in page and "Élève" in page
+    assert 'value="admin"' in page and 'value="super_admin"' in page
+    assert "Utilisateur</option>" not in page      # l'ancien libellé a disparu
+    assert page.count('<option value="user"') == 1
+
+
+# ---------------------------------------------------------------------------
+# Dossier scolaire de l'élève
+# ---------------------------------------------------------------------------
+def _create_student(client, token, **overrides):
+    data = {
+        "csrf_token": token, "full_name": "", "last_name": "Rakoto", "first_name": "Jean",
+        "pseudo": "LeRoiDuReseau", "username": "rakoto.jean", "email": "",
+        "role": "user", "status": "active", "bio": "", "password": "Eleve2026!mdp",
+        "must_change": "1", "class_number": "7", "study_level": "Terminale",
+        "gender": "garcon", "class_group": "2",
+    }
+    data.update(overrides)
+    return client.post("/admin/utilisateurs/nouveau", data=data)
+
+
+def test_inscription_enregistre_le_dossier_scolaire(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    client = app.test_client()
+    _login(client, "chef", "MotDePasse2026!")
+    token = _csrf(client)
+
+    response = _create_student(client, token)
+    assert response.status_code == 200          # page avec les identifiants
+
+    with app.app_context():
+        student = User.query.filter_by(username="rakoto.jean").one()
+        assert student.role == ROLE_USER
+        assert student.last_name == "Rakoto"
+        assert student.first_name == "Jean"
+        assert student.pseudo == "LeRoiDuReseau"
+        assert student.class_number == 7
+        assert student.study_level == "Terminale"
+        assert student.gender == "garcon"
+        assert student.class_group == 2
+        assert student.full_name == "Rakoto Jean"     # composé automatiquement
+        assert student.class_label == "Terminale · Groupe 2 · N° 7"
+        assert student.gender_label == "Garçon"
+
+    page = client.get("/admin/utilisateurs?q=rakoto.jean").get_data(as_text=True)
+    assert "Rakoto Jean" in page and "Groupe 2" in page and ">7<" in page.replace("\n", "")
+
+    with app.app_context():
+        student_id = User.query.filter_by(username="rakoto.jean").one().id
+    detail = client.get(f"/admin/utilisateurs/{student_id}").get_data(as_text=True)
+    assert "Dossier scolaire" in detail
+    assert "LeRoiDuReseau" in detail and "Terminale" in detail
+
+
+def test_dossier_scolaire_validation(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    client = app.test_client()
+    _login(client, "chef", "MotDePasse2026!")
+    token = _csrf(client)
+
+    bad_group = _create_student(client, token, class_group="4", username="eleve.groupe")
+    assert "Le groupe doit être 1, 2 ou 3" in bad_group.get_data(as_text=True)
+
+    bad_number = _create_student(client, token, class_number="1000", username="eleve.numero")
+    assert "numéro en classe" in bad_number.get_data(as_text=True)
+
+    bad_gender = _create_student(client, token, gender="autre", username="eleve.sexe")
+    assert "Sexe invalide" in bad_gender.get_data(as_text=True)
+
+    with app.app_context():
+        assert User.query.filter(User.username.in_(
+            ["eleve.groupe", "eleve.numero", "eleve.sexe"])).count() == 0
+
+
+def test_groupe_modifiable_depuis_la_fiche(app):
+    student_id = _make_user(app, "rakoto", role=ROLE_USER)
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    client = app.test_client()
+    _login(client, "chef", "MotDePasse2026!")
+    token = _csrf(client)
+
+    response = client.post(f"/admin/utilisateurs/{student_id}/classe",
+                           data={"csrf_token": token, "class_group": "3",
+                                 "class_number": "12", "study_level": "1ère"})
+    assert response.status_code == 302
+    with app.app_context():
+        student = db.session.get(User, student_id)
+        assert student.class_group == 3 and student.class_number == 12
+        assert student.study_level == "1ère"
+
+    # contrôle serveur : groupe hors bornes refusé
+    client.post(f"/admin/utilisateurs/{student_id}/classe",
+                data={"csrf_token": token, "class_group": "9"})
+    with app.app_context():
+        assert db.session.get(User, student_id).class_group == 3
+
+    # un apprenant n'a pas accès à ces écrans
+    other = app.test_client()
+    _login(other, "rakoto", "MotDePasse2026!")
+    other_token = _csrf(other)
+    assert other.post(f"/admin/utilisateurs/{student_id}/classe",
+                      data={"csrf_token": other_token,
+                            "class_group": "1"}).status_code == 403
+
+
+def test_liste_filtree_par_niveau_et_groupe(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    with app.app_context():
+        for index, (level, group) in enumerate(
+                [("Terminale", 1), ("Terminale", 2), ("2nde", 1)], start=1):
+            user = User(username=f"eleve{index}", full_name=f"Élève {index}", role=ROLE_USER,
+                        status=STATUS_ACTIVE, must_change_password=False,
+                        study_level=level, class_group=group, class_number=index)
+            user.set_password("MotDePasse2026!")
+            db.session.add(user)
+        db.session.commit()
+
+    client = app.test_client()
+    _login(client, "chef", "MotDePasse2026!")
+    page = client.get("/admin/utilisateurs?niveau=Terminale").get_data(as_text=True)
+    assert "Élève 1" in page and "Élève 2" in page and "Élève 3" not in page
+
+    page = client.get("/admin/utilisateurs?groupe=2").get_data(as_text=True)
+    assert "Élève 2" in page and "Élève 1" not in page
+
+    page = client.get("/admin/utilisateurs?sort=numero").get_data(as_text=True)
+    assert page.index("Élève 1") < page.index("Élève 3")
+
+
+def test_export_csv_contient_le_dossier(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    with app.app_context():
+        student = User(username="csv.eleve", full_name="Rasoa Marie", role=ROLE_USER,
+                       status=STATUS_ACTIVE, must_change_password=False,
+                       last_name="Rasoa", first_name="Marie", pseudo="Mimi",
+                       class_number=3, study_level="Terminale", gender="fille",
+                       class_group=1)
+        student.set_password("MotDePasse2026!")
+        db.session.add(student)
+        db.session.commit()
+
+    client = app.test_client()
+    _login(client, "chef", "MotDePasse2026!")
+    response = client.get("/admin/utilisateurs/export.csv")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "nom;prenom;pseudo;numero_classe;niveau_etude;sexe;groupe" in body
+    assert "Rasoa;Marie;Mimi;3;Terminale;Fille;Groupe 1" in body
+
+
+def test_profil_affiche_la_scolarite(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    client = app.test_client()
+    _login(client, "chef", "MotDePasse2026!")
+    token = _csrf(client)
+    _create_student(client, token, username="eleve.profil", must_change="")
+
+    student = app.test_client()
+    _login(student, "eleve.profil", "Eleve2026!mdp")
+    page = student.get("/mon-profil").get_data(as_text=True)
+    assert "Ma scolarité" in page
+    assert "Terminale" in page and "Groupe 2" in page and "LeRoiDuReseau" in page
+
+
+# ---------------------------------------------------------------------------
+# Schéma : ajout automatique des colonnes manquantes
+# ---------------------------------------------------------------------------
+def test_schema_ajoute_les_colonnes_manquantes(app):
+    from sqlalchemy import inspect, text
+    from app.schema import USER_COLUMNS, ensure_schema
+
+    with app.app_context():
+        columns = {c["name"] for c in inspect(db.engine).get_columns("users")}
+        assert set(USER_COLUMNS).issubset(columns)
+
+        # simulation d'une base plus ancienne : on retire une colonne
+        db.session.execute(text("ALTER TABLE users DROP COLUMN pseudo"))
+        db.session.commit()
+        columns = {c["name"] for c in inspect(db.engine).get_columns("users")}
+        assert "pseudo" not in columns
+
+        applied = ensure_schema()
+        assert "pseudo" in applied
+        columns = {c["name"] for c in inspect(db.engine).get_columns("users")}
+        assert "pseudo" in columns
+
+        assert ensure_schema() == []      # idempotent

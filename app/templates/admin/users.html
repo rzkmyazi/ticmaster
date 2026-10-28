@@ -2,8 +2,8 @@
 
 
 {% block title %}Utilisateurs{% endblock %}
-{% block page_title %}Utilisateurs{% endblock %}
-{% block page_subtitle %}<p class="page-sub">{{ pagination.total }} compte(s) — création réservée à l'administration</p>{% endblock %}
+{% block page_title %}Utilisateurs & élèves{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ pagination.total }} compte(s) — inscription réservée à l'administration</p>{% endblock %}
 
 {% block content %}
 <section class="card">
@@ -18,7 +18,19 @@
         <option value="">Tous les rôles</option>
         <option value="super_admin" {{ 'selected' if role == 'super_admin' }}>Super Admin</option>
         <option value="admin" {{ 'selected' if role == 'admin' }}>Admin</option>
-        <option value="user" {{ 'selected' if role == 'user' }}>Utilisateur</option>
+        <option value="user" {{ 'selected' if role == 'user' }}>Élève</option>
+      </select>
+      <select name="niveau" aria-label="Niveau d'étude">
+        <option value="">Tous les niveaux</option>
+        {% for item in levels %}
+        <option value="{{ item }}" {{ 'selected' if level == item }}>{{ item }}</option>
+        {% endfor %}
+      </select>
+      <select name="groupe" aria-label="Groupe">
+        <option value="">Tous les groupes</option>
+        {% for item in groups %}
+        <option value="{{ item }}" {{ 'selected' if group == item }}>Groupe {{ item }}</option>
+        {% endfor %}
       </select>
       <select name="status" aria-label="Statut">
         <option value="">Tous les statuts</option>
@@ -31,19 +43,20 @@
         <option value="oldest" {{ 'selected' if sort == 'oldest' }}>Plus anciens</option>
         <option value="name" {{ 'selected' if sort == 'name' }}>Nom (A-Z)</option>
         <option value="login" {{ 'selected' if sort == 'login' }}>Dernière connexion</option>
+        <option value="numero" {{ 'selected' if sort == 'numero' }}>Numéro en classe</option>
       </select>
       <button class="btn btn-outline btn-sm" type="submit">{{ icon('filter') }} Filtrer</button>
     </form>
     <div class="row">
       <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.users_export') }}">{{ icon('download') }} CSV</a>
-      <a class="btn btn-primary btn-sm" href="{{ url_for('admin.user_new') }}">{{ icon('plus') }} Nouveau compte</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('admin.user_new') }}">{{ icon('plus') }} Inscrire un élève</a>
     </div>
   </div>
 
   <div class="table-wrap">
     <table class="data">
       <thead>
-        <tr><th>Utilisateur</th><th>Rôle</th><th>Statut</th><th>Créé le</th><th>Dernière connexion</th><th></th></tr>
+        <tr><th>Élève / compte</th><th>N°</th><th>Classe</th><th>Rôle</th><th>Statut</th><th>Dernière connexion</th><th></th></tr>
       </thead>
       <tbody>
         {% for user in users %}
@@ -52,14 +65,20 @@
             <div class="cell-user">
               {{ avatar(user, 'sm', user.is_online()) }}
               <div>
-                <strong>{{ user.full_name or user.username }}</strong>
-                <small>@{{ user.username }}{% if user.email %} · {{ user.email }}{% endif %}</small>
+                <strong>{{ user.display_name }}</strong>
+                <small>
+                  @{{ user.username }}{% if user.pseudo %} · « {{ user.pseudo }} »{% endif %}
+                  {% if user.gender_label %} · {{ user.gender_label }}{% endif %}
+                </small>
               </div>
             </div>
           </td>
+          <td class="num">{{ user.class_number or '—' }}</td>
+          <td class="text-xs">
+            {% if user.class_label %}{{ user.class_label }}{% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
           <td>{{ role_badge(user.role) }}</td>
           <td>{{ status_badge(user.status) }}{% if user.must_change_password %} <span class="badge badge-warning">MDP temporaire</span>{% endif %}</td>
-          <td class="text-xs text-muted">{{ fmt_date(user.created_at) }}</td>
           <td class="text-xs text-muted">{{ time_ago(user.last_login_at) }}</td>
           <td class="row-actions">
             <a class="btn btn-sm btn-ghost" href="{{ url_for('admin.user_detail', user_id=user.id) }}" aria-label="Détail">{{ icon('eye') }}</a>
@@ -69,17 +88,17 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="6">
+        <tr><td colspan="7">
           <div class="empty">
             <div class="empty-icon">{{ icon('users') }}</div>
             <h3>Aucun utilisateur trouvé</h3>
-            <p>Modifiez les filtres ou créez un nouveau compte.</p>
+            <p>Modifiez les filtres ou inscrivez un nouvel élève.</p>
           </div>
         </td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-  {{ page_nav(pagination, 'admin.users', args={'q': q, 'role': role, 'status': status, 'sort': sort}) }}
+  {{ page_nav(pagination, 'admin.users', args={'q': q, 'role': role, 'status': status, 'sort': sort, 'niveau': level, 'groupe': group}) }}
 </section>
 {% endblock %}

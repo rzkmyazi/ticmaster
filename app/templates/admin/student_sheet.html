@@ -3,7 +3,7 @@
 
 {% block title %}Bulletin de {{ r.user.full_name or r.user.username }}{% endblock %}
 {% block page_title %}Bulletin scolaire{% endblock %}
-{% block page_subtitle %}<p class="page-sub">{{ r.user.full_name or r.user.username }} · @{{ r.user.username }}</p>{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ r.user.display_name }} · @{{ r.user.username }}{% if r.user.class_label %} · {{ r.user.class_label }}{% endif %}</p>{% endblock %}
 
 {% block content %}
 <div class="page-actions">
@@ -14,9 +14,12 @@
   <div class="bulletin-id">
     {{ avatar(r.user, 'xl') }}
     <div>
-      <h2 class="bulletin-name">{{ r.user.full_name or r.user.username }}</h2>
+      <h2 class="bulletin-name">{{ r.user.display_name }}</h2>
       <div class="bulletin-meta">
         <span>@{{ r.user.username }}</span>
+        {% if r.user.pseudo %}<span class="badge badge-neutral">« {{ r.user.pseudo }} »</span>{% endif %}
+        {% if r.user.class_label %}<span class="badge badge-info">{{ r.user.class_label }}</span>{% endif %}
+        {% if r.user.gender_label %}<span class="badge badge-neutral">{{ r.user.gender_label }}</span>{% endif %}
         {{ role_badge(r.user.role) }}
         {{ status_badge(r.user.status) }}
       </div>

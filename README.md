@@ -21,7 +21,8 @@ battles de connaissances et messagerie interne, avec une administration complèt
 | Domaine | Détail |
 |---|---|
 | **Authentification** | Connexion par identifiant ou e-mail, mot de passe haché **Argon2id**, sessions serveur révocables, verrouillage anti-force brute (compte + IP), messages neutres, changement de mot de passe forcé à la première connexion, mot de passe oublié validé par le super administrateur |
-| **Rôles** | `SUPER ADMIN`, `ADMIN`, `UTILISATEUR` — permissions vérifiées **côté serveur** à chaque requête |
+| **Rôles** | Trois rôles seulement : **Super Admin**, **Admin**, **Élève** — permissions vérifiées **côté serveur** à chaque requête |
+| **Dossier scolaire** | À l'inscription d'un élève : **nom, prénom, pseudo, nom d'utilisateur du site, numéro en classe, niveau d'étude, sexe (garçon/fille), groupe 1 à 3 modifiable**. Filtres par niveau et par groupe, tri par numéro, export CSV, fiche de suivi |
 | **Administration** | CRUD utilisateurs (identifiant unique, mot de passe temporaire affiché une seule fois, rôle, activation/suspension/désactivation, dates de création et de dernière connexion, recherche/filtres/tri, suppression avec confirmation, révocation de sessions), export CSV, journal d'audit, statistiques et graphiques |
 | **Contenus** | 12 modules, 36 leçons (Markdown sécurisé, images, documents, vidéos), 6 catégories, ressources téléchargeables, exercices et examens à choix unique avec correction et explication |
 | **Examens** | 3 examens trimestriels (T1, T2, T3) ; sortie d'onglet, perte de focus, sortie du plein écran, navigation hors examen ou coupure de battement de cœur ⇒ **élimination enregistrée** ; réaffectation réservée au **super administrateur**, sanction strictement individuelle |

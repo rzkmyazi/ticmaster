@@ -38,6 +38,8 @@
         <option value="progression" {{ 'selected' if sort == 'progression' }}>Progression</option>
         <option value="nom" {{ 'selected' if sort == 'nom' }}>Ordre alphabétique</option>
         <option value="activite" {{ 'selected' if sort == 'activite' }}>Activité récente</option>
+        <option value="numero" {{ 'selected' if sort == 'numero' }}>Numéro en classe</option>
+        <option value="groupe" {{ 'selected' if sort == 'groupe' }}>Groupe</option>
       </select>
       <button class="btn btn-sm btn-primary" type="submit">{{ icon('search', 15) }} Filtrer</button>
       {% if q or sort != 'moyenne' %}<a class="btn btn-sm btn-ghost" href="{{ url_for('admin.grades') }}">Réinitialiser</a>{% endif %}
@@ -72,8 +74,11 @@
             <div class="cell-user">
               {{ avatar(row.user, 'sm') }}
               <div>
-                <div class="cell-name">{{ row.user.full_name or row.user.username }}</div>
-                <div class="cell-sub">@{{ row.user.username }}{% if row.user.status != 'active' %} · {{ row.user.status }}{% endif %}</div>
+                <div class="cell-name">{{ row.user.display_name }}</div>
+                <div class="cell-sub">
+                  @{{ row.user.username }}{% if row.user.class_label %} · {{ row.user.class_label }}{% endif %}
+                  {% if row.user.status != 'active' %} · {{ row.user.status }}{% endif %}
+                </div>
               </div>
             </div>
           </td>

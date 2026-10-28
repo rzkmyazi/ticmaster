@@ -276,4 +276,39 @@ sert l'application ; il est idempotent grâce au marqueur `~/.tic_bootstrap_done
 
 ---
 
+## 12. Mise à jour du 29/10/2026 — Rôles simplifiés & dossier scolaire de l'élève
+
+### Nouvelles fonctionnalités vérifiées
+
+| Fonction | Contrôle | Résultat |
+|---|---|---|
+| Trois rôles seulement | formulaire : `Élève`, `Admin`, `Super Admin` — aucun autre choix | ✔ |
+| | libellé « Élève » partout (badges, filtres, répartition des rôles) | ✔ |
+| Inscription d'un élève | nom, prénom, pseudo, nom d'utilisateur du site | ✔ |
+| | numéro en classe (1-999) et niveau d'étude (liste + saisie libre) | ✔ |
+| | sexe : Garçon / Fille | ✔ |
+| | groupe 1, 2 ou 3 — **modifiable** depuis la fiche et le formulaire | ✔ |
+| | nom complet composé automatiquement « Nom Prénom » si laissé vide | ✔ |
+| Contrôles serveur | groupe 4 ou sexe inconnu ou numéro > 999 ⇒ refus, aucun compte créé | ✔ |
+| Liste des utilisateurs | colonnes n°, classe, sexe ; filtres niveau et groupe ; tri par numéro | ✔ |
+| Fiche élève | bloc « Dossier scolaire » + modification rapide du groupe | ✔ |
+| Export CSV | colonnes nom, prénom, pseudo, numéro, niveau, sexe, groupe | ✔ |
+| Profil de l'élève | carte « Ma scolarité » en lecture seule | ✔ |
+| Permissions | un élève n'accède ni à la fiche d'administration ni à la route de mise à jour (403) | ✔ |
+| Schéma | `ensure_schema()` ajoute les colonnes manquantes sur les bases déjà en service | ✔ |
+
+### Résultats des tests
+
+- `pytest -q` → **40 tests réussis** (8 nouveaux : rôles, dossier scolaire, validations, groupe modifiable,
+  filtres, export CSV, profil, migration de schéma).
+- `tools/verify.py` → **97 contrôles conformes** en local et en production après déploiement.
+
+### Points d'attention
+
+- Les colonnes sont ajoutées **automatiquement au démarrage** (`ALTER TABLE users ADD COLUMN …`), sans perte
+  de données et sans intervention manuelle sur Render ou PythonAnywhere.
+- Le rôle reste stocké en base sous la valeur `user` (compatibilité) : seul le libellé affiché est « Élève ».
+
+---
+
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*

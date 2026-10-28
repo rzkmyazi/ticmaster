@@ -12,10 +12,25 @@ ROLE_ADMIN = "admin"
 ROLE_USER = "user"
 ROLES = (ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_USER)
 ROLE_LABELS = {
+    ROLE_SUPER_ADMIN: "Super Admin",
+    ROLE_ADMIN: "Admin",
+    ROLE_USER: "Élève",
+}
+ROLE_LABELS_LONG = {
     ROLE_SUPER_ADMIN: "Super Administrateur",
     ROLE_ADMIN: "Administrateur",
-    ROLE_USER: "Utilisateur",
+    ROLE_USER: "Élève",
 }
+
+# ---------------------------------------------------------------------------
+# Informations de classe (dossier scolaire de l'élève)
+# ---------------------------------------------------------------------------
+GENDERS = {"garcon": "Garçon", "fille": "Fille"}
+GROUPS = (1, 2, 3)
+DEFAULT_LEVELS = (
+    "6ème", "5ème", "4ème", "3ème", "2nde", "1ère", "Terminale",
+    "Licence 1", "Licence 2", "Licence 3", "Master 1", "Master 2",
+)
 
 STATUS_ACTIVE = "active"
 STATUS_SUSPENDED = "suspended"
@@ -40,6 +55,15 @@ class User(db.Model):
     must_change_password = db.Column(db.Boolean, nullable=False, default=True)
     bio = db.Column(db.Text, nullable=False, default="")
     avatar_color = db.Column(db.String(16), nullable=False, default="#22d3ee")
+
+    # ---- dossier scolaire (renseigné à l'inscription de l'élève) ----
+    last_name = db.Column(db.String(80), default="")
+    first_name = db.Column(db.String(80), default="")
+    pseudo = db.Column(db.String(64), default="")
+    class_number = db.Column(db.Integer)          # numéro dans la liste de classe
+    study_level = db.Column(db.String(60), default="")
+    gender = db.Column(db.String(12), default="")  # garcon / fille
+    class_group = db.Column(db.Integer)            # 1, 2 ou 3 (modifiable)
 
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
     last_login_at = db.Column(db.DateTime)
@@ -71,6 +95,33 @@ class User(db.Model):
     @property
     def role_label(self) -> str:
         return ROLE_LABELS.get(self.role, self.role)
+
+    # ---- dossier scolaire ------------------------------------------------
+    @property
+    def gender_label(self) -> str:
+        return GENDERS.get(self.gender or "", "")
+
+    @property
+    def group_label(self) -> str:
+        return f"Groupe {self.class_group}" if self.class_group else ""
+
+    @property
+    def display_name(self) -> str:
+        """Nom à afficher : nom complet, sinon pseudo, sinon identifiant."""
+        return (self.full_name or self.pseudo or self.username or "?").strip()
+
+    @property
+    def class_label(self) -> str:
+        """Résumé lisible du dossier : niveau · groupe · n°."""
+        parts = [part for part in (self.study_level, self.group_label,
+                                   f"N° {self.class_number}" if self.class_number else "")
+                 if part]
+        return " · ".join(parts)
+
+    @property
+    def has_class_record(self) -> bool:
+        return any((self.last_name, self.first_name, self.pseudo, self.class_number,
+                    self.study_level, self.gender, self.class_group))
 
     @property
     def initials(self) -> str:

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
 
-{% block title %}{{ user.full_name or user.username }}{% endblock %}
-{% block page_title %}{{ user.full_name or user.username }}{% endblock %}
-{% block page_subtitle %}<p class="page-sub">@{{ user.username }} · {{ role_labels.get(user.role) }}</p>{% endblock %}
+{% block title %}{{ user.display_name }}{% endblock %}
+{% block page_title %}{{ user.display_name }}{% endblock %}
+{% block page_subtitle %}<p class="page-sub">@{{ user.username }} · {{ role_labels.get(user.role) }}{% if user.class_label %} · {{ user.class_label }}{% endif %}</p>{% endblock %}
 
 {% block content %}
 <div class="row mb-2">
@@ -32,7 +32,8 @@
         <div class="profile-card">
           {{ avatar(user, 'xl', user.is_online()) }}
           <div class="profile-meta">
-            <h2>{{ user.full_name or user.username }}</h2>
+            <h2>{{ user.display_name }}</h2>
+            {% if user.pseudo %}<span class="text-sm text-muted">« {{ user.pseudo }} »</span>{% endif %}
             <span class="role-line">{{ role_badge(user.role) }} {{ status_badge(user.status) }}
               {% if user.must_change_password %}<span class="badge badge-warning">MDP temporaire</span>{% endif %}
             </span>
@@ -49,6 +50,54 @@
         </div>
       </div>
     </section>
+
+    {% if user.role == 'user' %}
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{{ icon('books') }} Dossier scolaire</h2>
+        <span class="badge badge-info">{{ 'Groupe ' ~ user.class_group if user.class_group else 'Sans groupe' }}</span>
+      </div>
+      <div class="card-body">
+        {% if user.has_class_record %}
+        <div class="grid grid-3 mb-2" style="gap:.6rem">
+          <div class="stat"><span class="stat-label">Nom</span><div class="stat-value" style="font-size:.95rem">{{ user.last_name or '—' }}</div></div>
+          <div class="stat"><span class="stat-label">Prénom</span><div class="stat-value" style="font-size:.95rem">{{ user.first_name or '—' }}</div></div>
+          <div class="stat"><span class="stat-label">Pseudo</span><div class="stat-value" style="font-size:.95rem">{{ user.pseudo or '—' }}</div></div>
+          <div class="stat"><span class="stat-label">N° en classe</span><div class="stat-value" style="font-size:.95rem">{{ user.class_number or '—' }}</div></div>
+          <div class="stat"><span class="stat-label">Niveau</span><div class="stat-value" style="font-size:.95rem">{{ user.study_level or '—' }}</div></div>
+          <div class="stat"><span class="stat-label">Sexe</span><div class="stat-value" style="font-size:.95rem">{{ user.gender_label or '—' }}</div></div>
+        </div>
+        {% else %}
+        <p class="text-sm text-muted">Aucune information de classe enregistrée pour cet élève.</p>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('admin.user_class', user_id=user.id) }}" class="row" style="gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="field" style="margin:0">
+            <label for="quick-group">Groupe</label>
+            <select id="quick-group" name="class_group">
+              <option value="">—</option>
+              {% for group in [1, 2, 3] %}
+              <option value="{{ group }}" {{ 'selected' if user.class_group == group }}>Groupe {{ group }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field" style="margin:0">
+            <label for="quick-number">N°</label>
+            <input id="quick-number" type="number" name="class_number" min="1" max="999"
+                   value="{{ user.class_number or '' }}" style="width:90px">
+          </div>
+          <div class="field" style="margin:0">
+            <label for="quick-level">Niveau</label>
+            <input id="quick-level" type="text" name="study_level" maxlength="60"
+                   value="{{ user.study_level or '' }}" placeholder="Ex. Terminale" style="width:140px">
+          </div>
+          <button class="btn btn-outline btn-sm" type="submit">{{ icon('save') }} Mettre à jour</button>
+        </form>
+        <p class="text-xs text-muted mt-2" style="margin-bottom:0">Le groupe, le numéro et le niveau restent modifiables à tout moment.</p>
+      </div>
+    </section>
+    {% endif %}
 
     <section class="card">
       <div class="card-head"><h2 class="card-title">{{ icon('clipboard') }} Dernières évaluations</h2></div>

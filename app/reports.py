@@ -178,6 +178,9 @@ def student_rows(search: str = "", sort: str = "moyenne") -> list[dict]:
         "progression": lambda r: -r["progress"],
         "activite": lambda r: -(r["last_activity"].timestamp() if r["last_activity"] else 0),
         "note": lambda r: (r["average"] is None, -(r["average"] or 0)),
+        "numero": lambda r: (r["user"].class_number is None, r["user"].class_number or 0),
+        "groupe": lambda r: (r["user"].class_group is None, r["user"].class_group or 0,
+                             r["user"].class_number or 0),
     }
     rows.sort(key=keys.get(sort, keys["moyenne"]))
     return rows

@@ -253,6 +253,63 @@ def main() -> int:
                      "role": "admin", "status": "active", "password": ""})
     ok("admin → création d'un admin refusée", "Seul le super administrateur" in r.text)
 
+    # ------------------------------------------------ rôles et dossier scolaire
+    print("▸ Rôles et dossier scolaire de l'élève")
+    page = sa.get(BASE + "/admin/utilisateurs/nouveau").text
+    ok("trois rôles seulement dans le formulaire",
+       page.count('<option value="user"') == 1 and page.count('<option value="admin"') == 1
+       and page.count('<option value="super_admin"') == 1,
+       "options détectées")
+    ok("libellé « Élève »", "Élève" in page and ">Utilisateur<" not in page)
+    ok("bloc « Dossier scolaire » présent", "Dossier scolaire" in page)
+
+    eleve_name = "verif.eleve." + rand_suffix(4)
+    token = csrf(sa, "/admin/utilisateurs/nouveau")
+    r = sa.post(BASE + "/admin/utilisateurs/nouveau",
+                data={"csrf_token": token, "full_name": "", "last_name": "Andriamana",
+                      "first_name": "Soa", "pseudo": "SoaDuTIC", "username": eleve_name,
+                      "email": "", "role": "user", "status": "active", "bio": "",
+                      "password": "VerifEleve2026!", "class_number": "14",
+                      "study_level": "Terminale", "gender": "fille", "class_group": "3"})
+    ok("inscription d'un élève avec ses informations de classe",
+       r.status_code == 200 and "Identifiants à communiquer" in r.text, str(r.status_code))
+
+    listing = sa.get(BASE + "/admin/utilisateurs?q=" + eleve_name).text
+    ok("élève listé avec nom composé", "Andriamana Soa" in listing)
+    ok("élève listé avec niveau, groupe et numéro",
+       "Terminale" in listing and "Groupe 3" in listing)
+    ok("pseudo affiché dans la liste", "SoaDuTIC" in listing)
+
+    ids = sorted({int(i) for i in re.findall(r'/admin/utilisateurs/(\d+)"', listing)})
+    eleve_id = ids[0] if ids else 0
+    detail = sa.get(BASE + f"/admin/utilisateurs/{eleve_id}").text
+    ok("fiche élève : dossier scolaire complet",
+       "Dossier scolaire" in detail and "Terminale" in detail and "Fille" in detail,
+       f"id={eleve_id}")
+
+    token = re.search(r'name="csrf_token" value="([^"]+)"', detail).group(1)
+    r = sa.post(BASE + f"/admin/utilisateurs/{eleve_id}/classe",
+                data={"csrf_token": token, "class_group": "1", "class_number": "3",
+                      "study_level": "Terminale"}, allow_redirects=False)
+    ok("groupe modifiable depuis la fiche", r.status_code == 302, str(r.status_code))
+    detail = sa.get(BASE + f"/admin/utilisateurs/{eleve_id}").text
+    ok("groupe mis à jour", "Groupe 1" in detail)
+
+    r = sa.post(BASE + f"/admin/utilisateurs/{eleve_id}/classe",
+                data={"csrf_token": token, "class_group": "9"}, allow_redirects=False)
+    detail = sa.get(BASE + f"/admin/utilisateurs/{eleve_id}").text
+    ok("groupe hors bornes refusé", "Groupe 1" in detail)
+
+    csv_body = sa.get(BASE + "/admin/utilisateurs/export.csv").text
+    ok("export CSV avec les colonnes du dossier",
+       "nom;prenom;pseudo;numero_classe;niveau_etude;sexe;groupe" in csv_body)
+    ok("ligne de l'élève exportée",
+       f"{eleve_name}" in csv_body and "Andriamana;Soa;SoaDuTIC" in csv_body)
+
+    r = u.get(BASE + f"/admin/utilisateurs/{eleve_id}", allow_redirects=False)
+    ok("un élève ne peut pas ouvrir une fiche d'administration", r.status_code in (403, 302),
+       str(r.status_code))
+
     # ------------------------------------------- compte jetable pour les tests
     print("▸ Création d'un compte de test (super admin)")
     probe_name = "verif." + rand_suffix(6)

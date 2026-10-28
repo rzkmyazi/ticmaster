@@ -9,14 +9,14 @@
 <div class="stats-grid mb-2">
   <div class="stat"><span class="stat-label">Super Admin</span><div class="stat-value">{{ counts.super_admin }}</div>{{ icon('award', 'stat-icon') }}</div>
   <div class="stat"><span class="stat-label">Administrateurs</span><div class="stat-value">{{ counts.admin }}</div>{{ icon('shield', 'stat-icon') }}</div>
-  <div class="stat"><span class="stat-label">Utilisateurs</span><div class="stat-value">{{ counts.user }}</div>{{ icon('users', 'stat-icon') }}</div>
+  <div class="stat"><span class="stat-label">Élèves</span><div class="stat-value">{{ counts.user }}</div>{{ icon('users', 'stat-icon') }}</div>
 </div>
 
 <section class="card">
   <div class="card-head"><h2 class="card-title">{{ icon('lock') }} Matrice des permissions</h2></div>
   <div class="table-wrap">
     <table class="data">
-      <thead><tr><th>Action</th><th class="center">Super Admin</th><th class="center">Admin</th><th class="center">Utilisateur</th></tr></thead>
+      <thead><tr><th>Action</th><th class="center">Super Admin</th><th class="center">Admin</th><th class="center">Élève</th></tr></thead>
       <tbody>
         {% set permissions = [
           ('Consulter les cours, exercices et ressources', true, true, true),
@@ -61,7 +61,7 @@
     <p class="text-sm mt-1">Gestion des apprenants et des contenus. Ne peut ni créer d'administrateur, ni consulter les messages privés, ni modifier les paramètres sensibles.</p>
   </div></div>
   <div class="card"><div class="card-body">
-    <h3 class="card-title">{{ icon('user') }} Utilisateur</h3>
+    <h3 class="card-title">{{ icon('user') }} Élève</h3>
     <p class="text-sm mt-1">Accès aux cours, exercices, examens, battles, messagerie et à son propre suivi. Aucun accès à l'administration.</p>
   </div></div>
 </div>

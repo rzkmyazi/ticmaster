@@ -2,7 +2,7 @@
 
 
 {% block title %}{{ 'Nouveau compte' if mode == 'create' else 'Modifier un compte' }}{% endblock %}
-{% block page_title %}{{ 'Créer un compte' if mode == 'create' else 'Modifier le compte' }}{% endblock %}
+{% block page_title %}{{ 'Inscrire un élève' if mode == 'create' else 'Modifier le compte' }}{% endblock %}
 {% block page_subtitle %}<p class="page-sub">{{ 'Les identifiants sont communiqués une seule fois' if mode == 'create' else '@' ~ user.username }}</p>{% endblock %}
 
 {% block content %}
@@ -33,11 +33,11 @@
     </div>
     <div class="alert alert-warning mt-2">
       {{ icon('alert') }}
-      <span>Ce mot de passe ne sera plus affiché. Transmettez-le par un canal sûr : l'utilisateur devra le changer à la première connexion.</span>
+      <span>Ce mot de passe ne sera plus affiché. Transmettez-le par un canal sûr : l'élève devra le changer à la première connexion.</span>
     </div>
     <div class="row mt-2">
       <button type="button" class="btn btn-outline btn-sm" data-copy="{{ created.username }} / {{ created.password }}">{{ icon('file') }} Copier les identifiants</button>
-      <a class="btn btn-primary btn-sm" href="{{ url_for('admin.user_new') }}">{{ icon('plus') }} Créer un autre compte</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('admin.user_new') }}">{{ icon('plus') }} Inscrire un autre élève</a>
       <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.users') }}">Retour à la liste</a>
     </div>
   </div>
@@ -49,50 +49,109 @@
 <form method="post" class="grid" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);align-items:start">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-  <section class="card">
-    <div class="card-head"><h2 class="card-title">{{ icon('user') }} Informations du compte</h2></div>
-    <div class="card-body">
-      <div class="form-grid">
-        <div class="field">
-          <label for="full_name">Nom complet <span class="req">*</span></label>
-          <input type="text" id="full_name" name="full_name" value="{{ form.full_name }}" required maxlength="160" placeholder="Ex. Rakoto Jean">
+  <div class="stack">
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ icon('user') }} Identité</h2></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label for="last_name">Nom</label>
+            <input type="text" id="last_name" name="last_name" value="{{ form.last_name }}" maxlength="80" placeholder="Ex. Rakoto">
+          </div>
+          <div class="field">
+            <label for="first_name">Prénom</label>
+            <input type="text" id="first_name" name="first_name" value="{{ form.first_name }}" maxlength="80" placeholder="Ex. Jean">
+          </div>
+          <div class="field">
+            <label for="pseudo">Pseudo</label>
+            <input type="text" id="pseudo" name="pseudo" value="{{ form.pseudo }}" maxlength="64" placeholder="Ex. LeRoiDuRéseau">
+            <span class="hint">Le surnom affiché dans la classe et sur le fil d'actualité.</span>
+          </div>
+          <div class="field">
+            <label for="username">Nom d'utilisateur sur le site</label>
+            <input type="text" id="username" name="username" value="{{ form.username }}"
+                   {{ 'readonly' if mode == 'edit' }} maxlength="32" autocapitalize="none" placeholder="généré automatiquement si vide">
+            <span class="hint">3 à 32 caractères : lettres, chiffres, point, tiret, souligné.</span>
+          </div>
+          <div class="field full">
+            <label for="full_name">Nom complet <span class="req">*</span></label>
+            <input type="text" id="full_name" name="full_name" value="{{ form.full_name }}" required maxlength="160" placeholder="Renseigné automatiquement depuis le nom et le prénom">
+            <span class="hint">Sert de nom de battle en solo et d'affichage partout dans l'application.</span>
+          </div>
+          <div class="field">
+            <label for="email">Adresse e-mail</label>
+            <input type="email" id="email" name="email" value="{{ form.email }}" maxlength="190" placeholder="prenom.nom@exemple.mg">
+          </div>
+          <div class="field">
+            <label for="bio">Note interne / biographie</label>
+            <input type="text" id="bio" name="bio" value="{{ form.bio }}" maxlength="1000">
+          </div>
         </div>
-        <div class="field">
-          <label for="username">Identifiant</label>
-          <input type="text" id="username" name="username" value="{{ form.username }}"
-                 {{ 'readonly' if mode == 'edit' }} maxlength="32" autocapitalize="none" placeholder="généré automatiquement si vide">
-          <span class="hint">3 à 32 caractères : lettres, chiffres, point, tiret, souligné.</span>
-        </div>
-        <div class="field">
-          <label for="email">Adresse e-mail</label>
-          <input type="email" id="email" name="email" value="{{ form.email }}" maxlength="190" placeholder="prenom.nom@exemple.mg">
-        </div>
-        <div class="field">
-          <label for="bio">Note interne / biographie</label>
-          <input type="text" id="bio" name="bio" value="{{ form.bio }}" maxlength="1000">
-        </div>
-      </div>
 
-      {% if mode == 'create' %}
-      <div class="field">
-        <label for="password">Mot de passe temporaire</label>
-        <div class="input-group">
-          <input type="text" id="password" name="password" autocomplete="new-password" placeholder="Laisser vide pour générer automatiquement">
-          <button type="button" class="pw-toggle" data-copy-target="password" aria-label="Copier">{{ icon('file') }}</button>
+        {% if mode == 'create' %}
+        <div class="field">
+          <label for="password">Mot de passe temporaire</label>
+          <div class="input-group">
+            <input type="text" id="password" name="password" autocomplete="new-password" placeholder="Laisser vide pour générer automatiquement">
+            <button type="button" class="pw-toggle" data-copy-target="password" aria-label="Copier">{{ icon('file') }}</button>
+          </div>
+          <span class="hint">10 caractères minimum avec majuscule, minuscule, chiffre et caractère spécial.</span>
         </div>
-        <span class="hint">10 caractères minimum avec majuscule, minuscule, chiffre et caractère spécial.</span>
+        <label class="checkbox mb-2">
+          <input type="checkbox" name="must_change" value="1" checked>
+          <span>Obliger le changement de mot de passe à la première connexion (recommandé)</span>
+        </label>
+        {% endif %}
       </div>
-      <label class="checkbox mb-2">
-        <input type="checkbox" name="must_change" value="1" checked>
-        <span>Obliger le changement de mot de passe à la première connexion (recommandé)</span>
-      </label>
-      {% endif %}
-    </div>
-    <div class="card-foot row">
-      <button class="btn btn-primary" type="submit">{{ icon('check') }} {{ 'Créer le compte' if mode == 'create' else 'Enregistrer' }}</button>
-      <a class="btn btn-ghost" href="{{ url_for('admin.users') }}">Annuler</a>
-    </div>
-  </section>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{{ icon('books') }} Dossier scolaire</h2>
+        <span class="badge badge-info">Élève</span>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label for="class_number">Numéro en classe</label>
+            <input type="number" id="class_number" name="class_number" min="1" max="999"
+                   value="{{ form.class_number }}" placeholder="Ex. 7">
+          </div>
+          <div class="field">
+            <label for="study_level">Niveau d'étude</label>
+            <input type="text" id="study_level" name="study_level" list="levels-list"
+                   value="{{ form.study_level }}" maxlength="60" placeholder="Ex. Terminale">
+            <datalist id="levels-list">
+              {% for level in levels %}<option value="{{ level }}"></option>{% endfor %}
+            </datalist>
+          </div>
+          <div class="field">
+            <label for="gender">Sexe</label>
+            <select id="gender" name="gender">
+              <option value="">— non renseigné —</option>
+              {% for key, label in genders.items() %}
+              <option value="{{ key }}" {{ 'selected' if form.gender == key }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="class_group">Groupe</label>
+            <select id="class_group" name="class_group">
+              <option value="">— aucun —</option>
+              {% for group in groups %}
+              <option value="{{ group }}" {{ 'selected' if form.class_group|string == group|string }}>Groupe {{ group }}</option>
+              {% endfor %}
+            </select>
+            <span class="hint">Le groupe reste modifiable à tout moment depuis cette fiche.</span>
+          </div>
+        </div>
+        <div class="alert alert-info">
+          {{ icon('info') }}
+          <span>Ces informations constituent le dossier scolaire de l'élève : elles apparaissent dans la liste de classe, les notes et la fiche de suivi.</span>
+        </div>
+      </div>
+    </section>
+  </div>
 
   <aside class="stack">
     <section class="card">
@@ -102,15 +161,17 @@
           <label for="role">Rôle</label>
           <select id="role" name="role">
             {% if current_user.is_super_admin %}
-            <option value="user" {{ 'selected' if form.role == 'user' }}>Utilisateur</option>
-            <option value="admin" {{ 'selected' if form.role == 'admin' }}>Administrateur</option>
-            <option value="super_admin" {{ 'selected' if form.role == 'super_admin' }}>Super Administrateur</option>
+            <option value="user" {{ 'selected' if form.role == 'user' or not form.role }}>Élève</option>
+            <option value="admin" {{ 'selected' if form.role == 'admin' }}>Admin</option>
+            <option value="super_admin" {{ 'selected' if form.role == 'super_admin' }}>Super Admin</option>
             {% else %}
-            <option value="user" selected>Utilisateur</option>
+            <option value="user" selected>Élève</option>
             {% endif %}
           </select>
           {% if not current_user.is_super_admin %}
           <span class="hint">Seul le super administrateur peut attribuer un rôle administrateur.</span>
+          {% else %}
+          <span class="hint">Trois rôles seulement : Super Admin, Admin, Élève.</span>
           {% endif %}
         </div>
         <div class="field">
@@ -126,6 +187,10 @@
           <span>Les permissions sont contrôlées côté serveur : masquer un bouton ne suffit pas.</span>
         </div>
       </div>
+      <div class="card-foot row">
+        <button class="btn btn-primary" type="submit">{{ icon('check') }} {{ 'Inscrire l\'élève' if mode == 'create' else 'Enregistrer' }}</button>
+        <a class="btn btn-ghost" href="{{ url_for('admin.users') }}">Annuler</a>
+      </div>
     </section>
 
     {% if mode == 'edit' %}
@@ -140,4 +205,24 @@
     {% endif %}
   </aside>
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    var last = document.getElementById("last_name");
+    var first = document.getElementById("first_name");
+    var full = document.getElementById("full_name");
+    if (!last || !first || !full) return;
+    var auto = !full.value;
+    function compose() {
+      if (!auto) return;
+      full.value = (last.value + " " + first.value).trim();
+    }
+    function touch() { auto = false; }
+    full.addEventListener("input", touch);
+    last.addEventListener("blur", compose);
+    first.addEventListener("blur", compose);
+  })();
+</script>
 {% endblock %}
