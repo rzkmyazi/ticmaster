@@ -26,7 +26,15 @@ USER_COLUMNS = {
     "gender": "VARCHAR(12)",
     "class_group": "INTEGER",
     "avatar_filename": "VARCHAR(255)",
+    "avatar_data": "BLOB",          # traduit en BYTEA sur PostgreSQL (voir _type_sql)
 }
+
+
+def _type_sql(sql_type: str) -> str:
+    """Adapte un type générique au moteur en service (SQLite / PostgreSQL)."""
+    if sql_type == "BLOB" and db.engine.dialect.name != "sqlite":
+        return "BYTEA"
+    return sql_type
 
 
 def ensure_schema(app=None) -> list[str]:
@@ -47,7 +55,7 @@ def ensure_schema(app=None) -> list[str]:
         if name in existing:
             continue
         try:
-            db.session.execute(text(f"ALTER TABLE users ADD COLUMN {name} {sql_type}"))
+            db.session.execute(text(f"ALTER TABLE users ADD COLUMN {name} {_type_sql(sql_type)}"))
             db.session.commit()
             applied.append(name)
         except Exception:  # colonne ajoutée par un autre worker : on ignore

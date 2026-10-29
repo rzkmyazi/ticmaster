@@ -6,6 +6,7 @@ Les tests utilisent une base SQLite en mémoire et ne touchent jamais la base r�
 """
 from __future__ import annotations
 
+import io
 import re
 
 import pytest
@@ -1747,3 +1748,52 @@ def test_accuses_de_lecture_dans_les_messages_prives(app):
 
     # aucun accusé de lecture pour ses propres messages
     assert all(m["reads"] == 0 for m in apres["messages"] if not m["mine"]) or True
+
+
+def test_photo_de_profil_survit_au_redemarrage(app):
+    """La photo est copiée en base : elle survit à un redéploiement (Render)."""
+    image = (b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+             b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+             b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82")
+    _make_user(app, "eleve", role=ROLE_USER)
+    client = app.test_client()
+    _login(client, "eleve", "MotDePasse2026!")
+    token = _csrf(client)
+
+    reponse = client.post("/mon-profil/photo", data={"csrf_token": token,
+                                                     "photo": (io.BytesIO(image), "moi.png")},
+                          content_type="multipart/form-data", follow_redirects=True)
+    assert reponse.status_code == 200
+
+    with app.app_context():
+        eleve = User.query.filter_by(username="eleve").first()
+        assert eleve.avatar_filename.endswith(".png")
+        assert eleve.avatar_data and eleve.avatar_data[:4] == b"\x89PNG"
+
+    # même sans fichier sur le disque, la photo est servie depuis la base
+    from pathlib import Path
+    with app.app_context():
+        eleve = User.query.filter_by(username="eleve").first()
+        nom = eleve.avatar_filename
+        dossier = Path(app.config["UPLOAD_FOLDER"])
+    (dossier / nom).unlink(missing_ok=True)
+
+    servi = client.get(f"/avatar/{nom}")
+    assert servi.status_code == 200
+    assert servi.headers["Content-Type"].startswith("image/")
+
+
+def test_photo_manquante_affiche_les_initiales(app):
+    _make_user(app, "eleve", role=ROLE_USER)
+    client = app.test_client()
+    _login(client, "eleve", "MotDePasse2026!")
+    with app.app_context():
+        eleve = User.query.filter_by(username="eleve").first()
+        eleve.avatar_filename = "disparu.png"
+        eleve.avatar_data = None
+        db.session.commit()
+
+    reponse = client.get("/avatar/disparu.png")
+    assert reponse.status_code == 200
+    assert "image/svg+xml" in reponse.headers["Content-Type"]
+    assert b"<svg" in reponse.data

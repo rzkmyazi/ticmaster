@@ -66,6 +66,7 @@ class User(db.Model):
     gender = db.Column(db.String(12), default="")  # garcon / fille
     class_group = db.Column(db.Integer)            # numéro de groupe choisi par le super admin (1, 2, 3, 4…)
     avatar_filename = db.Column(db.String(255), default="")  # photo de profil envoyée
+    avatar_data = db.Column(db.LargeBinary)                  # copie en base : survit aux redéploiements
 
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
     last_login_at = db.Column(db.DateTime)

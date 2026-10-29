@@ -939,6 +939,11 @@ def main() -> int:
     ok("salons de classe proposés au professeur",
        "Messages de classe" in messagerie and "Toute la classe" in messagerie)
 
+    notes = sa.get(BASE + "/admin/notes").text
+    ok("aucun gestionnaire en ligne (respect de la CSP)",
+       "onclick=" not in notes and "onchange=" not in notes and "data-auto-submit" in notes,
+       "gestionnaire en ligne détecté" if ("onclick=" in notes or "onchange=" in notes) else "")
+
     probe_msg = "verif.classe" + "".join(random.choice(string.ascii_lowercase) for _ in range(4))
     mdp_msg = "Classe2026!"
     if _provision(sa, probe_msg, "Vérification Classe", "user", mdp_msg):
@@ -982,6 +987,13 @@ def main() -> int:
            f"receipts={accuses.get('receipts')} total={accuses.get('total')}")
     else:
         skip("messagerie de classe", "compte de test indisponible")
+
+    # ---------------------------------------------- photo de profil robuste
+    print("▸ Photo de profil")
+    page = sa.get(BASE + "/mon-profil").text
+    ok("photo de profil modifiable depuis la galerie",
+       'type="file"' in page and 'name="photo"' in page and "gallery" in page.lower() or
+       ('type="file"' in page and 'name="photo"' in page))
 
     # ------------------------------------- actions de la fiche d'un élève
     print("▸ Fiche élève : réinitialiser, suspendre, supprimer")

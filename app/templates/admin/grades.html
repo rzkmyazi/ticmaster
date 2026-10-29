@@ -33,7 +33,7 @@
         {{ icon('search', 16) }}
         <input type="search" name="q" value="{{ q }}" placeholder="Nom ou identifiant…" aria-label="Rechercher un élève">
       </div>
-      <select name="tri" aria-label="Trier" onchange="this.form.submit()">
+      <select name="tri" aria-label="Trier" data-auto-submit>
         <option value="moyenne" {{ 'selected' if sort == 'moyenne' }}>Meilleures moyennes</option>
         <option value="progression" {{ 'selected' if sort == 'progression' }}>Progression</option>
         <option value="nom" {{ 'selected' if sort == 'nom' }}>Ordre alphabétique</option>

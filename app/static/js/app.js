@@ -878,6 +878,19 @@
     on(window, "focus", pollNotifications);
   }
 
+  /* Actions inline remplacées par des attributs (CSP sans « unsafe-inline ») */
+  function initInlineActions() {
+    $$("[data-auto-submit]").forEach(function (el) {
+      on(el, "change", function () { if (el.form) el.form.requestSubmit ? el.form.requestSubmit() : el.form.submit(); });
+    });
+    $$("[data-reload]").forEach(function (btn) {
+      on(btn, "click", function () { window.location.reload(); });
+    });
+    $$("[data-back]").forEach(function (btn) {
+      on(btn, "click", function () { window.history.back(); });
+    });
+  }
+
   function boot() {
     applyTheme(currentTheme());
     initSidebar();
@@ -898,6 +911,7 @@
     initTabs();
     initFeed();
     initNotifications();
+    initInlineActions();
 
     $$("[data-theme-toggle]").forEach(function (btn) {
       on(btn, "click", function () { TIC.theme.toggle(); });

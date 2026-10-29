@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from flask import (
-    Blueprint, abort, current_app, flash, g, redirect, render_template, request,
-    send_from_directory, url_for,
+    Blueprint, abort, current_app, flash, g, make_response, redirect, render_template,
+    request, send_from_directory, url_for,
 )
 from sqlalchemy import func
 
@@ -174,6 +174,7 @@ def _delete_avatar_file(user) -> None:
     except OSError:
         pass
     user.avatar_filename = ""
+    user.avatar_data = None
 
 
 @bp.route("/mon-profil/photo", methods=["POST"])
@@ -208,12 +209,36 @@ def avatar_upload():
         flash("L'envoi de la photo a échoué.", "danger")
         return redirect(url_for("user.profile") + "#infos")
 
+    # Copie en base : sur un hébergeur au disque éphémère (Render), la photo
+    # survivrait sinon quelques minutes seulement.
+    octets = b""
+    try:
+        octets = (Path(current_app.config["UPLOAD_FOLDER"]) / stored).read_bytes()
+    except OSError:
+        octets = b""
+
     _delete_avatar_file(user)
     user.avatar_filename = stored
+    user.avatar_data = octets or None
     db.session.commit()
     log_audit("avatar.updated", target=user.username, details=f"{original} ({size} octets)")
     flash("Photo de profil mise à jour.", "success")
     return redirect(url_for("user.profile") + "#infos")
+
+
+_AVATAR_TYPES = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+                 "gif": "image/gif", "webp": "image/webp", "bmp": "image/bmp"}
+
+
+def _initiales_svg(user) -> str:
+    """Photo par défaut : les initiales, aux couleurs du compte (aucune image cassée)."""
+    lettres = (user.initials or "?")[:2]
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">'
+        f'<rect width="64" height="64" rx="18" fill="{user.avatar_color or "#22d3ee"}"/>'
+        '<text x="32" y="41" font-family="Inter,Segoe UI,sans-serif" font-size="26" '
+        f'font-weight="700" fill="#04121f" text-anchor="middle">{lettres}</text></svg>'
+    )
 
 
 @bp.route("/avatar/<path:filename>")
@@ -222,9 +247,27 @@ def avatar(filename: str):
     """Sert une photo de profil (authentification obligatoire)."""
     if "/" in filename or "\\" in filename or filename.startswith("."):
         abort(404)
-    if User.query.filter_by(avatar_filename=filename).first() is None:
+    user = User.query.filter_by(avatar_filename=filename).first()
+    if user is None:
         abort(404)
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename, as_attachment=False)
+
+    dossier = Path(current_app.config["UPLOAD_FOLDER"])
+    if (dossier / filename).exists():
+        return send_from_directory(dossier, filename, as_attachment=False)
+
+    # Fichier absent du disque (redéploiement) : la copie en base prend le relais
+    if user.avatar_data:
+        ext = filename.rsplit(".", 1)[-1].lower()
+        response = make_response(user.avatar_data)
+        response.headers["Content-Type"] = _AVATAR_TYPES.get(ext, "application/octet-stream")
+        response.headers["Cache-Control"] = "private, max-age=86400"
+        return response
+
+    # Plus d'image du tout : initiales dessinées, jamais d'image cassée
+    response = make_response(_initiales_svg(user))
+    response.headers["Content-Type"] = "image/svg+xml"
+    response.headers["Cache-Control"] = "private, max-age=3600"
+    return response
 
 
 @bp.route("/mon-profil", methods=["GET", "POST"])

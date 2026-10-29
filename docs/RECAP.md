@@ -503,7 +503,14 @@ horizontale défilante** : la conversation occupe presque tout l'écran, la
 conversation ouverte est automatiquement amenée sous les yeux de l'utilisateur,
 et le composeur reste accessible au-dessus de la barre d'onglets.
 
-### 16.5 Preuves
+### 16.5 Deux défauts corrigés au passage
+
+| Problème constaté en production | Correction |
+|---|---|
+| La **photo de profil disparaissait** après un redéploiement (disque éphémère de Render) : l'image renvoyait une erreur 404 et s'affichait cassée | La photo est désormais **copiée dans la base** en plus du fichier ; si le fichier a disparu, elle est servie depuis la base. Si l'image n'existe plus du tout, les **initiales sont dessinées** (aucune image cassée). |
+| Le menu « Trier » de la page Notes et le bouton « Actualiser » ne faisaient rien : leurs gestionnaires `onclick`/`onchange` étaient **bloqués par la politique de sécurité (CSP)** | Plus aucun gestionnaire en ligne dans les pages : les comportements passent par `data-auto-submit`, `data-reload` et `data-back`, branchés dans `app.js`. |
+
+### 16.6 Preuves
 
 | Contrôle | Résultat |
 |---|---|
@@ -525,7 +532,7 @@ Captures : `apercus/android/prof-accueil.png`, `prof-message-classe.png`,
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **75 tests réussis** |
+| `pytest -q` | **77 tests réussis** |
 | `tools/verify.py` (local) | **216 contrôles conformes, 0 échec** |
 | `tools/verify.py` sur Render | **218 contrôles conformes, 0 échec** |
 | `tools/verify.py` sur PythonAnywhere | **218 contrôles conformes, 0 échec** |

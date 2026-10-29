@@ -25,7 +25,7 @@
 <section class="card mb-2">
   <div class="card-head">
     <h2 class="card-title">{{ icon('users') }} Connectés maintenant</h2>
-    <button class="btn btn-sm btn-ghost" type="button" onclick="location.reload()">{{ icon('refresh') }} Actualiser</button>
+    <button class="btn btn-sm btn-ghost" type="button" data-reload>{{ icon('refresh') }} Actualiser</button>
   </div>
   <div class="card-body">
     {% if online %}

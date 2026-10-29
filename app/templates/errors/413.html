@@ -18,7 +18,7 @@
         {% else %}
         <a class="btn btn-primary" href="{{ url_for('public.index') }}">{{ icon('home') }} Accueil</a>
         {% endif %}
-        <button class="btn btn-outline" type="button" onclick="history.back()">{{ icon('arrow-left') }} Retour</button>
+        <button class="btn btn-outline" type="button" data-back>{{ icon('arrow-left') }} Retour</button>
       </div>
     </div>
     <div class="card-foot center">

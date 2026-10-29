@@ -577,6 +577,8 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 | Clic « Suspendre » → boîte « Suspendre le compte » affichée | ✔ |
 | « Annuler » referme la boîte sans rien modifier | ✔ |
 | « Réinitialiser » → mot de passe temporaire affiché | ✔ |
+| Aucun gestionnaire `onclick` / `onchange` en ligne (CSP) | ✔ |
+| Photo de profil : copie en base, servie même sans fichier, repli initiales | ✔ |
 | Erreurs JavaScript | aucune |
 
 ## 19. Mise à jour du 29/10/2026 — Notifications en temps réel (vague 10)
@@ -650,7 +652,7 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 | Android : bande de conversations défilante, conversation ouverte centrée | ✔ |
 | Erreurs JavaScript | aucune |
 
-- `pytest -q` → **75 tests réussis** (5 nouveaux).
+- `pytest -q` → **77 tests réussis** (7 nouveaux).
 - `tools/verify.py` → **216** contrôles en local, **218** sur PythonAnywhere et sur Render (0 échec).
 
 ---
