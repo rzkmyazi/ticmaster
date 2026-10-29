@@ -28,11 +28,15 @@ def _teachers_have_no_exam():
     Contrôle fait côté serveur (masquer le menu ne suffit pas).
     """
     user = getattr(g, "user", None)
-    if user is None or user.role != ROLE_SUPER_ADMIN:
+    if user is None or not user.is_admin:
         return None
     if request.method == "GET":
-        flash("Votre rôle de professeur ne passe pas d'examen : voici les notes des élèves.", "info")
-        return redirect(url_for("admin.grades"))
+        # Le professeur ne compose pas : il corrige et surveille.
+        if user.is_super_admin:
+            flash("Votre rôle de professeur ne passe pas d'examen : voici les notes des élèves.", "info")
+            return redirect(url_for("admin.grades"))
+        flash("Votre rôle de professeur ne passe pas d'examen : voici la gestion des examens.", "info")
+        return redirect(url_for("admin.exams"))
     abort(403)
 
 

@@ -427,6 +427,22 @@ class Announcement(db.Model):
     author = db.relationship("User")
 
 
+class MessageRead(db.Model):
+    """Accusé de lecture d'un message (une ligne par lecteur)."""
+    __tablename__ = "message_reads"
+    __table_args__ = (db.UniqueConstraint("message_id", "user_id", name="uq_message_read"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, db.ForeignKey("messages.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    read_at = db.Column(db.DateTime, default=utcnow)
+
+    message = db.relationship("Message", backref=db.backref("reads", cascade="all, delete-orphan"))
+    user = db.relationship("User")
+
+
 class Message(db.Model):
     __tablename__ = "messages"
 

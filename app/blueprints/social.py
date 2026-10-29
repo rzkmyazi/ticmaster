@@ -15,8 +15,8 @@ from sqlalchemy import func, or_
 
 from ..extensions import db
 from ..models import (
-    BattleMember, BattleRoom, Exercise, Message, Option, Post, PostComment, PostReaction,
-    Question, REACTION_KINDS, User, utcnow, STATUS_ACTIVE,
+    BattleMember, BattleRoom, Exercise, Message, MessageRead, Option, Post, PostComment,
+    PostReaction, Question, REACTION_KINDS, User, utcnow, STATUS_ACTIVE,
 )
 from ..security.core import login_required, log_audit
 from ..utils import is_real_image, save_upload
@@ -35,9 +35,87 @@ def _dm_room(a: int, b: int) -> str:
     return f"dm:{low}:{high}"
 
 
+def _slug(text: str) -> str:
+    """« Terminale A » → « terminale-a » (identifiant stable pour un salon)."""
+    import unicodedata
+    norm = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode()
+    return "".join(c if c.isalnum() else "-" for c in norm.lower()).strip("-")[:40] or "x"
+
+
+def _class_room(level: str | None = None, group: int | None = None) -> str:
+    """Salon de classe : `classe:tous`, `classe:niveau:x`, `classe:groupe:n`…"""
+    level = (level or "").strip()
+    if level and group:
+        room = f"classe:niveau:{_slug(level)}:groupe:{int(group)}"
+    elif level:
+        room = f"classe:niveau:{_slug(level)}"
+    elif group:
+        room = f"classe:groupe:{int(group)}"
+    else:
+        room = "classe:tous"
+    return room[:60]
+
+
+def _class_room_targets(room: str) -> dict:
+    """Décompose un salon de classe en {level_slug, group}."""
+    parts = room.split(":")
+    target = {"level": None, "group": None}
+    for i, part in enumerate(parts):
+        if part == "niveau" and i + 1 < len(parts):
+            target["level"] = parts[i + 1]
+        if part == "groupe" and i + 1 < len(parts) and parts[i + 1].isdigit():
+            target["group"] = int(parts[i + 1])
+    return target
+
+
+def _class_recipients(room: str) -> list[User]:
+    """Élèves actifs visés par un salon de classe."""
+    target = _class_room_targets(room)
+    query = User.query.filter(User.status == STATUS_ACTIVE, User.role == "user")
+    rows = query.all()
+    out = []
+    for user in rows:
+        if target["level"] and _slug(user.study_level or "") != target["level"]:
+            continue
+        if target["group"] and int(user.class_group or 0) != target["group"]:
+            continue
+        out.append(user)
+    return out
+
+
+def _class_room_label(room: str) -> str:
+    """Libellé lisible : « Toute la classe », « Terminale · Groupe 3 »…"""
+    target = _class_room_targets(room)
+    if not target["level"] and not target["group"]:
+        return "Toute la classe"
+    level = ""
+    if target["level"]:
+        # on récupère l'orthographe réelle du niveau
+        sample = next((u.study_level for u in User.query.filter(User.role == "user").limit(500)
+                       if _slug(u.study_level or "") == target["level"]), target["level"])
+        level = (sample or target["level"]).strip().title()
+    group = f"Groupe {target['group']}" if target["group"] else ""
+    return " · ".join(part for part in (level, group) if part) or "Toute la classe"
+
+
+def _is_class_room(room: str) -> bool:
+    return room.startswith("classe:")
+
+
+def _student_in_class(user: User, room: str) -> bool:
+    target = _class_room_targets(room)
+    if target["level"] and _slug(user.study_level or "") != target["level"]:
+        return False
+    if target["group"] and int(user.class_group or 0) != target["group"]:
+        return False
+    return True
+
+
 def _can_access_room(user: User, room: str) -> bool:
     if room == "general":
         return True
+    if _is_class_room(room):
+        return True if user.is_admin else _student_in_class(user, room)
     if not room.startswith("dm:"):
         return False
     parts = room.split(":")
@@ -70,6 +148,59 @@ def _conversations_for(user: User):
     return out
 
 
+def _class_rooms_for(user: User) -> list[dict]:
+    """Salons de classe proposés : au professeur tout, à l'élève les siens."""
+    if user.is_admin:
+        cibles = [{"room": "classe:tous", "label": "Toute la classe"}]
+        niveaux = sorted({u.study_level for u in User.query.filter(User.role == "user",
+                                                                  User.status == STATUS_ACTIVE)
+                          if (u.study_level or "").strip()})
+        groupes = sorted({int(u.class_group) for u in User.query.filter(
+            User.role == "user", User.status == STATUS_ACTIVE, User.class_group.isnot(None))})
+        for niveau in niveaux:
+            cibles.append({"room": _class_room(level=niveau),
+                           "label": _class_room_label(_class_room(level=niveau))})
+        for groupe in groupes:
+            cibles.append({"room": _class_room(group=groupe),
+                           "label": _class_room_label(_class_room(group=groupe))})
+    else:
+        cibles = [{"room": "classe:tous", "label": "Toute la classe"}]
+        if (user.study_level or "").strip():
+            cibles.append({"room": _class_room(level=user.study_level),
+                           "label": _class_room_label(_class_room(level=user.study_level))})
+        if user.class_group:
+            cibles.append({"room": _class_room(group=int(user.class_group)),
+                           "label": _class_room_label(_class_room(group=int(user.class_group)))})
+        if (user.study_level or "").strip() and user.class_group:
+            cibles.append({"room": _class_room(level=user.study_level, group=int(user.class_group)),
+                           "label": _class_room_label(_class_room(level=user.study_level,
+                                                                  group=int(user.class_group)))})
+
+    out, seen = [], set()
+    for cible in cibles:
+        if cible["room"] in seen:
+            continue
+        seen.add(cible["room"])
+        dernier = (Message.query.filter_by(room=cible["room"], deleted=False)
+                   .order_by(Message.id.desc()).first())
+        if not user.is_admin and dernier is None:
+            continue            # l'élève ne voit que les classes où l'on a écrit
+        non_lus = 0
+        if user.is_admin:
+            nombre = len(_class_recipients(cible["room"]))
+            non_lus = 0
+        else:
+            nombre = 1
+            if dernier is not None:
+                non_lus = (Message.query.filter(Message.room == cible["room"],
+                                                Message.deleted.is_(False),
+                                                Message.sender_id != user.id,
+                                                ~Message.reads.any(MessageRead.user_id == user.id))
+                           .count())
+        out.append({**cible, "last": dernier, "destinataires": nombre, "non_lus": non_lus})
+    return out
+
+
 @bp.route("/messages")
 @login_required
 def messages():
@@ -78,6 +209,7 @@ def messages():
         room = "general"
 
     conversations = _conversations_for(g.user)
+    class_rooms = _class_rooms_for(g.user)
     contacts = (
         User.query.filter(User.status == STATUS_ACTIVE, User.id != g.user.id)
         .order_by(User.full_name.asc())
@@ -85,11 +217,20 @@ def messages():
         .all()
     )
     title = "Salon général"
+    class_label, class_count, is_class, class_sender = "", 0, False, None
     if room.startswith("dm:"):
         _, a, b = room.split(":")
         other_id = int(b) if int(a) == g.user.id else int(a)
         other = db.session.get(User, other_id)
         title = other.full_name or other.username if other else "Conversation"
+    elif _is_class_room(room):
+        is_class = True
+        class_label = _class_room_label(room)
+        title = f"Message de classe — {class_label}"
+        class_count = len(_class_recipients(room))
+        dernier = (Message.query.filter_by(room=room, deleted=False)
+                   .order_by(Message.id.desc()).first())
+        class_sender = dernier.sender_id if dernier else None
 
     return render_template(
         "user/messages.html",
@@ -97,7 +238,51 @@ def messages():
         title=title,
         conversations=conversations,
         contacts=contacts,
+        class_rooms=class_rooms,
+        is_class=is_class,
+        class_label=class_label,
+        class_count=class_count,
+        class_sender=class_sender,
     )
+
+
+def _room_total(room: str) -> int:
+    """Nombre de personnes censées lire le salon (0 = non affiché)."""
+    if room.startswith("dm:"):
+        return 1
+    if _is_class_room(room):
+        return len(_class_recipients(room))
+    if room == "general":
+        return max(0, User.query.filter_by(status=STATUS_ACTIVE).count() - 1)
+    return 0
+
+
+def _mark_reads(room: str, rows, user: User) -> int:
+    """Enregistre les accusés de lecture des messages affichés."""
+    ids = [m.id for m in rows if m.sender_id != user.id]
+    if not ids:
+        return 0
+    deja = {r.message_id for r in MessageRead.query.filter(
+        MessageRead.user_id == user.id, MessageRead.message_id.in_(ids)).all()}
+    nouveaux = [MessageRead(message_id=i, user_id=user.id) for i in ids if i not in deja]
+    if nouveaux:
+        db.session.add_all(nouveaux)
+        db.session.commit()
+    return len(nouveaux)
+
+
+def _receipts(rows, user: User) -> dict:
+    """Nombre de lecteurs pour mes propres messages (accusés de lecture)."""
+    mes_ids = [m.id for m in rows if m.sender_id == user.id]
+    if not mes_ids:
+        return {}
+    counts = dict(
+        db.session.query(MessageRead.message_id, func.count(MessageRead.id))
+        .filter(MessageRead.message_id.in_(mes_ids))
+        .group_by(MessageRead.message_id)
+        .all()
+    )
+    return {str(mid): int(nb) for mid, nb in counts.items()}
 
 
 @bp.route("/api/messages")
@@ -113,15 +298,22 @@ def api_messages():
         query = query.filter(Message.id > after)
     rows = query.order_by(Message.id.asc()).limit(120).all()
 
+    _mark_reads(room, rows, g.user)
+    receipts = _receipts(rows, g.user)
+    total = _room_total(room)
+
     return jsonify({
         "ok": True,
         "room": room,
+        "receipts": receipts,
+        "total": total,
         "messages": [
             {
                 "id": m.id,
                 "body": m.body,
                 "at": m.created_at.isoformat(timespec="minutes"),
                 "mine": m.sender_id == g.user.id,
+                "reads": receipts.get(str(m.id), 0),
                 "sender": {
                     "id": m.sender_id,
                     "name": (m.sender.full_name or m.sender.username) if m.sender else "Inconnu",
@@ -152,11 +344,19 @@ def api_send_message():
         return jsonify({"ok": False, "error": "Vous envoyez des messages trop rapidement."}), 429
 
     recipient_id = None
+    classe = None
     if room.startswith("dm:"):
         if not _can_access_room(g.user, room):
             return jsonify({"ok": False, "error": "Conversation non autorisée."}), 403
         _, a, b = room.split(":")
         recipient_id = int(b) if int(a) == g.user.id else int(a)
+    elif _is_class_room(room):
+        # Seul le professeur écrit à une classe ; les élèves y répondent en privé.
+        if not g.user.is_admin:
+            return jsonify({"ok": False, "error": "Seul un professeur peut écrire à une classe."}), 403
+        classe = _class_recipients(room)
+        if not classe:
+            return jsonify({"ok": False, "error": "Aucun élève dans cette classe."}), 400
     elif room != "general":
         return jsonify({"ok": False, "error": "Salon inconnu."}), 400
 
@@ -164,7 +364,7 @@ def api_send_message():
     db.session.add(msg)
     db.session.commit()
 
-    # Notification instantanée pour un message privé
+    # Notification instantanée : message privé ou message de classe
     if recipient_id:
         from ..notifications import notify
         notify(
@@ -174,6 +374,15 @@ def api_send_message():
             url_for("social.messages") + "?room=" + room,
             actor=g.user,
         )
+    elif classe:
+        from ..notifications import notify_many
+        notify_many(
+            [u.id for u in classe], "message",
+            f"Message de classe — {_class_room_label(room)}",
+            body[:140],
+            url_for("social.messages", room=room),
+            actor=g.user, icon="megaphone",
+        )
 
     return jsonify({
         "ok": True,
@@ -182,6 +391,7 @@ def api_send_message():
             "body": msg.body,
             "at": msg.created_at.isoformat(timespec="minutes"),
             "mine": True,
+            "reads": 0,
             "sender": {
                 "id": g.user.id,
                 "name": g.user.full_name or g.user.username,

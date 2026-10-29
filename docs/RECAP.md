@@ -452,14 +452,83 @@ Captures : `apercus/android/prod-notifications-panneau.png`,
 
 ---
 
+## 16. Vague 11 — Le professeur et la messagerie de classe — ✔
+
+### 16.1 Le super administrateur est un professeur
+
+Le super administrateur (et l'administrateur) **enseignent** : ils ne suivent pas
+de programme et ne passent pas d'exercices. L'interface le reflète maintenant
+partout.
+
+| Avant | Maintenant |
+|---|---|
+| Menu « Cours & modules » et « Exercices » (parcours d'élève) | Menu **« Espace professeur »** : *Mes cours*, *Mes exercices*, *Ressources* |
+| « Examens trimestriels » et « Mes résultats » pour les administrateurs | Masqués pour tout le personnel |
+| « Mon historique » (parcours d'apprenant) | Réservé aux élèves |
+| `/espace` affichait 0 % de progression pour un administrateur | Renvoi vers l'accueil professeur |
+| `/cours`, `/exercices`, `/examens`, `/resultats` accessibles au professeur | Renvois vers la gestion correspondante |
+
+Contrôles côté **serveur** (masquer un menu ne suffit pas) : les redirections
+sont faites dans les vues, avec un message explicite (« Espace professeur : vos
+cours se gèrent dans Modules & leçons »). L'accueil du professeur s'intitule
+« Bonjour … » et rassemble les indicateurs de la classe.
+
+### 16.2 Messagerie de classe
+
+Un professeur peut désormais écrire **à toute une classe en une fois**.
+
+| Fonction | Détail |
+|---|---|
+| Cibles | Toute la classe, un **niveau** (« Terminale », « 1ère »), un **groupe** (1 → 99), ou niveau + groupe |
+| Envoi | Un seul message, une seule action ; chaque élève visé reçoit une **notification** |
+| Écriture | Réservée au professeur : un élève reçoit une erreur 403 s'il tente d'écrire dans le salon de classe |
+| Lecture | Chaque élève ne voit **que** les salons de sa classe ; un autre groupe n'y a aucun accès |
+| Réponse | L'élève répond en privé au professeur (bouton « Répondre au professeur en privé ») |
+| Repérage | Les salons de classe portent l'icône mégaphone et un compteur de messages non lus |
+
+### 16.3 Accusés de lecture
+
+| Fonction | Détail |
+|---|---|
+| Enregistrement | Un lecteur = une ligne (table `message_reads`), jamais de doublon |
+| Dans les messages privés | « Envoyé » puis « Lu » dès que le destinataire ouvre la conversation |
+| Dans un message de classe | « Lu par 3/28 » — le professeur sait combien d'élèves ont lu |
+| Rafraîchissement | Toutes les 4 s pour les nouveaux messages, toutes les 12 s pour les accusés |
+| Vie privée | Aucun accusé de lecture sur ses propres messages ; rien n'est affiché dans le salon général |
+
+### 16.4 Sur Android
+
+La liste des conversations (classe, privés, membres) devient une **bande
+horizontale défilante** : la conversation occupe presque tout l'écran, la
+conversation ouverte est automatiquement amenée sous les yeux de l'utilisateur,
+et le composeur reste accessible au-dessus de la barre d'onglets.
+
+### 16.5 Preuves
+
+| Contrôle | Résultat |
+|---|---|
+| Menu professeur : « Mes cours », « Mes exercices », aucun parcours d'élève | ✔ |
+| `/cours`, `/exercices`, `/examens`, `/resultats`, `/espace` renvoyés côté professeur | ✔ |
+| Message du professeur à un groupe → seul ce groupe est notifié | ✔ |
+| Élève visé : message reçu, notification reçue | ✔ |
+| Élève d'un autre groupe : 403 et salon invisible | ✔ |
+| Élève tentant d'écrire à la classe : 403 | ✔ |
+| Accusés de lecture remontés (« Lu », « Lu par n/N ») | ✔ |
+| Aucune erreur JavaScript sur Android simulé | ✔ |
+
+Captures : `apercus/android/prof-accueil.png`, `prof-message-classe.png`,
+`eleve-message-classe.png`, `prof-mes-cours.png`.
+
+---
+
 ## Vérifications automatiques
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **70 tests réussis** |
-| `tools/verify.py` (local) | **206 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **208 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **208 contrôles conformes, 0 échec** |
+| `pytest -q` | **75 tests réussis** |
+| `tools/verify.py` (local) | **216 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | **218 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **218 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.

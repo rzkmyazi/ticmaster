@@ -985,9 +985,9 @@ table.table { width: 100%; border-collapse: collapse; font-size: .86rem; min-wid
 }
 @media (max-width: 720px) {
   body { font-size: 15px; }
-  .chat-layout { grid-template-columns: 1fr; height: auto; min-height: 0; }
-  .chat-side { max-height: 220px; }
-  .chat-main { height: 60vh; min-height: 400px; }
+  .chat-layout { grid-template-columns: 1fr; height: auto; min-height: 0; gap: .6rem; }
+  .chat-side { max-height: none; }
+  .chat-main { height: min(68dvh, 520px); min-height: 380px; }
   .page-actions { width: 100%; }
   .page-actions .btn { flex: 1; }
   .welcome-actions { margin-left: 0; width: 100%; }
@@ -2364,4 +2364,70 @@ body.confirm-open { overflow: hidden; }
 }
 @media (prefers-reduced-motion: reduce) {
   .notif-badge, .notif-btn.has-news .ic { animation: none; }
+}
+
+/* ---------- 30. Messagerie de classe : accusés de lecture, salons ---------- */
+.bubble-receipt {
+  display: block; margin-top: .18rem; padding-right: .15rem;
+  font-size: .64rem; font-weight: 600; letter-spacing: .01em;
+  color: var(--text-3); text-align: right;
+}
+.bubble-receipt.is-read { color: var(--green); }
+.msg.is-mine .bubble-receipt { padding-right: .3rem; }
+
+.chat-room--class .avatar { background: rgba(52, 211, 153, .14); color: var(--green); }
+.chat-unread {
+  margin-left: auto; min-width: 19px; height: 19px; padding: 0 5px;
+  display: inline-grid; place-items: center; border-radius: 999px;
+  background: var(--accent); color: #04222b;
+  font-size: .66rem; font-weight: 800;
+}
+
+.chat-locked {
+  display: flex; align-items: center; gap: .45rem; flex-wrap: wrap;
+  padding: .8rem 1rem; border-top: 1px solid var(--line);
+  background: var(--surface-2); color: var(--text-2); font-size: .8rem;
+}
+.chat-locked a { color: var(--accent); font-weight: 700; text-decoration: none; }
+.chat-locked a:hover { text-decoration: underline; }
+
+@media (max-width: 560px) {
+  .bubble-receipt { font-size: .6rem; }
+}
+
+/* ---------- 31. Android : messagerie en bande horizontale ----------
+   La liste des conversations (classe, privés, membres) devient une bande
+   défilante ; la conversation occupe presque tout l'écran. Placé en fin de
+   feuille pour primer sur la règle générale de `.chat-rooms`. */
+@media (max-width: 720px) {
+  .chat-side { max-height: none; border-radius: 14px; }
+  .chat-side-head { display: none; }
+  .chat-rooms {
+    display: flex; align-items: center; gap: .45rem;
+    padding: .5rem .55rem; overflow-x: auto; overflow-y: hidden;
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    box-shadow: inset -16px 0 14px -14px rgba(2, 8, 23, .75);
+  }
+  .chat-rooms::-webkit-scrollbar { height: 0; }
+  .chat-rooms .nav-section {
+    display: inline-flex; align-items: center; flex: none;
+    margin: 0; padding: 0 .3rem;
+    font-size: .6rem; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--text-3); white-space: nowrap; font-weight: 700;
+  }
+  .chat-room {
+    flex: 0 0 auto; max-width: 62vw; padding: .42rem .7rem;
+    border-radius: 999px; scroll-snap-align: start;
+    border: 1px solid var(--line); background: var(--surface-2);
+  }
+  .chat-room.is-active { border-color: var(--accent); background: var(--accent-soft); }
+  .chat-room .avatar { width: 20px; height: 20px; font-size: .6rem; }
+  .chat-room-txt small { display: none; }
+  .chat-room-txt strong {
+    font-size: .78rem; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; max-width: 46vw; display: block;
+  }
+  .chat-main { height: min(68dvh, 520px); min-height: 380px; }
+  .chat-locked { font-size: .76rem; }
 }

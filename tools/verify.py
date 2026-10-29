@@ -329,6 +329,12 @@ def main() -> int:
     r = sa.get(BASE + "/espace", allow_redirects=False)
     ok("super admin → /espace redirigé vers l'administration",
        r.status_code == 302 and "/admin" in r.headers.get("Location", ""))
+    r = sa.get(BASE + "/cours", allow_redirects=False)
+    ok("super admin → /cours renvoyé vers la gestion des cours",
+       r.status_code == 302 and "/admin/modules" in r.headers.get("Location", ""))
+    r = sa.get(BASE + "/exercices", allow_redirects=False)
+    ok("super admin → /exercices renvoyé vers la gestion des exercices",
+       r.status_code == 302 and "/admin/exercices" in r.headers.get("Location", ""))
     page = sa.get(BASE + "/admin").text
     ok("menu sans « Examens trimestriels » pour le professeur",
        "Examens trimestriels" not in page and "Notes des élèves" in page)
@@ -922,6 +928,60 @@ def main() -> int:
 
     ok("cloche absente de la page publique (aucune fuite)",
        'id="notif-toggle"' not in requests.get(BASE + "/", timeout=30).text)
+
+    # ------------------------------------------ messagerie de classe
+    print("▸ Professeur et messagerie de classe")
+    accueil = sa.get(BASE + "/admin/").text
+    ok("menu « Espace professeur » sans parcours d'élève",
+       "Espace professeur" in accueil and "Cours &amp; modules" not in accueil,
+       "menu élève encore visible" if "Cours &amp; modules" in accueil else "")
+    messagerie = sa.get(BASE + "/messages").text
+    ok("salons de classe proposés au professeur",
+       "Messages de classe" in messagerie and "Toute la classe" in messagerie)
+
+    probe_msg = "verif.classe" + "".join(random.choice(string.ascii_lowercase) for _ in range(4))
+    mdp_msg = "Classe2026!"
+    if _provision(sa, probe_msg, "Vérification Classe", "user", mdp_msg):
+        fiche = sa.get(BASE + "/admin/utilisateurs?q=" + probe_msg).text
+        uid_msg = next((int(i) for i in re.findall(r'/admin/utilisateurs/(\d+)"', fiche)), None)
+        if uid_msg:
+            detail = sa.get(BASE + f"/admin/utilisateurs/{uid_msg}").text
+            token = re.search(r'name="csrf_token" value="([^"]+)"', detail).group(1)
+            sa.post(BASE + f"/admin/utilisateurs/{uid_msg}/classe",
+                    data={"csrf_token": token, "study_level": "Vérification", "class_group": "90"},
+                    allow_redirects=False)
+
+        token = csrf(sa, "/messages")
+        envoi = sa.post(BASE + "/api/messages",
+                        json={"room": "classe:groupe:90", "body": "Message de classe vérifié"},
+                        headers={"X-CSRF-Token": token})
+        ok("le professeur écrit à une classe en une fois", envoi.status_code == 201,
+           str(envoi.status_code))
+
+        eleve_msg = login(probe_msg, mdp_msg, f"connexion {probe_msg}")
+        recu = eleve_msg.get(BASE + "/api/messages?room=classe:groupe:90")
+        corps = recu.json().get("messages", []) if recu.status_code == 200 else []
+        ok("l'élève de la classe reçoit le message",
+           recu.status_code == 200 and any("Message de classe vérifié" in m.get("body", "") for m in corps),
+           str(recu.status_code))
+        notifs = eleve_msg.get(BASE + "/api/notifications").json()
+        ok("l'élève est prévenu par une notification",
+           any(i.get("kind") == "message" for i in notifs.get("items", [])),
+           f"count={notifs.get('count')}")
+
+        token = csrf(eleve_msg, "/messages")
+        refus = eleve_msg.post(BASE + "/api/messages",
+                               json={"room": "classe:tous", "body": "Test interdiction"},
+                               headers={"X-CSRF-Token": token})
+        ok("un élève ne peut pas écrire à la classe", refus.status_code == 403,
+           str(refus.status_code))
+
+        accuses = sa.get(BASE + "/api/messages?room=classe:groupe:90").json()
+        ok("accusé de lecture remonté au professeur",
+           bool(accuses.get("receipts")) and accuses.get("total") == 1,
+           f"receipts={accuses.get('receipts')} total={accuses.get('total')}")
+    else:
+        skip("messagerie de classe", "compte de test indisponible")
 
     # ------------------------------------- actions de la fiche d'un élève
     print("▸ Fiche élève : réinitialiser, suspendre, supprimer")

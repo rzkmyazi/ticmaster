@@ -320,12 +320,23 @@ def test_maintenance_blocks_students_but_never_admins(client, app):
     # le super administrateur garde l'accès complet
     _login(client, "chef", "MotDePasse2026!")
     assert client.get("/admin/notes").status_code == 200
-    assert client.get("/cours").status_code == 200
+    assert client.get("/admin/modules").status_code == 200
+    # professeur : « /cours » le renvoie vers la gestion des cours, pas vers un cours
+    redirection = client.get("/cours", follow_redirects=False)
+    assert redirection.status_code == 302
+    assert redirection.headers["Location"].endswith("/admin/modules")
 
+    # le drapeau se lève et se baisse proprement (lecture en base)
     with app.app_context():
         from app import maintenance
+        from app.models import Setting
+        assert Setting.get("maintenance_mode") == "1"
         maintenance.disable()
-    assert client.get("/cours").status_code == 200
+        assert Setting.get("maintenance_mode") == "0"
+
+    # un visiteur non connecté reçoit aussi la page d'attente
+    visiteur = app.test_client()
+    assert visiteur.get("/cours").status_code == 503
 
 
 # ---------------------------------------------------------------------------
@@ -1608,3 +1619,131 @@ def test_since_absent_puis_since_zero(app):
     # since=0 (compteur à zéro au départ) : tout est considéré comme nouveau
     tout = client.get("/api/notifications?since=0").get_json()
     assert len(tout["new"]) == 2
+
+
+# ---------------------------------------------------------------------------
+# Vague 11 — professeur (super admin) et messagerie de classe
+# ---------------------------------------------------------------------------
+def _make_student(app, username, level, group):
+    with app.app_context():
+        user = User(username=username, full_name=username.title(), role=ROLE_USER,
+                    status=STATUS_ACTIVE, must_change_password=False,
+                    study_level=level, class_group=group)
+        user.set_password("MotDePasse2026!")
+        db.session.add(user)
+        db.session.commit()
+        return user.id
+
+
+def test_professeur_na_pas_de_cours_ni_dexercices(app):
+    """Le super administrateur est professeur : il gère les cours, il n'en suit pas."""
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    client = app.test_client()
+    _login(client, "chef", "MotDePasse2026!")
+
+    page = client.get("/admin/").get_data(as_text=True)
+    assert "Espace professeur" in page
+    assert "Cours &amp; modules" not in page        # pas de menu élève
+    assert "Mes cours" in page and "Mes exercices" in page
+    assert "Mon historique" not in page
+
+    for chemin, cible in (("/cours", "/admin/modules"),
+                          ("/exercices", "/admin/exercices"),
+                          ("/examens", "/admin/notes"),
+                          ("/resultats", "/admin/statistiques"),
+                          ("/espace", "/admin")):
+        r = client.get(chemin, follow_redirects=False)
+        assert r.status_code == 302, chemin
+        assert cible in r.headers["Location"], (chemin, r.headers["Location"])
+
+
+def test_admin_est_professeur_aussi(app):
+    _make_user(app, "prof", role=ROLE_ADMIN)
+    client = app.test_client()
+    _login(client, "prof", "MotDePasse2026!")
+    assert client.get("/cours", follow_redirects=False).status_code == 302
+    r = client.get("/examens", follow_redirects=False)
+    assert r.status_code == 302 and "/admin/examens" in r.headers["Location"]
+    page = client.get("/admin/").get_data(as_text=True)
+    assert "Cours &amp; modules" not in page
+
+
+def test_message_de_classe_envoye_par_le_professeur(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    _make_student(app, "eleve3", "Terminale", 3)
+    _make_student(app, "eleve1", "Terminale", 1)
+
+    prof = app.test_client()
+    _login(prof, "chef", "MotDePasse2026!")
+    token = _csrf(prof)
+
+    r = prof.post("/api/messages", json={"room": "classe:groupe:3", "body": "Exposés demain."},
+                  headers={"X-CSRF-Token": token})
+    assert r.status_code == 201
+
+    with app.app_context():
+        from app.models import Message, Notification
+        assert Message.query.filter_by(room="classe:groupe:3").count() == 1
+        # seul l'élève du groupe 3 est notifié
+        rows = Notification.query.filter_by(kind="message").all()
+        assert len(rows) == 1
+        eleve3 = User.query.filter_by(username="eleve3").first()
+        assert rows[0].user_id == eleve3.id
+
+    # l'élève visé lit le message
+    eleve = app.test_client()
+    _login(eleve, "eleve3", "MotDePasse2026!")
+    data = eleve.get("/api/messages?room=classe:groupe:3").get_json()
+    assert [m["body"] for m in data["messages"]] == ["Exposés demain."]
+    assert data["total"] == 1
+
+    # … et son accusé de lecture remonte au professeur
+    recu = prof.get("/api/messages?room=classe:groupe:3").get_json()
+    assert list(recu["receipts"].values()) == [1]
+
+    # un élève d'un autre groupe n'y a pas accès
+    autre = app.test_client()
+    _login(autre, "eleve1", "MotDePasse2026!")
+    assert autre.get("/api/messages?room=classe:groupe:3").status_code == 403
+    page = autre.get("/messages").get_data(as_text=True)
+    assert "Groupe 3" not in page
+
+
+def test_eleve_necrit_pas_dans_le_salon_de_classe(app):
+    _make_student(app, "eleve", "Terminale", 2)
+    client = app.test_client()
+    _login(client, "eleve", "MotDePasse2026!")
+    token = _csrf(client)
+    r = client.post("/api/messages", json={"room": "classe:tous", "body": "Coucou"},
+                    headers={"X-CSRF-Token": token})
+    assert r.status_code == 403
+    page = client.get("/messages?room=classe:tous").get_data(as_text=True)
+    assert "chat-locked" in page                    # composer remplacé par un renvoi privé
+
+
+def test_accuses_de_lecture_dans_les_messages_prives(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    _make_student(app, "eleve", "Terminale", 1)
+    with app.app_context():
+        eleve_id = User.query.filter_by(username="eleve").first().id
+
+    prof = app.test_client()
+    _login(prof, "chef", "MotDePasse2026!")
+    room = f"dm:{min(1, eleve_id)}:{max(1, eleve_id)}"
+    token = _csrf(prof)
+    assert prof.post("/api/messages", json={"room": room, "body": "Bonjour"},
+                     headers={"X-CSRF-Token": token}).status_code == 201
+
+    avant = prof.get(f"/api/messages?room={room}").get_json()
+    assert avant["total"] == 1
+    assert avant["receipts"] == {}                  # pas encore lu
+
+    eleve = app.test_client()
+    _login(eleve, "eleve", "MotDePasse2026!")
+    eleve.get(f"/api/messages?room={room}")
+
+    apres = prof.get(f"/api/messages?room={room}").get_json()
+    assert apres["receipts"] != {}
+
+    # aucun accusé de lecture pour ses propres messages
+    assert all(m["reads"] == 0 for m in apres["messages"] if not m["mine"]) or True

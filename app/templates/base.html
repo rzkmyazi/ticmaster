@@ -35,19 +35,20 @@
 
   <nav class="sidebar-nav">
     <div class="nav-section">
-      <div class="nav-title">Mon espace</div>
+      <div class="nav-title">{{ "Espace professeur" if current_user.is_admin else "Mon espace" }}</div>
       {% if current_user.is_admin %}
       <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}">{{ icon('home', 18) }} Tableau de bord</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint in ['admin.modules', 'admin.module_edit', 'admin.lesson_edit'] }}" href="{{ url_for('admin.modules') }}">{{ icon('book', 18) }} Mes cours</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint in ['admin.exercises', 'admin.exercise_edit'] }}" href="{{ url_for('admin.exercises') }}">{{ icon('clipboard', 18) }} Mes exercices</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'learning.resources' }}" href="{{ url_for('learning.resources') }}">{{ icon('file', 18) }} Ressources</a>
       {% else %}
       <a class="nav-link{{ ' is-active' if request.endpoint == 'user.dashboard' }}" href="{{ url_for('user.dashboard') }}">{{ icon('home', 18) }} Tableau de bord</a>
-      {% endif %}
       <a class="nav-link{{ ' is-active' if request.endpoint == 'learning.catalog' or request.endpoint == 'learning.module_detail' or request.endpoint == 'learning.lesson' }}" href="{{ url_for('learning.catalog') }}">{{ icon('book', 18) }} Cours &amp; modules</a>
       <a class="nav-link{{ ' is-active' if request.endpoint in ['learning.exercises', 'learning.exercise_detail', 'learning.take_exercise', 'learning.result_detail'] }}" href="{{ url_for('learning.exercises') }}">{{ icon('clipboard', 18) }} Exercices</a>
-      {% if not current_user.is_super_admin %}
       <a class="nav-link{{ ' is-active' if request.endpoint in ['exam.index', 'exam.take_exam', 'exam.exam_result'] }}" href="{{ url_for('exam.index') }}">{{ icon('award', 18) }} Examens trimestriels</a>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'learning.results' }}" href="{{ url_for('learning.results') }}">{{ icon('chart', 18) }} Mes résultats</a>
-      {% endif %}
       <a class="nav-link{{ ' is-active' if request.endpoint == 'learning.resources' }}" href="{{ url_for('learning.resources') }}">{{ icon('file', 18) }} Ressources</a>
+      {% endif %}
     </div>
 
     {% if current_user.is_super_admin %}
@@ -70,7 +71,7 @@
 
     {% if current_user.is_admin %}
     <div class="nav-section">
-      <div class="nav-title">Administration</div>
+      <div class="nav-title">Gestion du cours</div>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}">{{ icon('grid', 18) }} Vue d'ensemble</a>
       <a class="nav-link{{ ' is-active' if request.endpoint in ['admin.users', 'admin.user_new', 'admin.user_detail', 'admin.user_edit'] }}" href="{{ url_for('admin.users') }}">{{ icon('user', 18) }} Utilisateurs</a>
       <a class="nav-link{{ ' is-active' if request.endpoint in ['admin.modules', 'admin.module_edit', 'admin.lesson_edit'] }}" href="{{ url_for('admin.modules') }}">{{ icon('layers', 18) }} Modules &amp; leçons</a>
@@ -97,7 +98,9 @@
         {{ icon('bell', 18) }} Notifications
         {% if notifications_non_lues %}<span class="nav-count">{{ notifications_non_lues if notifications_non_lues < 100 else '99+' }}</span>{% endif %}
       </a>
+      {% if not current_user.is_admin %}
       <a class="nav-link{{ ' is-active' if request.endpoint == 'user.history' }}" href="{{ url_for('user.history') }}">{{ icon('history', 18) }} Mon historique</a>
+      {% endif %}
       <a class="nav-link" href="{{ url_for('auth.change_password') }}">{{ icon('lock', 18) }} Mot de passe</a>
     </div>
   </nav>

@@ -619,6 +619,40 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 | Page `/notifications` : lignes groupées par jour | ✔ |
 | Erreurs JavaScript | aucune |
 
+## 20. Mise à jour du 29/10/2026 — Professeur et messagerie de classe (vague 11)
+
+### Le super administrateur est un professeur
+
+| Contrôle | Résultat |
+|---|---|
+| Menu « Espace professeur » : Mes cours, Mes exercices, Ressources | ✔ |
+| Plus aucun « Cours & modules », « Exercices », « Examens trimestriels », « Mes résultats » | ✔ |
+| « Mon historique » réservé aux élèves | ✔ |
+| `/cours` → `/admin/modules` | ✔ |
+| `/exercices` → `/admin/exercices` | ✔ |
+| `/examens` → `/admin/notes` (super admin) et `/admin/examens` (administrateur) | ✔ |
+| `/resultats` → `/admin/statistiques` | ✔ |
+| `/espace` → accueil professeur | ✔ |
+| Même règle pour le rôle ADMIN | ✔ |
+
+### Messagerie de classe
+
+| Contrôle | Résultat |
+|---|---|
+| Choix de la cible : toute la classe, niveau, groupe, niveau + groupe | ✔ |
+| Envoi unique, notification à chaque élève visé | ✔ |
+| Seul le professeur écrit dans le salon de classe (élève : 403) | ✔ |
+| Cloisonnement : un élève d'un autre groupe n'a aucun accès (403) | ✔ |
+| Réponse de l'élève en privé au professeur | ✔ |
+| Accusés de lecture : « Envoyé » → « Lu » (privé), « Lu par n/N » (classe) | ✔ |
+| Table `message_reads` : un lecteur = une ligne, aucun doublon | ✔ |
+| Rafraîchissement des accusés sans recharger la page | ✔ |
+| Android : bande de conversations défilante, conversation ouverte centrée | ✔ |
+| Erreurs JavaScript | aucune |
+
+- `pytest -q` → **75 tests réussis** (5 nouveaux).
+- `tools/verify.py` → **216** contrôles en local, **218** sur PythonAnywhere et sur Render (0 échec).
+
 ---
 
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*

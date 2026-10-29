@@ -25,9 +25,26 @@
     return date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   }
 
+  var total = 0;          // destinataires du salon (0 = pas d'accusé affiché)
+
+  function receiptLabel(count) {
+    if (!total) return "";
+    if (!count) return "Envoyé";
+    if (total === 1) return "Lu";
+    return "Lu par " + count + (count < total ? "/" + total : "");
+  }
+
+  function setReceipt(wrapper, count) {
+    var el = wrapper.querySelector(".bubble-receipt");
+    if (!el) return;
+    el.textContent = receiptLabel(count);
+    el.classList.toggle("is-read", count > 0);
+  }
+
   function bubble(message) {
     var wrapper = document.createElement("div");
     wrapper.className = "msg" + (message.mine ? " is-mine" : "");
+    if (message.id) wrapper.dataset.id = message.id;
 
     if (!message.mine) {
       var avatar = document.createElement("span");
@@ -51,6 +68,12 @@
 
     content.appendChild(b);
     content.appendChild(meta);
+    if (message.mine) {
+      var receipt = document.createElement("span");
+      receipt.className = "bubble-receipt" + (message.reads ? " is-read" : "");
+      receipt.textContent = receiptLabel(message.reads || 0);
+      content.appendChild(receipt);
+    }
     wrapper.appendChild(content);
     return wrapper;
   }
@@ -70,6 +93,13 @@
       .then(function (data) {
         loading = false;
         if (!data || !data.ok) return;
+        if (typeof data.total === "number") total = data.total;
+        if (data.receipts) {
+          Object.keys(data.receipts).forEach(function (id) {
+            var node = body.querySelector('.msg[data-id="' + id + '"]');
+            if (node) setReceipt(node, data.receipts[id]);
+          });
+        }
         if (initial) {
           body.innerHTML = "";
           if (!data.messages.length) {
@@ -122,6 +152,29 @@
     });
   }
 
+  // Sur téléphone, la bande des conversations défile : on amène la
+  // conversation ouverte sous les yeux de l'utilisateur (sans déplacer la page).
+  var strip = document.querySelector(".chat-rooms");
+  var activeRoom = document.querySelector(".chat-room.is-active");
+  if (strip && activeRoom && strip.scrollWidth > strip.clientWidth + 4) {
+    strip.scrollLeft = Math.max(0, activeRoom.offsetLeft - strip.clientWidth / 2 + activeRoom.offsetWidth / 2);
+  }
+
   load(true);
   setInterval(function () { load(false); }, 4000);
+  // Les accusés de lecture évoluent même sans nouveau message : on les relit
+  // toutes les 12 secondes (requête légère, uniquement le salon ouvert).
+  setInterval(function () {
+    fetch(api + "?room=" + encodeURIComponent(room) + "&after=0", { credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || !data.ok) return;
+        if (typeof data.total === "number") total = data.total;
+        Object.keys(data.receipts || {}).forEach(function (id) {
+          var node = body.querySelector('.msg[data-id="' + id + '"]');
+          if (node) setReceipt(node, data.receipts[id]);
+        });
+      })
+      .catch(function () {});
+  }, 12000);
 })();

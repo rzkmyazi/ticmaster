@@ -27,6 +27,10 @@ bp = Blueprint("learning", __name__)
 @bp.route("/cours")
 @login_required
 def catalog():
+    # Un professeur ne suit pas les cours : il les gère.
+    if g.user.is_admin:
+        flash("Espace professeur : vos cours se gèrent dans « Modules & leçons ».", "info")
+        return redirect(url_for("admin.modules"))
     q = (request.args.get("q") or "").strip()
     cat = (request.args.get("cat") or "").strip()
 
@@ -145,6 +149,10 @@ def download(filename: str):
 @bp.route("/exercices")
 @login_required
 def exercises():
+    # Un professeur ne passe pas d'exercice : il les crée et les corrige.
+    if g.user.is_admin:
+        flash("Espace professeur : les exercices se gèrent dans l'administration.", "info")
+        return redirect(url_for("admin.exercises"))
     items = (
         Exercise.query.filter_by(published=True, kind="exercise")
         .order_by(Exercise.module_id, Exercise.id)
@@ -296,7 +304,7 @@ def submit_exercise(attempt_id: int):
 @bp.route("/resultats")
 @login_required
 def results():
-    if g.user.is_super_admin:
+    if g.user.is_admin:
         flash("Vos statistiques personnelles d'apprenant sont remplacées par celles de la classe.", "info")
         return redirect(url_for("admin.statistics"))
     attempts = (

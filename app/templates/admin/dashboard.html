@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
 
-{% block title %}Administration{% endblock %}
-{% block page_title %}Tableau de bord administrateur{% endblock %}
-{% block page_subtitle %}<p class="page-sub">Vue d'ensemble de la plateforme</p>{% endblock %}
+{% block title %}Espace professeur{% endblock %}
+{% block page_title %}Bonjour, {{ current_user.full_name.split(' ')[0] if current_user.full_name else current_user.username }}{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Votre classe et la plateforme en un coup d'œil</p>{% endblock %}
 
 {% block content %}
 <div class="stats-grid mb-2">

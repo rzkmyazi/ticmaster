@@ -60,7 +60,8 @@ def _global_progress(user_id: int) -> dict:
 @login_required
 def dashboard():
     user = g.user
-    if user.is_super_admin:
+    if user.is_admin:
+        # Le personnel enseigne : pas de tableau de bord d'élève.
         return redirect(url_for("admin.dashboard"))
     global_progress = _global_progress(user.id)
 
