@@ -75,6 +75,43 @@
           </section>
 
           <section class="card">
+            <div class="card-head">
+              <h2 class="card-title">{{ icon('activity') }} Disponibilité 24 h/24</h2>
+              <span class="pill-status {{ 'pill-status--on' if veille.active else 'pill-status--off' }}">
+                <i></i>{{ 'Veille active' if veille.active else 'Veille inactive' }}
+              </span>
+            </div>
+            <div class="card-body text-sm">
+              {% if veille.active %}
+              <p>Ce serveur (PythonAnywhere, toujours en ligne) appelle
+                 <span class="mono">{{ veille.url }}</span> toutes les
+                 {{ veille.intervalle // 60 }} minutes : le site Render ne s'endort
+                 plus et répond à n'importe quelle heure.</p>
+              {% if veille.derniers %}
+              <div class="stack mt-2">
+                {% for passage in veille.derniers %}
+                <div class="row-between text-xs">
+                  <span class="mono">{{ passage.at }}</span>
+                  <span class="{{ 'text-green' if passage.etat == 'ok' else 'text-red' }}">
+                    {{ passage.detail }} · {{ passage.duree }} s
+                  </span>
+                </div>
+                {% endfor %}
+              </div>
+              {% else %}
+              <p class="text-xs text-muted mt-2">Premier passage dans moins de
+                 {{ veille.intervalle // 60 }} minutes.</p>
+              {% endif %}
+              {% else %}
+              <p class="text-muted">La veille n'est pas activée sur ce serveur.</p>
+              <p class="text-xs text-muted">Pour la mettre en place : ajoutez
+                 <span class="mono">VEILLE=1</span> dans le fichier
+                 <span class="mono">.env</span>, puis rechargez l'application.</p>
+              {% endif %}
+            </div>
+          </section>
+
+          <section class="card">
             <div class="card-head"><h2 class="card-title">{{ icon('lock') }} Sécurité</h2></div>
             <div class="card-body text-sm">
               <p>Le changement de ces paramètres se fait dans le fichier <span class="mono">.env</span> puis redémarrage du service.</p>

@@ -88,7 +88,17 @@ def health():
         db_ok = True
     except Exception:  # pragma: no cover
         db_ok = False
-    payload = {"status": "ok" if db_ok else "degraded", "database": db_ok, "app": "TIC MASTER"}
+    from .. import veille
+
+    info = veille.etat()
+    payload = {
+        "status": "ok" if db_ok else "degraded",
+        "database": db_ok,
+        "app": "TIC MASTER",
+        # Veille 24 h/24 : ce serveur réveille Render toutes les 5 minutes.
+        "veille": info["active"],
+        "veille_dernier": info["derniers"][0]["at"] if info["derniers"] else None,
+    }
     return jsonify(payload), (200 if db_ok else 503)
 
 

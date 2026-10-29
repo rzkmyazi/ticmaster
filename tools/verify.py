@@ -191,6 +191,14 @@ def main() -> int:
     print("▸ Santé")
     r = requests.get(BASE + "/sante", timeout=20)
     ok("/sante", r.status_code == 200 and r.json().get("status") == "ok", r.text[:60])
+    sante = r.json()
+    ok("/sante publie l'état de la veille 24 h/24", "veille" in sante, str(sante.get("veille")))
+    if "myazirzk1" in BASE:
+        ok("veille active sur ce serveur (site Render maintenu éveillé)",
+           sante.get("veille") is True, str(sante))
+    if "ticmaster.onrender.com" in BASE:
+        ok("Render répond sans page « service waking up »",
+           sante.get("status") == "ok" and "veille" in sante)
 
     print("▸ Pages publiques et absence d'inscription")
     for path, expected in (("/", 200), ("/a-propos", 200), ("/decouvrir", 200),

@@ -1306,3 +1306,32 @@ def test_aucun_programme_dans_le_menu_public(app):
         html = client.get(path).get_data(as_text=True)
         assert ">Programme<" not in html, path
         assert "#programme" not in html, path
+
+
+# ---------------------------------------------------------------------------
+# Veille 24 h/24 : le site ne doit jamais s'endormir
+# ---------------------------------------------------------------------------
+def test_sante_indique_la_veille(client):
+    payload = client.get("/sante").get_json()
+    assert payload["status"] == "ok"
+    assert "veille" in payload            # état lisible par les sondes
+    assert payload["veille"] is False     # pas de fil en local / sur Render
+
+
+def test_veille_ne_demarre_que_si_demandee(monkeypatch):
+    from app import veille
+
+    veille._started = False
+    monkeypatch.delenv("VEILLE", raising=False)
+    assert veille.start() is False        # rien ne tourne sans VEILLE=1
+
+
+def test_veille_est_configurable(monkeypatch):
+    from app import veille
+
+    monkeypatch.setenv("VEILLE_URL", "https://exemple.test/sante")
+    monkeypatch.setenv("VEILLE_INTERVAL", "120")
+    info = veille.etat()
+    assert info["url"] == "https://exemple.test/sante"
+    assert info["intervalle"] == 120
+    assert info["active"] in (True, False)

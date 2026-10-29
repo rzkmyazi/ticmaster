@@ -47,6 +47,11 @@ def _write_env():
         f.write("SUPER_ADMIN_USERNAME=Myazirzk\n")
         f.write("SUPER_ADMIN_PASSWORD=Fiaram131213!!\n")
         f.write("AUTH_SESSION_HOURS=8\n")
+        # Veille 24 h/24 : ce serveur (toujours en ligne) réveille Render
+        # toutes les 5 minutes pour que le site ne s'endorme jamais.
+        f.write("VEILLE=1\n")
+        f.write("VEILLE_URL=https://ticmaster.onrender.com/sante\n")
+        f.write("VEILLE_INTERVAL=300\n")
         f.write("LOGIN_MAX_ATTEMPTS=5\n")
         f.write("LOGIN_LOCK_MINUTES=15\n")
 
@@ -66,6 +71,13 @@ if not STATUS["done"]:
             STATUS["done"] = True
     except Exception as exc:  # noqa: BLE001
         STATUS["error"] = "%s: %s" % (type(exc).__name__, exc)
+
+# Veille 24 h/24 : PythonAnywhere ne met jamais l'application en veille, elle
+# réveille donc Render (offre gratuite) toutes les 5 minutes pour que le site
+# réponde à n'importe quelle heure, sans page « service waking up ».
+os.environ.setdefault("VEILLE", "1")
+os.environ.setdefault("VEILLE_URL", "https://ticmaster.onrender.com/sante")
+os.environ.setdefault("VEILLE_INTERVAL", "300")
 
 if STATUS["done"]:
     from wsgi import app as application          # noqa: E402

@@ -145,6 +145,13 @@ def create_app(config_object: str | None = None) -> Flask:
     app.register_blueprint(social_bp)
     app.register_blueprint(exam_bp)
 
+    # ---------------- Veille 24 h/24 ----------------
+    # Sur PythonAnywhere (toujours en ligne) un fil discret appelle /sante de
+    # Render toutes les 5 minutes : le service gratuit ne s'endort plus, le site
+    # reste joignable à n'importe quelle heure. Ailleurs : aucun effet.
+    from . import veille
+    veille.start()
+
     # ---------------- Template helpers ----------------
     @app.context_processor
     def inject_globals():
@@ -194,6 +201,7 @@ def create_app(config_object: str | None = None) -> Flask:
             fmt_dt=fmt_dt,
             fmt_date=fmt_date,
             time_ago=time_ago,
+            veille=veille.etat(),
             is_admin_area=request.path.startswith(("/admin", "/gestion")),
             render_content=render_content,
             human_size=human_size,
