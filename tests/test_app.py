@@ -1978,3 +1978,112 @@ def test_vider_les_notifications_lues(app):
     with app.app_context():
         restants = [n.title for n in Notification.query.filter_by(user_id=user).all()]
     assert restants == ["Message non lu"]          # la non lue est conservée
+
+
+# ---------------------------------------------------------------------------
+# Création de compte et première connexion (vague 13)
+# ---------------------------------------------------------------------------
+def test_identifiant_genere_lisible(app):
+    """« Kanto Rasoanaivo » doit donner un identifiant reconnaissable."""
+    from app.security.core import generate_username
+    with app.app_context():
+        identifiant = generate_username("Kanto Rasoanaivo")
+        assert identifiant == "kanto.rasoanaivo"
+        # accents supprimés, pas de collision avec un compte existant
+        _make_user(app, "kanto.rasoanaivo", role=ROLE_USER)
+        assert generate_username("Kanto Rasoanaivo") == "kanto.rasoanaivo2"
+
+
+def test_creation_de_compte_puis_connexion(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    admin = app.test_client()
+    _login(admin, "chef", "MotDePasse2026!")
+    token = _csrf(admin)
+
+    page = admin.post("/admin/utilisateurs/nouveau", data={
+        "csrf_token": token, "full_name": "Kanto Rasoanaivo", "username": "", "email": "",
+        "role": "user", "status": "active", "password": "", "must_change": "1",
+    }).get_data(as_text=True)
+    assert "Compte créé" in page
+    identifiant = re.search(r'id="created-username"[^>]*>([^<]+)</div>', page).group(1)
+    mot_de_passe = re.search(r'id="created-password"[^>]*>([^<]+)</div>', page).group(1)
+    assert identifiant == "kanto.rasoanaivo"
+
+    eleve = app.test_client()
+    reponse = _login(eleve, identifiant, mot_de_passe)
+    assert reponse.status_code == 302
+    # le changement obligatoire est déclenché à la première page privée
+    assert "/auth/changer-mot-de-passe" in eleve.get("/espace").headers["Location"]
+
+
+def test_mot_de_passe_saisi_avec_espaces_est_netoye(app):
+    """Les claviers mobiles ajoutent une espace : elle ne doit pas être enregistrée."""
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    admin = app.test_client()
+    _login(admin, "chef", "MotDePasse2026!")
+    page = admin.post("/admin/utilisateurs/nouveau", data={
+        "csrf_token": _csrf(admin), "full_name": "Espace Mobile", "username": "espace.mobile",
+        "role": "user", "status": "active", "password": "Espace2026!  ", "must_change": "1",
+    }).get_data(as_text=True)
+    assert "Compte créé" in page
+    assert "espaces présents au début" in page          # l'administrateur est prévenu
+
+    with app.app_context():
+        eleve = User.query.filter_by(username="espace.mobile").one()
+        assert eleve.check_password("Espace2026!")      # sans les espaces
+        assert not eleve.check_password("Espace2026!  ")
+
+    client = app.test_client()
+    assert _login(client, "espace.mobile", "Espace2026!").status_code == 302
+
+
+def test_connexion_avec_nom_complet_pseudo_ou_email(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    admin = app.test_client()
+    _login(admin, "chef", "MotDePasse2026!")
+    admin.post("/admin/utilisateurs/nouveau", data={
+        "csrf_token": _csrf(admin), "full_name": "Rado Andria", "username": "rado.andria",
+        "pseudo": "LeRado", "email": "rado@exemple.mg", "role": "user", "status": "active",
+        "password": "RadoPerso2026!", "must_change": "0",
+    })
+
+    for identifiant in ("rado.andria", "RADO.ANDRIA", " Rado Andria ", "radoandria",
+                        "LeRado", "rado@exemple.mg"):
+        client = app.test_client()
+        reponse = _login(client, identifiant, "RadoPerso2026!")
+        assert reponse.status_code == 302, identifiant
+        assert "/auth/changer-mot-de-passe" not in reponse.headers["Location"], identifiant
+
+    # un mot de passe faux reste refusé, quel que soit l'identifiant
+    client = app.test_client()
+    assert _login(client, "Rado Andria", "MauvaisMotDePasse2026!").status_code == 200
+
+
+def test_connexion_tolere_une_espace_au_bout_du_mot_de_passe(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    admin = app.test_client()
+    _login(admin, "chef", "MotDePasse2026!")
+    admin.post("/admin/utilisateurs/nouveau", data={
+        "csrf_token": _csrf(admin), "full_name": "Sans Espace", "username": "sans.espace",
+        "role": "user", "status": "active", "password": "SansEspace2026!", "must_change": "0",
+    })
+
+    client = app.test_client()
+    reponse = _login(client, "sans.espace", "SansEspace2026! ")   # espace ajoutée par le clavier
+    assert reponse.status_code == 302
+    assert "/auth/changer-mot-de-passe" not in reponse.headers["Location"]
+
+
+def test_mot_de_passe_faible_ne_cree_pas_de_compte(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    admin = app.test_client()
+    _login(admin, "chef", "MotDePasse2026!")
+    page = admin.post("/admin/utilisateurs/nouveau", data={
+        "csrf_token": _csrf(admin), "full_name": "Trop Faible", "username": "trop.faible",
+        "role": "user", "status": "active", "password": "1234", "must_change": "1",
+    }).get_data(as_text=True)
+
+    assert "Compte créé" not in page
+    assert "Le compte n&#39;a pas été créé" in page or "Le compte n'a pas été créé" in page
+    with app.app_context():
+        assert User.query.filter_by(username="trop.faible").first() is None

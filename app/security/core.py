@@ -270,8 +270,33 @@ def safe_next_url(target: str | None) -> str | None:
 USERNAME_RE = re.compile(r"^[A-Za-z0-9._-]{3,32}$")
 
 
+def normalize_identifier(value: str) -> str:
+    """Forme « aplatie » d'un nom : sans accents, sans espaces ni ponctuation.
+
+    « Rado Andria » → « radoandria » ; permet de retrouver un compte quel que
+    soit l'orthographe tapée par l'élève.
+    """
+    import unicodedata
+    norm = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]", "", norm.lower())
+
+
 def generate_username(full_name: str) -> str:
-    base = re.sub(r"[^a-zA-Z0-9]", "", full_name.lower())[:14] or "utilisateur"
+    """Identifiant lisible tiré du nom : « Kanto Rasoanaivo » → « kanto.rasoanaivo ».
+
+    L'ancien format collait tout et coupait à 14 caractères
+    (« kantorasoanaiv ») : l'élève ne reconnaissait pas son identifiant.
+    """
+    import unicodedata
+    norm = unicodedata.normalize("NFKD", full_name or "").encode("ascii", "ignore").decode()
+    mots = re.findall(r"[A-Za-z0-9]+", norm.lower())
+    if not mots:
+        return "utilisateur"
+    if len(mots) == 1:
+        base = mots[0][:20]
+    else:
+        base = f"{mots[0][:14]}.{mots[-1][:16]}"
+    base = base.strip("._-")[:28] or "utilisateur"
     candidate = base
     i = 1
     while User.query.filter_by(username=candidate).first():

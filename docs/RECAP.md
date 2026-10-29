@@ -593,14 +593,62 @@ Captures : `apercus/android/battle-solo-fini.png`, `battle-groupe-fini.png`,
 
 ---
 
+## 18. Vague 13 — Créer un compte, puis se connecter sans se tromper — ✔
+
+### 18.1 Pourquoi « identifiant ou mot de passe incorrect » juste après une création
+
+Trois défauts se cumulaient, tous invisibles pour l'administrateur :
+
+| Défaut | Ce que vivait l'utilisateur |
+|---|---|
+| **Identifiant illisible** : généré en collant le nom et en coupant à 14 caractères (« Kanto Rasoanaivo » → `kantorasoanaiv`) | L'élève tapait son nom ou une orthographe logique : `kanto.rasoanaivo` → refus. |
+| **Espaces du clavier mobile** : le mot de passe temporaire saisi par l'administrateur gardait ses espaces de bord | Le mot de passe **affiché** ne correspondait pas à celui réellement enregistré. |
+| **Seul l'identifiant exact fonctionnait** | Le nom complet, le pseudo, l'adresse e-mail ou une majuscule de trop donnaient le même message générique. |
+
+### 18.2 Les corrections
+
+* **Identifiant lisible** : `Kanto Rasoanaivo` → **`kanto.rasoanaivo`** (nom + initiale conservés, accents
+  retirés, suffixe `2`, `3`… en cas de doublon). Il est affiché dans la carte « Compte créé ».
+* **Espaces de bord retirés** à l'enregistrement du mot de passe imposé, avec un message explicite :
+  le mot de passe affiché est exactement celui qui fonctionne.
+* **Connexion tolérante** — le champ accepte indifféremment :
+  l'**identifiant** (insensible à la casse et aux espaces), l'**adresse e-mail**, le **pseudo**,
+  le **nom complet**, ou la forme aplatie sans accents ni ponctuation. La forme approchée n'ouvre un
+  compte que si **une seule** correspondance existe : impossible d'entrer dans le compte d'un autre.
+* Une **espace finale** ajoutée par le clavier au mot de passe est ignorée (la saisie exacte est
+  toujours essayée d'abord, donc un mot de passe volontairement entouré d'espaces reste valable).
+* **Erreur de création éclairante** : le message apparaît en haut, la page défile jusqu'à lui et il est
+  écrit noir sur blanc : « **Le compte n'a pas été créé : mot de passe trop faible (…)** ».
+* **Contrôle en direct** de la politique de mot de passe : cinq pastilles se colorent à mesure de la saisie.
+* **Deux boutons de copie** (identifiant / mot de passe) au lieu d'un seul, un lien direct vers la page
+  de connexion, et le même confort sur la fiche élève après une réinitialisation.
+* La page de connexion explique la **première connexion** : majuscules, aucune espace, et les
+  identifiants acceptés.
+
+### 18.3 Preuves
+
+| Contrôle | Résultat |
+|---|---|
+| Création « Kanto Rasoanaivo » → identifiant `kanto.rasoanaivo` | ✔ |
+| Connexion avec l'identifiant affiché (200 créés sur Render et PythonAnywhere) | ✔ |
+| Mot de passe saisi `Espace2026!  ` → enregistré `Espace2026!`, connexion OK | ✔ |
+| Connexion par nom complet, majuscules, espaces, pseudo, e-mail, forme aplatie | ✔ 8 variantes |
+| Mot de passe faux toujours refusé | ✔ |
+| Mot de passe trop faible : aucun compte créé + message clair | ✔ |
+
+Captures : `apercus/android/v13-connexion.png`, `v13-politique.png`, `v13-erreur.png`,
+`v13-compte-cree.png`.
+
+---
+
 ## Vérifications automatiques
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **83 tests réussis** |
-| `tools/verify.py` (local) | **233 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **235 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **235 contrôles conformes, 0 échec** |
+| `pytest -q` | **89 tests réussis** |
+| `tools/verify.py` (local) | **246 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | **248 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **248 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.

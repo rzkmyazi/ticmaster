@@ -20,23 +20,40 @@
     <div class="grid grid-3">
       <div class="stat">
         <span class="stat-label">Identifiant</span>
-        <div class="stat-value mono" style="font-size:1.05rem">{{ created.username }}</div>
+        <div class="stat-value mono" style="font-size:1.05rem" id="created-username">{{ created.username }}</div>
+        <button type="button" class="btn btn-ghost btn-sm mt-1" data-copy="{{ created.username }}">
+          {{ icon('file', 14) }} Copier l'identifiant
+        </button>
       </div>
       <div class="stat">
         <span class="stat-label">Mot de passe temporaire</span>
-        <div class="stat-value mono" style="font-size:1.05rem">{{ created.password }}</div>
+        <div class="stat-value mono" style="font-size:1.05rem" id="created-password">{{ created.password }}</div>
+        <button type="button" class="btn btn-ghost btn-sm mt-1" data-copy="{{ created.password }}">
+          {{ icon('file', 14) }} Copier le mot de passe
+        </button>
       </div>
       <div class="stat">
         <span class="stat-label">Rôle</span>
         <div class="stat-value" style="font-size:1.05rem">{{ role_labels.get(created.role) }}</div>
       </div>
     </div>
+    {% if created.espaces_retires %}
+    <div class="alert alert-info mt-2">
+      {{ icon('info') }}
+      <span>Les espaces présents au début ou à la fin du mot de passe saisi ont été retirés :
+        le mot de passe affiché ci-dessus est exactement celui qui fonctionne.</span>
+    </div>
+    {% endif %}
     <div class="alert alert-warning mt-2">
       {{ icon('alert') }}
-      <span>Ce mot de passe ne sera plus affiché. Transmettez-le par un canal sûr : l'élève devra le changer à la première connexion.</span>
+      <span>Ce mot de passe ne sera plus affiché. Transmettez-le par un canal sûr : l'élève devra le
+        changer à la première connexion. Attention : les majuscules comptent et il ne doit y avoir
+        <strong>aucune espace</strong> avant ou après.</span>
     </div>
     <div class="row mt-2">
-      <button type="button" class="btn btn-outline btn-sm" data-copy="{{ created.username }} / {{ created.password }}">{{ icon('file') }} Copier les identifiants</button>
+      <a class="btn btn-success btn-sm" href="{{ url_for('auth.login') }}" target="_blank" rel="noopener">
+        {{ icon('key') }} Ouvrir la page de connexion
+      </a>
       <a class="btn btn-primary btn-sm" href="{{ url_for('admin.user_new') }}">{{ icon('plus') }} Inscrire un autre élève</a>
       <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.users') }}">Retour à la liste</a>
     </div>
@@ -44,7 +61,16 @@
 </div>
 {% endif %}
 
-{% if error %}<div class="auth-error mb-2">{{ icon('alert') }}<span>{{ error }}</span></div>{% endif %}
+{% if error %}
+<div class="auth-error auth-error--form mb-2" id="form-error" role="alert" tabindex="-1"
+     data-scroll-into-view>
+  {{ icon('alert') }}
+  <span>
+    {{ error }}
+    {% if mode == 'create' %}<br><strong>Aucun compte n'a été enregistré</strong> : corrigez puis validez à nouveau.{% endif %}
+  </span>
+</div>
+{% endif %}
 
 <form method="post" class="grid" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);align-items:start">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -70,8 +96,11 @@
           <div class="field">
             <label for="username">Nom d'utilisateur sur le site</label>
             <input type="text" id="username" name="username" value="{{ form.username }}"
-                   {{ 'readonly' if mode == 'edit' }} maxlength="32" autocapitalize="none" placeholder="généré automatiquement si vide">
-            <span class="hint">3 à 32 caractères : lettres, chiffres, point, tiret, souligné.</span>
+                   {{ 'readonly' if mode == 'edit' }} maxlength="32" autocapitalize="none"
+                   autocorrect="off" spellcheck="false"
+                   placeholder="généré automatiquement si vide (ex. kanto.rasoanaivo)">
+            <span class="hint">3 à 32 caractères : lettres, chiffres, point, tiret, souligné.
+              Laissé vide, il est tiré du nom complet (le même identifiant est affiché après la création).</span>
           </div>
           <div class="field full">
             <label for="full_name">Nom complet <span class="req">*</span></label>
@@ -92,10 +121,21 @@
         <div class="field">
           <label for="password">Mot de passe temporaire</label>
           <div class="input-group">
-            <input type="text" id="password" name="password" autocomplete="new-password" placeholder="Laisser vide pour générer automatiquement">
+            <input type="text" id="password" name="password" autocomplete="new-password"
+                   data-password-policy
+                   placeholder="Laisser vide pour générer automatiquement"
+                   aria-describedby="password-policy">
             <button type="button" class="pw-toggle" data-copy-target="password" aria-label="Copier">{{ icon('file') }}</button>
           </div>
-          <span class="hint">10 caractères minimum avec majuscule, minuscule, chiffre et caractère spécial.</span>
+          <span class="hint">10 caractères minimum, avec majuscule, minuscule, chiffre et caractère spécial.
+            Les espaces de bord sont retirés automatiquement.</span>
+          <ul class="pw-checks" id="password-policy" aria-live="polite">
+            <li data-check="length">{{ icon('check', 13) }} 10 caractères minimum</li>
+            <li data-check="upper">{{ icon('check', 13) }} Une majuscule</li>
+            <li data-check="lower">{{ icon('check', 13) }} Une minuscule</li>
+            <li data-check="digit">{{ icon('check', 13) }} Un chiffre</li>
+            <li data-check="special">{{ icon('check', 13) }} Un caractère spécial</li>
+          </ul>
         </div>
         <label class="checkbox mb-2">
           <input type="checkbox" name="must_change" value="1" checked>

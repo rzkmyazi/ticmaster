@@ -2509,3 +2509,45 @@ body.confirm-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .bubble-forward { transition: none; }
 }
+
+/* ---------- 33. Création de compte : politique de mot de passe et erreurs ---------- */
+.auth-error--form {
+  display: flex; gap: .6rem; align-items: flex-start;
+  line-height: 1.45;
+}
+.auth-error--form:focus { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.pw-checks {
+  list-style: none; margin: .45rem 0 0; padding: 0;
+  display: none; flex-wrap: wrap; gap: .35rem .7rem;
+}
+.pw-checks.is-visible { display: flex; }
+.pw-checks li {
+  display: inline-flex; align-items: center; gap: .28rem;
+  font-size: .72rem; color: var(--text-2);
+  padding: .18rem .5rem; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface-2);
+  transition: color .15s var(--ease), border-color .15s var(--ease);
+}
+.pw-checks li svg { opacity: .35; }
+.pw-checks li.is-ok {
+  color: #bbf7d0; border-color: rgba(52, 211, 153, .55);
+  background: rgba(16, 185, 129, .14);
+}
+.pw-checks li.is-ok svg { opacity: 1; color: #34d399; }
+[data-theme="light"] .pw-checks li.is-ok { color: #065f46; }
+
+@media (max-width: 560px) {
+  .pw-checks { gap: .3rem .45rem; }
+  .pw-checks li { font-size: .68rem; }
+}
+
+.login-first {
+  display: flex; gap: .45rem; align-items: flex-start;
+  margin: .7rem 0 0; padding: .6rem .75rem;
+  border-radius: var(--radius); border: 1px dashed var(--line-strong);
+  background: rgba(56, 189, 248, .06);
+  font-size: .76rem; line-height: 1.5; color: var(--text-2); text-align: left;
+}
+.login-first svg { flex: 0 0 auto; margin-top: .15rem; color: var(--accent); }
+[data-theme="light"] .login-first { background: rgba(14, 116, 224, .06); }

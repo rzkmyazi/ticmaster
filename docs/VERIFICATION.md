@@ -730,4 +730,24 @@ PythonAnywhere**, pas seulement en local.
 
 ---
 
+## 22. Mise à jour du 29/10/2026 — Création de compte et connexion (vague 13)
+
+| Contrôle | Résultat |
+|---|---|
+| Identifiant généré : `Kanto Rasoanaivo` → `kanto.rasoanaivo` | ✔ |
+| Doublon de nom → suffixe `2` | ✔ |
+| Compte créé : identifiant + mot de passe affichés, boutons de copie séparés | ✔ |
+| Connexion immédiate avec les identifiants affichés (local, Render, PythonAnywhere) | ✔ |
+| Mot de passe imposé saisi avec des espaces → nettoyé, signalé, connexion OK | ✔ |
+| Connexion par identifiant, majuscules, espaces de bord, pseudo, e-mail, nom complet, forme aplatie | ✔ 8 variantes |
+| Espace finale au mot de passe tolérée | ✔ |
+| Mot de passe trop faible : refusé, aucun compte créé, message explicite | ✔ |
+| Page de connexion : aide « première connexion » | ✔ |
+| Aucune erreur JavaScript sur Android simulé | ✔ |
+
+- `pytest -q` → **89 tests réussis** (6 nouveaux).
+- `tools/verify.py` → **246** contrôles en local, **248** sur PythonAnywhere et sur Render (0 échec).
+
+---
+
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*

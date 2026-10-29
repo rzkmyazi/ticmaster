@@ -40,12 +40,12 @@
     {% if request.args.get('next') %}<input type="hidden" name="next" value="{{ request.args.get('next') }}">{% endif %}
 
     <div class="field">
-      <label for="identifier">Identifiant</label>
+      <label for="identifier">Identifiant, e-mail ou nom complet</label>
       <div class="input-wrap">
         <span class="input-ic" aria-hidden="true">{{ icon('user', 17) }}</span>
         <input type="text" id="identifier" name="identifier" value="{{ identifier or '' }}"
                autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"
-               enterkeyhint="next" placeholder="Votre identifiant" required
+               enterkeyhint="next" placeholder="Ex. kanto.rasoanaivo" required
                aria-required="true"{% if autofocus %} data-autofocus{% endif %}>
       </div>
     </div>
@@ -55,6 +55,7 @@
       <div class="input-wrap">
         <span class="input-ic" aria-hidden="true">{{ icon('lock', 17) }}</span>
         <input type="password" id="password" name="password" autocomplete="current-password"
+               autocapitalize="none" autocorrect="off" spellcheck="false"
                enterkeyhint="go" placeholder="••••••••" required aria-required="true">
         <button type="button" class="pw-toggle" data-pw-toggle="password"
                 aria-label="Afficher le mot de passe" aria-pressed="false" title="Afficher ou masquer le mot de passe">
@@ -84,6 +85,13 @@
   <noscript>
     <p class="auth-note">{{ icon('info') }} JavaScript est désactivé : la connexion fonctionne normalement.</p>
   </noscript>
+
+  <p class="login-first">
+    {{ icon('key', 14) }}
+    <span><strong>Première connexion ?</strong> Utilisez l'identifiant et le mot de passe temporaire
+      remis par l'administration. Les majuscules comptent, et il ne faut <strong>aucune espace</strong>
+      avant ou après le mot de passe. Le nom complet ou l'adresse e-mail fonctionnent aussi comme identifiant.</span>
+  </p>
 
   <p class="login-note">
     {{ icon('info', 15) }}

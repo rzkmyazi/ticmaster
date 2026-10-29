@@ -30,13 +30,38 @@ _DUMMY_HASH = hash_password(secrets.token_urlsafe(16))
 
 
 def _find_user(identifier: str) -> User | None:
+    """Retrouve un compte à partir de ce que la personne a réellement sous les yeux.
+
+    Accepte, dans cet ordre : identifiant, adresse e-mail, pseudo, nom complet,
+    puis une forme « aplatie » (sans accents, espaces, points ni tirets).
+    Cette dernière n'accepte que si **un seul** compte correspond : impossible
+    d'ouvrir la session de quelqu'un d'autre par approximation.
+    """
+    from ..security.core import normalize_identifier
+
     identifier = (identifier or "").strip()
     if not identifier or len(identifier) > 190:
         return None
-    user = User.query.filter(db.func.lower(User.username) == identifier.lower()).first()
-    if not user and "@" in identifier:
-        user = User.query.filter(db.func.lower(User.email) == identifier.lower()).first()
-    return user
+
+    low = identifier.lower()
+    for colonne in (User.username, User.email, User.pseudo, User.full_name):
+        try:
+            user = User.query.filter(db.func.lower(colonne) == low).first()
+        except Exception:                      # colonne absente d'une très vieille base
+            user = None
+        if user:
+            return user
+
+    cible = normalize_identifier(identifier)
+    if not cible:
+        return None
+    correspondances = [
+        row for row in User.query.limit(5000).all()
+        if cible in (normalize_identifier(row.username),
+                     normalize_identifier(row.full_name),
+                     normalize_identifier(row.pseudo))
+    ]
+    return correspondances[0] if len(correspondances) == 1 else None
 
 
 def _set_auth_cookie(response, token: str, remember: bool = False):
@@ -100,7 +125,17 @@ def attempt_login(identifier: str, password: str, remember: bool = False) -> dic
         log_audit("auth.locked", target=user.username)
         return {"status": "error", "error": LOCKED_ERROR}
 
-    ok, _ = verify_password(user.password_hash, password)
+    # Tolérance mobile : un clavier ajoute souvent une espace en fin de saisie.
+    # On essaie la saisie exacte puis, seulement si elle diffère, sans les espaces
+    # de bord — un mot de passe volontairement entouré d'espaces reste valable.
+    essais = [password]
+    if password.strip() and password.strip() != password:
+        essais.append(password.strip())
+    ok = False
+    for essai in essais:
+        ok, _ = verify_password(user.password_hash, essai)
+        if ok:
+            break
     if not ok:
         user.failed_attempts = (user.failed_attempts or 0) + 1
         if user.failed_attempts >= current_app.config.get("LOGIN_MAX_ATTEMPTS", 5):

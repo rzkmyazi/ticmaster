@@ -765,6 +765,80 @@ def main() -> int:
                 sa.post(BASE + f"/admin/questions/{question_id}/supprimer",
                         data={"csrf_token": token_q}, allow_redirects=False)
 
+    # ------------------------------- création d'un compte et connexion
+    print("▸ Création d'un compte puis première connexion")
+    suffixe = rand_suffix(4)
+    nom_eleve = f"Eleve Test{suffixe}"
+    page = sa.get(BASE + "/admin/utilisateurs/nouveau").text
+    ok("formulaire de création accessible", "Nom complet" in page)
+    ok("politique de mot de passe affichée en direct", "pw-checks" in page)
+    ok("aide sur l'identifiant automatique", "généré automatiquement" in page
+       or "tiré du nom complet" in page)
+
+    created = sa.post(BASE + "/admin/utilisateurs/nouveau",
+                      data={"csrf_token": csrf(sa, "/admin/utilisateurs/nouveau"),
+                            "full_name": nom_eleve, "username": f"verif.crea{suffixe}",
+                            "email": "", "role": "user", "status": "active",
+                            "password": "", "must_change": "1"})
+    texte = created.text
+    identifiant = re.search(r'id="created-username"[^>]*>([^<]+)</div>', texte)
+    motdepasse = re.search(r'id="created-password"[^>]*>([^<]+)</div>', texte)
+    ok("compte créé, identifiant affiché", bool(identifiant), identifiant.group(1) if identifiant else "")
+    ok("mot de passe temporaire affiché", bool(motdepasse))
+    ok("bouton « Copier l'identifiant »", "Copier l'identifiant" in texte)
+    ok("bouton « Copier le mot de passe »", "Copier le mot de passe" in texte)
+
+    if identifiant and motdepasse:
+        eleve = requests.Session()
+        connexion = eleve.post(BASE + "/auth/connexion",
+                               data={"csrf_token": csrf(eleve, "/auth/connexion"),
+                                     "identifier": identifiant.group(1).strip(),
+                                     "password": motdepasse.group(1).strip()},
+                               allow_redirects=True)
+        ok("connexion avec les identifiants affichés",
+           "/auth/changer-mot-de-passe" in connexion.url, connexion.url.replace(BASE, ""))
+
+        # le nom complet et l'identifiant en majuscules fonctionnent aussi
+        for variante, etiquette in ((nom_eleve, "le nom complet"),
+                                    (identifiant.group(1).strip().upper(),
+                                     "l'identifiant en majuscules")):
+            autre = requests.Session()
+            rep = autre.post(BASE + "/auth/connexion",
+                             data={"csrf_token": csrf(autre, "/auth/connexion"),
+                                   "identifier": variante,
+                                   "password": motdepasse.group(1).strip()},
+                             allow_redirects=True)
+            ok(f"connexion avec {etiquette}", "/auth/changer-mot-de-passe" in rep.url,
+               rep.url.replace(BASE, ""))
+
+        # une espace ajoutée à la fin du mot de passe n'empêche pas la connexion
+        autre = requests.Session()
+        rep = autre.post(BASE + "/auth/connexion",
+                         data={"csrf_token": csrf(autre, "/auth/connexion"),
+                               "identifier": identifiant.group(1).strip(),
+                               "password": motdepasse.group(1).strip() + "  "},
+                         allow_redirects=True)
+        ok("connexion tolérante à une espace finale", "/auth/changer-mot-de-passe" in rep.url)
+
+        # mot de passe imposé par l'administrateur : espaces de bord retirés
+        crea = sa.post(BASE + "/admin/utilisateurs/nouveau",
+                       data={"csrf_token": csrf(sa, "/admin/utilisateurs/nouveau"),
+                             "full_name": f"Espace Test{suffixe}",
+                             "username": f"verif.espace{suffixe}", "role": "user",
+                             "status": "active", "password": "VerifEspace2026!  ",
+                             "must_change": "1"})
+        ok("espaces de bord retirés du mot de passe saisi",
+           "espaces présents au début" in crea.text and "Compte créé" in crea.text)
+
+        faible = sa.post(BASE + "/admin/utilisateurs/nouveau",
+                         data={"csrf_token": csrf(sa, "/admin/utilisateurs/nouveau"),
+                               "full_name": f"Faible Test{suffixe}",
+                               "username": f"verif.faible{suffixe}", "role": "user",
+                               "status": "active", "password": "1234", "must_change": "1"})
+        ok("mot de passe trop faible : refusé et signalé",
+           "Compte créé" not in faible.text and "n&#39;a pas été créé" in faible.text
+           or "n'a pas été créé" in faible.text)
+
     # -------------------------- messages : remise, transfert, filtres
     print("▸ Messages : remise, transfert et notifications filtrées")
     token = csrf(p, "/messages")

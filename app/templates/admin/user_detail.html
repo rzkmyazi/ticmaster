@@ -15,12 +15,18 @@
   <div class="card-body">
     <span class="badge badge-warning mb-1">{{ icon('key') }} Mot de passe réinitialisé</span>
     <h2 class="card-title mt-1">Nouveau mot de passe temporaire</h2>
-    <p class="mono" style="font-size:1.35rem;margin:.5rem 0">{{ temp_password }}</p>
+    <p class="mono" id="temp-password" style="font-size:1.35rem;margin:.5rem 0">{{ temp_password }}</p>
     <div class="alert alert-warning">
       {{ icon('alert') }}
-      <span>Ce mot de passe ne sera plus jamais affiché. Toutes les sessions actives ont été révoquées. L'utilisateur devra le changer à sa prochaine connexion.</span>
+      <span>Ce mot de passe ne sera plus jamais affiché. Toutes les sessions actives ont été révoquées.
+        L'utilisateur devra le changer à sa prochaine connexion. Attention : les majuscules comptent et
+        il ne doit y avoir <strong>aucune espace</strong> avant ou après.</span>
     </div>
-    <button class="btn btn-outline btn-sm mt-2" type="button" data-copy="{{ temp_password }}">{{ icon('file') }} Copier</button>
+    <div class="row mt-2">
+      <button class="btn btn-outline btn-sm" type="button" data-copy="{{ temp_password }}">{{ icon('file') }} Copier le mot de passe</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-copy="{{ user.username }}">{{ icon('file') }} Copier l'identifiant</button>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('auth.login') }}" target="_blank" rel="noopener">{{ icon('key') }} Page de connexion</a>
+    </div>
   </div>
 </div>
 {% endif %}

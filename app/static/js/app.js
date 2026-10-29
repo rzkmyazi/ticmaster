@@ -887,6 +887,44 @@
   }
 
   /* Actions inline remplacées par des attributs (CSP sans « unsafe-inline ») */
+  /* ---------- Politique de mot de passe (liste cochée en direct) ---------- */
+  function initPasswordPolicy() {
+    $$("[data-password-policy]").forEach(function (input) {
+      var liste = document.querySelector("[data-password-policy] ~ .pw-checks") ||
+                  $("#" + (input.getAttribute("aria-describedby") || ""));
+      if (!liste) return;
+      var regles = {
+        length: function (v) { return v.length >= 10; },
+        upper: function (v) { return /[A-Z]/.test(v); },
+        lower: function (v) { return /[a-z]/.test(v); },
+        digit: function (v) { return /\d/.test(v); },
+        special: function (v) { return /[^A-Za-z0-9]/.test(v); }
+      };
+      function maj() {
+        var valeur = input.value || "";
+        liste.classList.toggle("is-visible", valeur.length > 0);
+        liste.querySelectorAll("[data-check]").forEach(function (item) {
+          var regle = regles[item.getAttribute("data-check")];
+          if (regle) item.classList.toggle("is-ok", regle(valeur));
+        });
+      }
+      on(input, "input", maj);
+      maj();
+    });
+  }
+
+  /* ---------- Amener le message d'erreur sous les yeux ---------- */
+  function initErrorFocus() {
+    var cible = $("[data-scroll-into-view]");
+    if (!cible) return;
+    try {
+      cible.scrollIntoView({ block: "center", behavior: "smooth" });
+      cible.focus({ preventScroll: true });
+    } catch (e) {
+      cible.scrollIntoView();
+    }
+  }
+
   function initInlineActions() {
     $$("[data-auto-submit]").forEach(function (el) {
       on(el, "change", function () { if (el.form) el.form.requestSubmit ? el.form.requestSubmit() : el.form.submit(); });
@@ -920,6 +958,8 @@
     initFeed();
     initNotifications();
     initInlineActions();
+    initPasswordPolicy();
+    initErrorFocus();
 
     $$("[data-theme-toggle]").forEach(function (btn) {
       on(btn, "click", function () { TIC.theme.toggle(); });

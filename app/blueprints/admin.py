@@ -302,10 +302,16 @@ def user_new():
     )}
 
     if request.method == "POST":
-        # Mot de passe : généré ou imposé par l'administrateur
-        requested_password = request.form.get("password") or ""
+        # Mot de passe : généré ou imposé par l'administrateur.
+        # Les espaces de bord (ajoutés sans le voir par les claviers mobiles)
+        # sont retirés : sinon le mot de passe affiché ne correspond plus à
+        # celui réellement enregistré.
+        brut = request.form.get("password") or ""
+        requested_password = brut.strip()
+        espaces_retires = bool(brut) and brut != requested_password
         if requested_password and not password_ok(requested_password):
-            error = "Mot de passe trop faible : " + ", ".join(password_errors(requested_password)) + "."
+            error = ("Le compte n'a pas été créé : mot de passe trop faible ("
+                     + ", ".join(password_errors(requested_password)) + ").")
         else:
             ok, message, user = _read_user_form(None)
             if not ok:
@@ -323,6 +329,7 @@ def user_new():
                     "password": requested_password or temp,
                     "full_name": user.full_name,
                     "role": user.role,
+                    "espaces_retires": espaces_retires,
                 }
 
     return render_template(

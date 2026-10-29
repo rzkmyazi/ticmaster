@@ -20,7 +20,7 @@ battles de connaissances et messagerie interne, avec une administration complèt
 
 | Domaine | Détail |
 |---|---|
-| **Authentification** | Connexion par identifiant ou e-mail, mot de passe haché **Argon2id**, sessions serveur révocables, verrouillage anti-force brute (compte + IP), messages neutres, changement de mot de passe forcé à la première connexion, mot de passe oublié validé par le super administrateur |
+| **Authentification** | Connexion par **identifiant, e-mail, pseudo ou nom complet** (majuscules et espaces sans importance), mot de passe haché **Argon2id**, sessions serveur révocables, verrouillage anti-force brute (compte + IP), messages neutres, changement de mot de passe forcé à la première connexion, mot de passe oublié validé par le super administrateur. Les comptes sont créés par l'administration : identifiant lisible tiré du nom (`prenom.nom`), mot de passe temporaire affiché une seule fois avec bouton de copie |
 | **Rôles** | Trois rôles seulement : **Super Admin**, **Admin**, **Élève** — permissions vérifiées **côté serveur** à chaque requête |
 | **Espace professeur** | Le super administrateur est **professeur** : il ne suit ni cours ni exercice d'élève (`/cours`, `/exercices`, `/examens`, `/resultats`, `/espace` le renvoient vers son espace). Il gère ceux des élèves : *Mes cours*, *Mes exercices*, *Ressources*, *Notes*, *Statistiques* |
 | **Photo de profil** | Envoi depuis la galerie du téléphone ; l'image est **conservée dans la base** en plus du fichier — elle survit aux redéploiements et, si elle manque, les **initiales** sont dessinées à la place (jamais d'image cassée) |
