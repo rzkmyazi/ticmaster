@@ -307,10 +307,13 @@ puis une requête → **HTTP 200 en 0,24 s** (un réveil à froid aurait pris
 
 ### 13.5 Jeton GitHub
 
-Le jeton OAuth utilisé jusqu'ici pour pousser sur GitHub a **expiré** le
-29/10 (réponse `401` de l'API). Render continue de se déployer depuis le dépôt
-via sa propre intégration GitHub : seule la publication de nouveaux commits
-depuis l'agent demande un jeton neuf (ou une reconnexion du compte GitHub).
+Le jeton OAuth utilisé jusqu'ici a **expiré** le 29/10 (réponse `401`). Le compte
+a été **reconnecté le même jour** par le « Device Flow » (code `7F1E-85ED`,
+autorisé par `@rzkmyazi`), avec désormais les portées `repo` **et `workflow`** :
+les fichiers `.github/workflows` peuvent être publiés. Le jeton n'est jamais
+écrit sur le disque : il ne vit que le temps de la commande `git push`.
+Les six commits en attente sont partis, Render s'est redéployé et les
+**196 contrôles** y sont conformes.
 
 ---
 
@@ -369,7 +372,7 @@ Une **boîte de dialogue intégrée** remplace toutes les confirmations natives 
 |---|---|
 | `pytest -q` | **62 tests réussis** |
 | `tools/verify.py` (local) | **194 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **attend un nouveau déploiement** (jeton GitHub expiré) |
+| `tools/verify.py` sur Render | **196 contrôles conformes, 0 échec** |
 | `tools/verify.py` sur PythonAnywhere | **196 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient

@@ -32,7 +32,7 @@ DEVICE_CODE_URL = "https://github.com/login/device/code"
 TOKEN_URL = "https://github.com/login/oauth/access_token"
 API_USER = "https://api.github.com/user"
 API_REPOS = "https://api.github.com/user/repos"
-SCOPE = "repo"
+SCOPE = "repo workflow"
 
 
 def _post(url: str, payload: dict, token: str | None = None, method: str = "POST") -> dict:
@@ -115,6 +115,9 @@ def main() -> int:
     me = _api_get(API_USER, token)
     login = me.get("login", "")
     print(f"✔ Autorisation accordée pour @{login}")
+
+    # Enregistre le jeton pour la session du terminal uniquement (jamais sur disque)
+    os.environ["TIC_GITHUB_TOKEN"] = token
 
     if not args.no_create:
         payload = json.dumps({

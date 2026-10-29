@@ -566,7 +566,18 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 | Réinitialisation : défilement automatique vers le mot de passe + message | ✔ |
 
 - `pytest -q` → **62 tests réussis** (3 nouveaux).
-- `tools/verify.py` → **194** contrôles en local, **196** sur PythonAnywhere (0 échec).
+- `tools/verify.py` → **194** contrôles en local, **196** sur Render **et** sur PythonAnywhere (0 échec).
+
+### Vérification directe dans un navigateur Android (site de production)
+
+| Contrôle | Résultat |
+|---|---|
+| `app.js` servi par Render contient la nouvelle confirmation | ✔ |
+| `window.confirm` volontairement cassé | **0** dialogue natif |
+| Clic « Suspendre » → boîte « Suspendre le compte » affichée | ✔ |
+| « Annuler » referme la boîte sans rien modifier | ✔ |
+| « Réinitialiser » → mot de passe temporaire affiché | ✔ |
+| Erreurs JavaScript | aucune |
 
 ---
 
