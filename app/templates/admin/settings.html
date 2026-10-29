@@ -83,10 +83,10 @@
             </div>
             <div class="card-body text-sm">
               {% if veille.active %}
-              <p>Ce serveur (PythonAnywhere, toujours en ligne) appelle
-                 <span class="mono">{{ veille.url }}</span> toutes les
-                 {{ veille.intervalle // 60 }} minutes : le site Render ne s'endort
-                 plus et répond à n'importe quelle heure.</p>
+              <p>Ce serveur s'appelle lui-même toutes les
+                 {{ veille.intervalle // 60 }} minutes
+                 (<span class="mono">{{ veille.url }}</span>) : l'offre gratuite ne
+                 s'endort plus et le site répond à n'importe quelle heure.</p>
               {% if veille.derniers %}
               <div class="stack mt-2">
                 {% for passage in veille.derniers %}
@@ -103,10 +103,11 @@
                  {{ veille.intervalle // 60 }} minutes.</p>
               {% endif %}
               {% else %}
-              <p class="text-muted">La veille n'est pas activée sur ce serveur.</p>
-              <p class="text-xs text-muted">Pour la mettre en place : ajoutez
-                 <span class="mono">VEILLE=1</span> dans le fichier
-                 <span class="mono">.env</span>, puis rechargez l'application.</p>
+              <p class="text-muted">La veille ne tourne pas sur ce serveur.</p>
+              <p class="text-xs text-muted">Elle démarre automatiquement sur Render
+                 (variable <span class="mono">RENDER_EXTERNAL_URL</span>) et peut être
+                 forcée ailleurs avec <span class="mono">VEILLE=1</span> dans le fichier
+                 <span class="mono">.env</span>.</p>
               {% endif %}
             </div>
           </section>
