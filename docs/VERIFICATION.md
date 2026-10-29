@@ -577,8 +577,6 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 | Clic « Suspendre » → boîte « Suspendre le compte » affichée | ✔ |
 | « Annuler » referme la boîte sans rien modifier | ✔ |
 | « Réinitialiser » → mot de passe temporaire affiché | ✔ |
-| Aucun gestionnaire `onclick` / `onchange` en ligne (CSP) | ✔ |
-| Photo de profil : copie en base, servie même sans fichier, repli initiales | ✔ |
 | Erreurs JavaScript | aucune |
 
 ## 19. Mise à jour du 29/10/2026 — Notifications en temps réel (vague 10)
@@ -652,8 +650,25 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 | Android : bande de conversations défilante, conversation ouverte centrée | ✔ |
 | Erreurs JavaScript | aucune |
 
+### Qualité de production : politique de sécurité et photos de profil
+
+Deux défauts visibles sur le site en service ont été corrigés et vérifiés **sur Render et sur
+PythonAnywhere**, pas seulement en local.
+
+| Contrôle | Résultat |
+|---|---|
+| Aucun `onclick` / `onchange` en ligne dans les pages (CSP : `script-src 'nonce'`) | ✔ 0 occurrence |
+| Tri des notes, « Actualiser », boutons « Retour » des pages d'erreur fonctionnels sans gestionnaire en ligne | ✔ |
+| Aucune erreur de console sur `/admin/`, `/admin/notes`, `/admin/classe`, `/utilisateurs-en-ligne` (navigateur Android émulé) | ✔ 0 erreur |
+| Photo de profil : envoi → affichage → service (PostgreSQL de Render) | ✔ 302 puis `image/png` |
+| Photo conservée **dans la base** : fichier effacé du disque, l'image est toujours servie | ✔ |
+| Ancienne URL fautive (`/avatar/acd4c907f7…png`, 404 avant correction) | ✔ **200**, initiales dessinées |
+| Photo inaccessible sans connexion | ✔ 302 vers `/auth/connexion` |
+| Fichier inconnu | ✔ 404 |
+| Retrait de la photo → retour aux initiales | ✔ |
+
 - `pytest -q` → **77 tests réussis** (7 nouveaux).
-- `tools/verify.py` → **216** contrôles en local, **218** sur PythonAnywhere et sur Render (0 échec).
+- `tools/verify.py` → **218** contrôles en local, **220** sur PythonAnywhere et sur Render (0 échec).
 
 ---
 

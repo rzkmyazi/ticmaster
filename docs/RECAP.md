@@ -534,8 +534,8 @@ Captures : `apercus/android/prof-accueil.png`, `prof-message-classe.png`,
 |---|---|
 | `pytest -q` | **77 tests réussis** |
 | `tools/verify.py` (local) | **216 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **218 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **218 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | **220 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **220 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.

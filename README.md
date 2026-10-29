@@ -22,6 +22,8 @@ battles de connaissances et messagerie interne, avec une administration complèt
 |---|---|
 | **Authentification** | Connexion par identifiant ou e-mail, mot de passe haché **Argon2id**, sessions serveur révocables, verrouillage anti-force brute (compte + IP), messages neutres, changement de mot de passe forcé à la première connexion, mot de passe oublié validé par le super administrateur |
 | **Rôles** | Trois rôles seulement : **Super Admin**, **Admin**, **Élève** — permissions vérifiées **côté serveur** à chaque requête |
+| **Espace professeur** | Le super administrateur est **professeur** : il ne suit ni cours ni exercice d'élève (`/cours`, `/exercices`, `/examens`, `/resultats`, `/espace` le renvoient vers son espace). Il gère ceux des élèves : *Mes cours*, *Mes exercices*, *Ressources*, *Notes*, *Statistiques* |
+| **Photo de profil** | Envoi depuis la galerie du téléphone ; l'image est **conservée dans la base** en plus du fichier — elle survit aux redéploiements et, si elle manque, les **initiales** sont dessinées à la place (jamais d'image cassée) |
 | **Dossier scolaire** | À l'inscription d'un élève : **nom, prénom, pseudo, nom d'utilisateur du site, numéro en classe, niveau d'étude, sexe (garçon/fille), groupe 1 à 3 modifiable**. Filtres par niveau et par groupe, tri par numéro, export CSV, fiche de suivi |
 | **Administration** | CRUD utilisateurs (identifiant unique, mot de passe temporaire affiché une seule fois, rôle, activation/suspension/désactivation, dates de création et de dernière connexion, recherche/filtres/tri, suppression avec confirmation, révocation de sessions), export CSV, journal d'audit, statistiques et graphiques |
 | **Contenus** | 12 modules, 36 leçons (Markdown sécurisé, images, documents, vidéos), 6 catégories, ressources téléchargeables, exercices et examens à choix unique avec correction et explication |
@@ -29,7 +31,7 @@ battles de connaissances et messagerie interne, avec une administration complèt
 | **Battle** | Battle **solo** (nom = nom de l'utilisateur) et **en groupe** (nom modifiable), code de salle, 5 questions chronométrées, classement en direct, correction commentée. **Chaque demande déposée par un élève reste en attente** : seuls l'**ADMIN** et le **SUPER ADMIN** peuvent l'accepter ou la refuser (`/admin/battles`). |
 | **Réseau social** | Fil d'actualité dans *Mon profil* : publication de texte et de photos (PNG, JPG, GIF, WEBP), **5 réactions emoji** (❤️ J'aime, 😂 Rire, 👊 Bravo, 😠 Colère, 😢 Triste — une seule par personne, modifiable), commentaires, suppression de ses propres publications (modération possible par l'administration) |
 | **Conservation** | Durée paramétrable dans *Paramètres* : **illimitée par défaut** (`0`), aucune suppression automatique |
-| **Messagerie** | Salon général + conversations privées, supervision intégrale par le **super administrateur** dans l'onglet « Messages des Utilisateurs » (icône rose à contour) |
+| **Messagerie** | Salon général, **messages de classe** (toute la classe, un niveau ou un groupe d'un coup, avec **accusés de lecture**) et conversations privées ; l'élève lit les messages de classe et répond en privé au professeur ; supervision intégrale par le **super administrateur** dans l'onglet « Messages des Utilisateurs » (icône rose à contour) |
 | **Présence** | Utilisateurs en ligne (contour vert) / inactifs (contour rouge) dans l'onglet dédié |
 | **Expérience** | Design premium bleu nuit / bleu électrique / cyan, mode sombre **et** clair, animations légères, responsive Android / iPhone / tablette / desktop, PWA installable, accessibilité (focus visibles, `prefers-reduced-motion`) |
 
@@ -203,6 +205,18 @@ et n'a pas de statistiques personnelles. À la place, il dirige la scolarité :
 | **Statistiques de la classe** (`/admin/statistiques`) | Moyenne et médiane, distribution sur 20, mentions, résultats par module, épreuves les plus difficiles, activité sur 14 jours, palmarès et élèves à soutenir |
 
 Ces trois pages sont protégées côté serveur : un simple administrateur ou un utilisateur reçoit un **403**.
+
+### Messagerie de classe
+
+*Messages → Messages de classe.* Le professeur choisit le destinataire : **toute la classe**,
+un **niveau** (ex. 1ère), un **groupe** (1 à 99) ou un niveau + groupe. Un seul envoi, tous les
+élèves concernés sont prévenus en temps réel.
+
+* L'élève **ne peut pas écrire dans le salon** : il lit, et répond en **privé** au professeur
+  (bouton « Répondre au professeur en privé »).
+* Chaque message affiche son état : « Envoyé », « Lu », puis « **Lu par N / N** » — le nombre de
+  lecteurs est rafraîchi automatiquement toutes les 12 secondes.
+* Un élève d'une autre classe reçoit un **403** : l'appartenance est vérifiée côté serveur.
 
 ### Mode « mise à jour du site »
 
