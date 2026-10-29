@@ -13,7 +13,7 @@ import pytest
 from app import create_app
 from app.extensions import db
 from app.models import (
-    Attempt, Exercise, Module, Question, Option, User, utcnow,
+    Attempt, BattleMember, BattleRoom, Exercise, Module, Question, Option, User, utcnow,
     ROLE_ADMIN, ROLE_SUPER_ADMIN, ROLE_USER, STATUS_ACTIVE,
 )
 from app.security.core import RateLimiter
@@ -705,8 +705,16 @@ def test_dossier_scolaire_validation(app):
     _login(client, "chef", "MotDePasse2026!")
     token = _csrf(client)
 
-    bad_group = _create_student(client, token, class_group="4", username="eleve.groupe")
-    assert "Le groupe doit être 1, 2 ou 3" in bad_group.get_data(as_text=True)
+    bad_group = _create_student(client, token, class_group="100", username="eleve.groupe")
+    assert "Le groupe doit être compris entre 1 et 99" in bad_group.get_data(as_text=True)
+
+    # un numéro libre est accepté (4, 7, 12…)
+    good_group = _create_student(client, token, class_group="4", username="eleve.groupe4")
+    assert "Identifiants à communiquer" in good_group.get_data(as_text=True)
+    with app.app_context():
+        assert User.query.filter_by(username="eleve.groupe4").one().class_group == 4
+        db.session.query(User).filter_by(username="eleve.groupe4").delete()
+        db.session.commit()
 
     bad_number = _create_student(client, token, class_number="1000", username="eleve.numero")
     assert "numéro en classe" in bad_number.get_data(as_text=True)
@@ -735,11 +743,17 @@ def test_groupe_modifiable_depuis_la_fiche(app):
         assert student.class_group == 3 and student.class_number == 12
         assert student.study_level == "1ère"
 
-    # contrôle serveur : groupe hors bornes refusé
+    # un numéro libre est accepté (groupe 9)
     client.post(f"/admin/utilisateurs/{student_id}/classe",
                 data={"csrf_token": token, "class_group": "9"})
     with app.app_context():
-        assert db.session.get(User, student_id).class_group == 3
+        assert db.session.get(User, student_id).class_group == 9
+
+    # contrôle serveur : groupe hors bornes refusé
+    client.post(f"/admin/utilisateurs/{student_id}/classe",
+                data={"csrf_token": token, "class_group": "100"})
+    with app.app_context():
+        assert db.session.get(User, student_id).class_group == 9
 
     # un apprenant n'a pas accès à ces écrans
     other = app.test_client()
@@ -1000,3 +1014,117 @@ def test_bulletins_affichent_la_note_de_chaque_eleve(app):
     html = chief.get("/admin/bulletins").get_data(as_text=True)
     assert "Bureautique" in html
     assert "8.0" in html and "15.0" in html  # notes /20 calculées depuis les vraies copies
+
+
+# ---------------------------------------------------------------------------
+# Vague 5 : groupes libres + questions des battles par l'administration
+# ---------------------------------------------------------------------------
+def _seed_room(app, owner_id, status="pending", code="TST001"):
+    with app.app_context():
+        room = BattleRoom(name="Battle test", mode="group", code=code, owner_id=owner_id,
+                          status=status, question_count=0, question_ids="")
+        db.session.add(room)
+        db.session.flush()
+        db.session.add(BattleMember(room_id=room.id, user_id=owner_id))
+        db.session.commit()
+        return room.id
+
+
+def test_groupes_libres_pour_le_super_admin(app):
+    student_id = _make_user(app, "rakoto")
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    chief = app.test_client()
+    _login(chief, "chef", "MotDePasse2026!")
+    token = _csrf(chief)
+
+    # n'importe quel numéro de groupe est accepté (4, 7, 12…)
+    for value in ("4", "7", "12"):
+        chief.post(f"/admin/utilisateurs/{student_id}/classe",
+                   data={"csrf_token": token, "class_group": value, "class_number": "5"})
+        with app.app_context():
+            assert db.session.get(User, student_id).class_group == int(value)
+
+    # bornes : 0 et 100 refusés, le groupe précédent est conservé
+    for value in ("0", "100", "abc"):
+        chief.post(f"/admin/utilisateurs/{student_id}/classe",
+                   data={"csrf_token": token, "class_group": value})
+        with app.app_context():
+            assert db.session.get(User, student_id).class_group == 12
+
+    # le groupe personnalisé apparaît dans la liste de classe et les filtres
+    html = chief.get("/admin/classe").get_data(as_text=True)
+    assert "Groupe 12" in html
+    listing = chief.get("/admin/utilisateurs?groupe=12").get_data(as_text=True)
+    assert "rakoto" in listing
+
+    # le formulaire permet la saisie libre (1 → 99)
+    form = chief.get(f"/admin/utilisateurs/{student_id}/modifier").get_data(as_text=True)
+    assert 'name="class_group"' in form and 'max="99"' in form and 'type="number"' in form
+
+    # un administrateur ne peut toujours pas changer le groupe
+    _make_user(app, "adjoint", role=ROLE_ADMIN)
+    admin = app.test_client()
+    _login(admin, "adjoint", "MotDePasse2026!")
+    admin_token = _csrf(admin)
+    admin.post(f"/admin/utilisateurs/{student_id}/classe",
+               data={"csrf_token": admin_token, "class_group": "2"})
+    with app.app_context():
+        assert db.session.get(User, student_id).class_group == 12
+
+
+def test_questions_dune_battle_composees_par_ladmin(app):
+    _seed_quiz(app)
+    owner_id = _make_user(app, "joueur")
+    _make_user(app, "modo", role=ROLE_ADMIN)
+    room_id = _seed_room(app, owner_id)
+
+    admin = app.test_client()
+    _login(admin, "modo", "MotDePasse2026!")
+    token = _csrf(admin)
+
+    page = admin.get(f"/admin/battles/{room_id}/questions")
+    html = page.get_data(as_text=True)
+    assert page.status_code == 200
+    assert "Créer une question" in html and "Question 0 ?" in html
+
+    with app.app_context():
+        ids = [q.id for q in Question.query.order_by(Question.id).limit(2).all()]
+
+    saved = admin.post(f"/admin/battles/{room_id}/questions",
+                       data={"csrf_token": token, "action": "save",
+                             "question_id": [str(i) for i in ids]})
+    assert saved.status_code == 302
+    with app.app_context():
+        room = db.session.get(BattleRoom, room_id)
+        assert room.qids() == ids and room.question_count == 2
+
+    created = admin.post(f"/admin/battles/{room_id}/questions",
+                         data={"csrf_token": token, "action": "create",
+                               "text": "Que signifie HTTP ?", "option_1": "Un protocole",
+                               "option_2": "Un langage de programmation", "correct": "1"})
+    assert created.status_code == 302
+    with app.app_context():
+        room = db.session.get(BattleRoom, room_id)
+        assert room.question_count == 3
+        question = db.session.get(Question, room.qids()[-1])
+        assert question.text == "Que signifie HTTP ?"
+        assert question.correct_option.text == "Un protocole"
+        assert len(question.options) == 2
+
+    # question invalide : aucune création
+    admin.post(f"/admin/battles/{room_id}/questions",
+               data={"csrf_token": token, "action": "create", "text": "abc",
+                     "option_1": "a", "option_2": "b", "correct": "1"})
+    with app.app_context():
+        assert db.session.get(BattleRoom, room_id).question_count == 3
+
+    # un élève n'accède pas à l'écran
+    student = app.test_client()
+    _login(student, "joueur", "MotDePasse2026!")
+    assert student.get(f"/admin/battles/{room_id}/questions").status_code == 403
+
+    # une battle démarrée n'est plus modifiable
+    with app.app_context():
+        db.session.get(BattleRoom, room_id).status = "running"
+        db.session.commit()
+    assert admin.get(f"/admin/battles/{room_id}/questions").status_code == 302

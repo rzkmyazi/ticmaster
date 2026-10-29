@@ -76,12 +76,12 @@
           <div class="field" style="margin:0">
             <label for="quick-group">Groupe</label>
             {% if current_user.is_super_admin %}
-            <select id="quick-group" name="class_group">
-              <option value="">—</option>
-              {% for group in [1, 2, 3] %}
-              <option value="{{ group }}" {{ 'selected' if user.class_group == group }}>Groupe {{ group }}</option>
-              {% endfor %}
-            </select>
+            <input id="quick-group" type="number" name="class_group" min="1" max="99" step="1"
+                   list="group-options" style="width:110px" placeholder="1-99"
+                   value="{{ user.class_group or '' }}">
+            <datalist id="group-options">
+              {% for group in groups %}<option value="{{ group }}"></option>{% endfor %}
+            </datalist>
             {% else %}
             <input id="quick-group" type="text" value="{{ user.group_label or 'Aucun' }}" readonly style="width:110px">
             {% endif %}

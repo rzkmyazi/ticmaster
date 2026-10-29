@@ -137,13 +137,13 @@
           <div class="field">
             <label for="class_group">Groupe</label>
             {% if current_user.is_super_admin %}
-            <select id="class_group" name="class_group">
-              <option value="">— aucun —</option>
-              {% for group in groups %}
-              <option value="{{ group }}" {{ 'selected' if form.class_group|string == group|string }}>Groupe {{ group }}</option>
-              {% endfor %}
-            </select>
-            <span class="hint">Réservé au super administrateur. Modifiable à tout moment.</span>
+            <input type="number" id="class_group" name="class_group" min="1" max="99" step="1"
+                   list="group-options" placeholder="1, 2, 3, 4…"
+                   value="{{ form.class_group if form.class_group not in (none, '') else '' }}">
+            <datalist id="group-options">
+              {% for group in groups %}<option value="{{ group }}"></option>{% endfor %}
+            </datalist>
+            <span class="hint">Choisissez le numéro du groupe : 1, 2, 3 ou le nombre que vous voulez (jusqu'à 99).</span>
             {% else %}
             <input type="text" id="class_group" value="{{ ('Groupe ' ~ form.class_group) if form.class_group else 'Aucun groupe' }}" readonly>
             <span class="hint">Seul le super administrateur attribue ou change le groupe.</span>

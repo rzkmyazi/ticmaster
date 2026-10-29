@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% from "macros.html" import stat %}
+
+{% block title %}Questions de la battle{% endblock %}
+{% block page_title %}Questions de la battle{% endblock %}
+{% block page_subtitle %}<p class="page-sub">{{ room.name }} · code {{ room.code }} · {{ 'Solo' if room.mode == 'solo' else 'Groupe' }}</p>{% endblock %}
+
+{% block content %}
+<div class="page-actions">
+  <a class="btn btn-ghost" href="{{ url_for('admin.battles') }}">{{ icon('arrow-left', 16) }} Battles</a>
+  <a class="btn btn-ghost" href="{{ url_for('admin.exercises') }}">{{ icon('clipboard', 16) }} Banque d'exercices</a>
+  <span class="badge badge-{{ 'warning' if room.status == 'pending' else 'info' }}">
+    {{ 'En attente de validation' if room.status == 'pending' else 'Salon ouvert' }}
+  </span>
+</div>
+
+<div class="alert alert-info">
+  {{ icon('info') }}
+  <span>
+    Choisissez les questions de cette battle dans la banque, ou créez-en de nouvelles : elles sont
+    ajoutées immédiatement. Modifiable tant que la battle n'a pas démarré — {{ room.question_count }}
+    question(s) actuellement.
+  </span>
+</div>
+
+<div class="grid grid-2" style="align-items:start">
+  {# ---------------- Colonne 1 : composer depuis la banque ---------------- #}
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">{{ icon('layers') }} Choisir dans la banque</h2>
+      <span class="badge badge-neutral"><span id="selected-count">{{ selected|length }}</span> sélectionnée(s)</span>
+    </div>
+    <div class="card-body">
+      <form method="get" class="row" style="gap:.5rem;margin-bottom:.8rem">
+        <input type="search" name="q" value="{{ q }}" placeholder="Rechercher une question…" aria-label="Rechercher une question">
+        <button class="btn btn-ghost btn-sm" type="submit">{{ icon('search', 15) }} Chercher</button>
+        {% if q %}<a class="btn btn-ghost btn-sm" href="{{ url_for('admin.battle_questions', battle_id=room.id) }}">Effacer</a>{% endif %}
+      </form>
+
+      {% if items %}
+      <form method="post" id="questions-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="save">
+
+        <div class="row-between" style="margin-bottom:.5rem">
+          <span class="text-xs text-muted">{{ items|length }} question(s) disponible(s)</span>
+          <span class="row" style="gap:.35rem">
+            <button class="btn btn-ghost btn-sm" type="button" data-check-all="1">Tout cocher</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-check-all="0">Tout décocher</button>
+          </span>
+        </div>
+
+        <div class="question-picker">
+          {% for item in items %}
+          <label class="question-option">
+            <input type="checkbox" name="question_id" value="{{ item.question.id }}"
+                   {{ 'checked' if item.question.id in selected }} data-question>
+            <span class="question-option-body">
+              <span class="question-option-text">{{ item.question.text }}</span>
+              <span class="text-xs text-muted">
+                {{ item.exercise.title if item.exercise else 'Sans exercice' }}
+                · bonne réponse : {{ item.correct }}
+                {% if item.question.points and item.question.points > 1 %}· {{ item.question.points }} pts{% endif %}
+              </span>
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+
+        <div class="row" style="justify-content:flex-end;margin-top:.8rem">
+          <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Enregistrer la sélection</button>
+        </div>
+      </form>
+      {% else %}
+      <div class="empty">
+        <div class="empty-icon">{{ icon('clipboard') }}</div>
+        <h3>Aucune question disponible</h3>
+        <p>Créez la première question avec le formulaire à droite, ou ajoutez-en depuis vos exercices.</p>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {# ---------------- Colonne 2 : créer une question ---------------- #}
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">{{ icon('plus') }} Créer une question</h2>
+      <span class="text-xs text-muted">ajoutée à la battle</span>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="create">
+
+        <div class="field">
+          <label for="q-text">Énoncé</label>
+          <textarea id="q-text" name="text" rows="3" maxlength="1200" required
+                    placeholder="Exemple : Que signifie « WWW » ?"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Propositions <span class="text-xs text-muted">(cochez la bonne réponse)</span></label>
+          {% for i in range(1, 5) %}
+          <div class="row" style="gap:.45rem;align-items:center;margin-bottom:.35rem">
+            <input type="radio" name="correct" value="{{ i }}" id="correct-{{ i }}"
+                   {{ 'checked' if i == 1 }} aria-label="Bonne réponse {{ i }}">
+            <input type="text" name="option_{{ i }}" maxlength="400"
+                   placeholder="Proposition {{ i }}{{ ' (facultative)' if i > 2 }}"
+                   aria-label="Proposition {{ i }}">
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="grid grid-2" style="gap:.6rem">
+          <div class="field">
+            <label for="q-exercise">Ranger dans</label>
+            <select id="q-exercise" name="exercise_id">
+              <option value="">{{ bank_title }} (recommandé)</option>
+              {% for exercise in exercises %}
+              <option value="{{ exercise.id }}">{{ exercise.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="q-points">Points</label>
+            <input type="number" id="q-points" name="points" min="1" max="10" value="1">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="q-explanation">Explication <span class="text-xs text-muted">(facultative)</span></label>
+          <input type="text" id="q-explanation" name="explanation" maxlength="400"
+                 placeholder="Affichée après la correction">
+        </div>
+
+        <button class="btn btn-primary" type="submit">{{ icon('plus', 16) }} Créer et ajouter à la battle</button>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .question-picker { display: grid; gap: .35rem; max-height: 420px; overflow: auto; padding-right: .2rem; }
+  .question-option {
+    display: flex; gap: .55rem; align-items: flex-start; padding: .55rem .65rem;
+    border: 1px solid var(--line); border-radius: 11px; background: var(--surface-3);
+    cursor: pointer; transition: border-color .15s ease, background .15s ease;
+  }
+  .question-option:hover { border-color: var(--line-strong); }
+  .question-option input { margin-top: .2rem; accent-color: #2563eb; }
+  .question-option-body { display: grid; gap: .15rem; min-width: 0; }
+  .question-option-text { font-size: .88rem; line-height: 1.35; }
+  .question-option:has(input:checked) { border-color: #2563eb; background: rgba(37, 99, 235, .12); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    var boxes = Array.prototype.slice.call(document.querySelectorAll("[data-question]"));
+    var counter = document.getElementById("selected-count");
+    function refresh() {
+      if (counter) counter.textContent = boxes.filter(function (b) { return b.checked; }).length;
+    }
+    boxes.forEach(function (box) { box.addEventListener("change", refresh); });
+    document.querySelectorAll("[data-check-all]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var value = btn.getAttribute("data-check-all") === "1";
+        boxes.forEach(function (box) { box.checked = value; });
+        refresh();
+      });
+    });
+    refresh();
+  })();
+</script>
+{% endblock %}

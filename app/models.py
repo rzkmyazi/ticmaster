@@ -26,6 +26,7 @@ ROLE_LABELS_LONG = {
 # Informations de classe (dossier scolaire de l'élève)
 # ---------------------------------------------------------------------------
 GENDERS = {"garcon": "Garçon", "fille": "Fille"}
+#: Groupes proposés par défaut (le super administrateur peut en créer d'autres : 4, 5…)
 GROUPS = (1, 2, 3)
 DEFAULT_LEVELS = (
     "6ème", "5ème", "4ème", "3ème", "2nde", "1ère", "Terminale",
@@ -63,7 +64,7 @@ class User(db.Model):
     class_number = db.Column(db.Integer)          # numéro dans la liste de classe
     study_level = db.Column(db.String(60), default="")
     gender = db.Column(db.String(12), default="")  # garcon / fille
-    class_group = db.Column(db.Integer)            # 1, 2 ou 3 (modifiable)
+    class_group = db.Column(db.Integer)            # numéro de groupe choisi par le super admin (1, 2, 3, 4…)
     avatar_filename = db.Column(db.String(255), default="")  # photo de profil envoyée
 
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)

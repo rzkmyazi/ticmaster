@@ -124,6 +124,37 @@ def roles():
 
 
 # ---------------------------------------------------------------------------
+# Groupes de classe : le super administrateur choisit le numéro qu'il veut
+# ---------------------------------------------------------------------------
+MAX_GROUP = 99
+
+
+def parse_group(raw: str) -> tuple[int | None, str | None]:
+    """Convertit la saisie du groupe. Le super administrateur peut créer
+    n'importe quel numéro (4, 5, 12…), pas seulement 1, 2 ou 3.
+
+    Retourne (valeur, message d'erreur)."""
+    raw = (raw or "").strip()
+    if not raw:
+        return None, None
+    if not raw.isdigit():
+        return None, "Le groupe doit être un nombre (1, 2, 3… jusqu'à %d)." % MAX_GROUP
+    value = int(raw)
+    if not 1 <= value <= MAX_GROUP:
+        return None, f"Le groupe doit être compris entre 1 et {MAX_GROUP}."
+    return value, None
+
+
+def known_groups() -> list[int]:
+    """Tous les groupes réellement utilisés, complétés par 1, 2 et 3."""
+    rows = (db.session.query(User.class_group)
+            .filter(User.class_group.isnot(None)).distinct().all())
+    values = {int(row[0]) for row in rows if row[0]}
+    values.update(GROUPS)
+    return sorted(values)
+
+
+# ---------------------------------------------------------------------------
 # Utilisateurs
 # ---------------------------------------------------------------------------
 @bp.route("/utilisateurs")
@@ -151,7 +182,7 @@ def users():
         query = query.filter(User.status == status)
     if level:
         query = query.filter(User.study_level == level)
-    if group in GROUPS:
+    if group and 1 <= group <= MAX_GROUP:
         query = query.filter(User.class_group == group)
 
     ordering = {
@@ -169,7 +200,7 @@ def users():
     return render_template(
         "admin/users.html", pagination=pagination, users=pagination.items,
         q=q, role=role, status=status, sort=sort, level=level, group=group,
-        levels=levels or list(DEFAULT_LEVELS), groups=GROUPS,
+        levels=levels or list(DEFAULT_LEVELS), groups=known_groups(),
         role_labels=ROLE_LABELS,
     )
 
@@ -203,8 +234,9 @@ def _read_user_form(user: User | None):
 
     if gender not in ("", "garcon", "fille"):
         return False, "Sexe invalide : choisissez Garçon ou Fille.", user
-    if group_raw and group_raw not in {str(g) for g in GROUPS}:
-        return False, "Le groupe doit être 1, 2 ou 3.", user
+    group_value, group_error = parse_group(group_raw)
+    if group_error:
+        return False, group_error, user
     if number_raw and not (number_raw.isdigit() and 1 <= int(number_raw) <= 999):
         return False, "Le numéro en classe doit être un nombre entre 1 et 999.", user
     if role not in (ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_USER):
@@ -248,7 +280,7 @@ def _read_user_form(user: User | None):
     user.pseudo = pseudo
     user.study_level = study_level
     user.gender = gender
-    user.class_group = int(group_raw) if group_raw else None
+    user.class_group = group_value
     user.class_number = int(number_raw) if number_raw else None
     if user.id is None or not user.password_hash:
         temp_password = generate_password()
@@ -295,7 +327,7 @@ def user_new():
 
     return render_template(
         "admin/user_form.html", mode="create", user=None, error=error, form=form,
-        created=created, levels=list(DEFAULT_LEVELS), genders=GENDERS, groups=GROUPS,
+        created=created, levels=list(DEFAULT_LEVELS), genders=GENDERS, groups=known_groups(),
     )
 
 
@@ -314,6 +346,7 @@ def user_detail(user_id: int):
     return render_template(
         "admin/user_detail.html", user=user, attempts=attempts,
         sessions=sessions, lessons_done=lessons_done, temp_password=None,
+        groups=known_groups(),
     )
 
 
@@ -342,7 +375,7 @@ def user_edit(user_id: int):
               for k in ("full_name", "username", "email", "role", "status", "bio",
                         "last_name", "first_name", "pseudo", "study_level", "gender",
                         "class_group", "class_number")},
-        levels=list(DEFAULT_LEVELS), genders=GENDERS, groups=GROUPS,
+        levels=list(DEFAULT_LEVELS), genders=GENDERS, groups=known_groups(),
         created=None,
     )
 
@@ -359,18 +392,19 @@ def user_class(user_id: int):
     number_raw = (request.form.get("class_number") or "").strip()
     level = (request.form.get("study_level") or "").strip()[:60]
 
-    if group_raw and group_raw not in {str(g) for g in GROUPS}:
-        flash("Le groupe doit être 1, 2 ou 3.", "danger")
-        return redirect(url_for("admin.user_detail", user_id=user.id))
-
     if not g.user.is_super_admin:
         # l'administrateur peut ajuster le numéro et le niveau, pas le groupe
         group_raw = str(user.class_group) if user.class_group else ""
+
+    group_value, group_error = parse_group(group_raw)
+    if group_error:
+        flash(group_error, "danger")
+        return redirect(url_for("admin.user_detail", user_id=user.id))
     if number_raw and not (number_raw.isdigit() and 1 <= int(number_raw) <= 999):
         flash("Le numéro en classe doit être un nombre entre 1 et 999.", "danger")
         return redirect(url_for("admin.user_detail", user_id=user.id))
 
-    user.class_group = int(group_raw) if group_raw else None
+    user.class_group = group_value
     user.class_number = int(number_raw) if number_raw else None
     user.study_level = level
     db.session.commit()
@@ -430,7 +464,7 @@ def user_reset_password(user_id: int):
     sessions = AuthSession.query.filter_by(user_id=user.id).order_by(AuthSession.created_at.desc()).limit(10).all()
     lessons_done = LessonProgress.query.filter_by(user_id=user.id).count()
     return render_template(
-        "admin/user_detail.html", user=user, attempts=attempts, sessions=sessions,
+        "admin/user_detail.html", user=user, attempts=attempts, sessions=sessions, groups=known_groups(),
         lessons_done=lessons_done, temp_password=temp,
     )
 
@@ -1168,6 +1202,127 @@ def battle_refuse(battle_id: int):
 
 
 # ---------------------------------------------------------------------------
+# Questions des battles — l'administrateur et le super administrateur
+# créent des questions et composent le battle (solo ou groupe)
+# ---------------------------------------------------------------------------
+BATTLE_BANK_TITLE = "Banque de questions Battle"
+BATTLE_MIN_QUESTIONS = 1
+
+
+def _battle_bank() -> Exercise:
+    """Exercice « brouillon » qui recueille les questions créées pour les battles."""
+    exercise = Exercise.query.filter_by(title=BATTLE_BANK_TITLE).first()
+    if exercise is None:
+        exercise = Exercise(
+            title=BATTLE_BANK_TITLE, kind="exercise", published=False,
+            description="Questions écrites depuis l'écran de composition des battles.",
+            created_by=g.user.id if g.user else None,
+        )
+        db.session.add(exercise)
+        db.session.flush()
+    return exercise
+
+
+def _battle_question_items(search: str = "") -> list[dict]:
+    """Banque de questions jouables (au moins deux propositions)."""
+    rows = (
+        Question.query.options(joinedload(Question.exercise), joinedload(Question.options))
+        .join(Exercise, Question.exercise_id == Exercise.id)
+        .order_by(Exercise.title, Question.order_index, Question.id)
+        .all()
+    )
+    needle = search.lower()
+    items = []
+    for question in rows:
+        if len(question.options) < 2:
+            continue
+        if needle and needle not in question.text.lower():
+            continue
+        correct = question.correct_option
+        items.append({
+            "question": question,
+            "exercise": question.exercise,
+            "correct": correct.text if correct else "—",
+        })
+    return items
+
+
+@bp.route("/battles/<int:battle_id>/questions", methods=["GET", "POST"])
+@admin_required
+def battle_questions(battle_id: int):
+    """Composer les questions d'une battle : choisir dans la banque ou en créer."""
+    room = db.session.get(BattleRoom, battle_id) or abort(404)
+    if room.status not in ("pending", "lobby"):
+        flash("Les questions ne sont modifiables qu'avant le démarrage de la battle.", "info")
+        return redirect(url_for("admin.battles"))
+
+    if request.method == "POST":
+        action = request.form.get("action") or "save"
+
+        if action == "create":
+            text = (request.form.get("text") or "").strip()
+            options = [(request.form.get(f"option_{i}") or "").strip() for i in range(1, 5)]
+            correct = request.form.get("correct", type=int)
+            if len(text) < 5:
+                flash("L'énoncé de la question est trop court (5 caractères minimum).", "danger")
+            elif sum(1 for option in options if option) < 2:
+                flash("Ajoutez au moins deux propositions.", "danger")
+            elif correct is None or not 1 <= correct <= 4 or not options[correct - 1]:
+                flash("Indiquez la bonne réponse parmi les propositions remplies.", "danger")
+            else:
+                exercise_id = request.form.get("exercise_id", type=int)
+                target = db.session.get(Exercise, exercise_id) if exercise_id else None
+                target = target or _battle_bank()
+                question = Question(
+                    exercise_id=target.id,
+                    text=text,
+                    explanation=(request.form.get("explanation") or "").strip(),
+                    points=max(1, min(10, request.form.get("points", type=int) or 1)),
+                    order_index=len(target.questions) + 1,
+                )
+                db.session.add(question)
+                db.session.flush()
+                for index, option_text in enumerate(options, start=1):
+                    if option_text:
+                        db.session.add(Option(question_id=question.id, text=option_text[:400],
+                                              is_correct=(index == correct), order_index=index))
+                ids = room.qids()
+                if question.id not in ids:
+                    ids.append(question.id)
+                room.question_ids = ",".join(str(i) for i in ids)
+                room.question_count = len(ids)
+                db.session.commit()
+                log_audit("battle.question_created", target=room.code,
+                          details=f"question={question.id}, exercice={target.id}")
+                flash("Question créée et ajoutée à la battle.", "success")
+            return redirect(url_for("admin.battle_questions", battle_id=room.id))
+
+        # action == "save" : sélection dans la banque existante
+        ids: list[int] = []
+        for value in request.form.getlist("question_id"):
+            if value.isdigit() and int(value) not in ids:
+                ids.append(int(value))
+        if len(ids) < BATTLE_MIN_QUESTIONS:
+            flash("Choisissez au moins une question pour la battle.", "danger")
+            return redirect(url_for("admin.battle_questions", battle_id=room.id))
+
+        room.question_ids = ",".join(str(i) for i in ids)
+        room.question_count = len(ids)
+        db.session.commit()
+        log_audit("battle.questions_saved", target=room.code, details=f"{len(ids)} question(s)")
+        flash(f"{len(ids)} question(s) enregistrée(s) pour la battle.", "success")
+        return redirect(url_for("admin.battle_questions", battle_id=room.id))
+
+    search = (request.args.get("q") or "").strip()
+    return render_template(
+        "admin/battle_questions.html", room=room, q=search,
+        items=_battle_question_items(search), selected=set(room.qids()),
+        exercises=Exercise.query.order_by(Exercise.title).all(),
+        bank_title=BATTLE_BANK_TITLE,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Paramètres et sauvegardes
 # ---------------------------------------------------------------------------
 @bp.route("/parametres", methods=["GET", "POST"])
@@ -1423,7 +1578,7 @@ def class_list():
     """Liste de classe imprimable : groupe, numéro, identité et note /20."""
     rows = student_rows(sort="groupe")
     grouped = []
-    for group in GROUPS:
+    for group in sorted({r["user"].class_group for r in rows if r["user"].class_group}):
         members = [r for r in rows if r["user"].class_group == group]
         if members:
             grouped.append({"label": f"Groupe {group}", "rows": members})

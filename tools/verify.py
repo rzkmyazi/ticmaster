@@ -310,10 +310,16 @@ def main() -> int:
     detail = sa.get(BASE + f"/admin/utilisateurs/{eleve_id}").text
     ok("groupe mis à jour", "Groupe 1" in detail)
 
+    # numéro de groupe libre : 9 est accepté par le super administrateur
     r = sa.post(BASE + f"/admin/utilisateurs/{eleve_id}/classe",
                 data={"csrf_token": token, "class_group": "9"}, allow_redirects=False)
     detail = sa.get(BASE + f"/admin/utilisateurs/{eleve_id}").text
-    ok("groupe hors bornes refusé", "Groupe 1" in detail)
+    ok("numéro de groupe libre accepté (groupe 9)", 'badge-info">Groupe 9</span>' in detail)
+
+    r = sa.post(BASE + f"/admin/utilisateurs/{eleve_id}/classe",
+                data={"csrf_token": token, "class_group": "100"}, allow_redirects=False)
+    detail = sa.get(BASE + f"/admin/utilisateurs/{eleve_id}").text
+    ok("groupe hors bornes refusé (100)", 'badge-info">Groupe 9</span>' in detail)
 
     csv_body = sa.get(BASE + "/admin/utilisateurs/export.csv").text
     ok("export CSV avec les colonnes du dossier",
@@ -381,19 +387,19 @@ def main() -> int:
     u.post(BASE + "/mon-profil/photo", data={"csrf_token": token, "action": "remove"})
     ok("photo de profil : retrait possible", u.get(BASE + avatar_path).status_code == 404)
     ok("photo de profil : retour aux initiales",
-       'class="avatar-img"' not in u.get(BASE + "/mon-profil", timeout=20).text)
+       avatar_path not in u.get(BASE + "/mon-profil", timeout=20).text)
 
-    # groupe : réservé au super administrateur
+    # groupe : réservé au super administrateur, numéro libre
     form = sa.get(BASE + f"/admin/utilisateurs/{eleve_id}/modifier", timeout=20).text
-    ok("dossier scolaire : sélecteur de groupe pour le super administrateur",
-       'name="class_group"' in form and 'id="class_group"' in form)
+    ok("dossier scolaire : champ de groupe pour le super administrateur",
+       'name="class_group"' in form and 'id="class_group"' in form and 'max="99"' in form)
     token = csrf(a, "/admin/utilisateurs")
     a.post(BASE + f"/admin/utilisateurs/{eleve_id}/classe",
            data={"csrf_token": token, "class_group": "3", "class_number": "14",
                  "study_level": "Terminale"}, allow_redirects=False)
     after = sa.get(BASE + f"/admin/utilisateurs/{eleve_id}", timeout=20).text
     ok("groupe inchangé par un administrateur",
-       'badge-info">Groupe 1</span>' in after and 'badge-info">Groupe 3</span>' not in after)
+       'badge-info">Groupe 9</span>' in after and 'badge-info">Groupe 3</span>' not in after)
     ok("fiche élève : groupe en lecture seule pour un administrateur",
        "readonly" in a.get(BASE + f"/admin/utilisateurs/{eleve_id}", timeout=20).text)
     token = csrf(sa, "/admin/utilisateurs")
@@ -590,6 +596,46 @@ def main() -> int:
         ok("acceptation de la demande par le super administrateur", accepted,
            "" if matching_ids else "demande introuvable dans la liste")
 
+        # --- composition des questions par l'administration
+        page = sa.get(BASE + "/admin/battles")
+        row = next((segment for segment in page.text.split("<tr") if code in segment), "")
+        q_link = re.search(r"/admin/battles/(\d+)/questions", row)
+        ok("lien « questions » du battle pour l'administration", bool(q_link))
+        created_ids: list[str] = []
+        if q_link:
+            battle_id = q_link.group(1)
+            editor = sa.get(BASE + f"/admin/battles/{battle_id}/questions")
+            ok("écran de composition des questions", editor.status_code == 200,
+               str(editor.status_code))
+            ok("formulaire « Créer une question »", "Créer une question" in editor.text)
+            before_ids = set(re.findall(r'name="question_id" value="(\d+)"', editor.text))
+            ok("banque de questions disponible", len(before_ids) > 0,
+               f"{len(before_ids)} question(s)")
+            token_q = csrf(sa, "/admin/battles")
+            picked = sorted(before_ids)[:2]
+            sa.post(BASE + f"/admin/battles/{battle_id}/questions",
+                    data={"csrf_token": token_q, "action": "save", "question_id": picked},
+                    allow_redirects=False)
+            saved = sa.get(BASE + f"/admin/battles/{battle_id}/questions").text
+            checked = re.findall(r'name="question_id" value="(\d+)"[^>]*checked', saved)
+            ok("sélection de questions enregistrée", len(checked) == len(picked),
+               f"{len(checked)} cochée(s)")
+            sa.post(BASE + f"/admin/battles/{battle_id}/questions",
+                    data={"csrf_token": token_q, "action": "create",
+                          "text": "Question de contrôle (vérification automatique)",
+                          "option_1": "Bonne réponse", "option_2": "Mauvaise réponse",
+                          "correct": "1", "points": "1"}, allow_redirects=False)
+            after_create = sa.get(BASE + f"/admin/battles/{battle_id}/questions").text
+            ok("question créée et ajoutée au battle",
+               "Question de contrôle (vérification automatique)" in after_create)
+            created_ids = sorted(
+                set(re.findall(r'name="question_id" value="(\d+)"', after_create)) - before_ids
+            )
+            ok("question enregistrée dans la banque", len(created_ids) == 1, str(created_ids))
+            ok("composition des questions interdite à un élève",
+               p.get(BASE + f"/admin/battles/{battle_id}/questions",
+                     allow_redirects=False).status_code in (403, 302))
+
         r = p.post(BASE + "/api/battle/start", json={"code": code},
                    headers={"X-CSRF-Token": token})
         ok("démarrage de la battle après validation", r.status_code == 200, r.text[:80])
@@ -601,6 +647,13 @@ def main() -> int:
         r = p.post(BASE + "/api/battle/rename", json={"code": code, "name": "Autre nom"},
                    headers={"X-CSRF-Token": token})
         ok("renommage d'une battle solo refusé", r.status_code == 400, str(r.status_code))
+
+        # nettoyage : les questions créées pour la vérification sont retirées
+        if created_ids:
+            token_q = csrf(sa, "/admin/battles")
+            for question_id in created_ids:
+                sa.post(BASE + f"/admin/questions/{question_id}/supprimer",
+                        data={"csrf_token": token_q}, allow_redirects=False)
 
     # ------------------------------------------------------------ fil social
     print("▸ Fil d'actualité du profil")

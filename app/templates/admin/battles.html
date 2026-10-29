@@ -7,7 +7,7 @@
 {% block content %}
 <div class="alert alert-info mb-2">
   {{ icon('info') }}
-  <span>Une battle demandée par un élève reste bloquée jusqu'à votre décision. Seuls l'administrateur et le super administrateur peuvent l'accepter ou la refuser.</span>
+  <span>Une battle demandée par un élève reste bloquée jusqu'à votre décision. Seuls l'administrateur et le super administrateur peuvent l'accepter, la refuser et <strong>choisir les questions</strong> du battle (solo ou groupe).</span>
 </div>
 
 <section class="card mb-2">
@@ -18,7 +18,7 @@
   {% if pending %}
   <div class="table-wrap">
     <table class="data">
-      <thead><tr><th>Battle</th><th>Mode</th><th>Demandée par</th><th>Code</th><th>Date</th><th class="ta-right">Décision</th></tr></thead>
+      <thead><tr><th>Battle</th><th>Mode</th><th>Demandée par</th><th>Code</th><th>Questions</th><th>Date</th><th class="ta-right">Décision</th></tr></thead>
       <tbody>
         {% for room in pending %}
         <tr>
@@ -31,6 +31,10 @@
           <td><span class="badge badge-{{ 'info' if room.mode == 'solo' else 'accent' }}">{{ 'Solo' if room.mode == 'solo' else 'Groupe' }}</span></td>
           <td class="text-sm">{{ room.owner.full_name or room.owner.username }}<br><small class="text-muted">@{{ room.owner.username }}</small></td>
           <td><code>{{ room.code }}</code></td>
+          <td>
+            <a class="badge badge-info" href="{{ url_for('admin.battle_questions', battle_id=room.id) }}"
+               title="Choisir ou créer les questions">{{ icon('layers', 13) }} {{ room.question_count }}</a>
+          </td>
           <td class="text-xs text-muted">{{ fmt_dt(room.created_at) }}</td>
           <td class="ta-right">
             <div class="row" style="justify-content:flex-end;gap:.35rem;flex-wrap:wrap">
@@ -61,7 +65,7 @@
   <div class="card-head"><h2 class="card-title">{{ icon('play') }} Battles ouvertes</h2></div>
   <div class="table-wrap">
     <table class="data">
-      <thead><tr><th>Battle</th><th>Mode</th><th>Statut</th><th>Code</th><th>Participants</th><th>Créée</th></tr></thead>
+      <thead><tr><th>Battle</th><th>Mode</th><th>Statut</th><th>Code</th><th>Questions</th><th>Participants</th><th>Créée</th></tr></thead>
       <tbody>
         {% for room in active %}
         <tr>
@@ -69,6 +73,14 @@
           <td>{{ 'Solo' if room.mode == 'solo' else 'Groupe' }}</td>
           <td><span class="badge badge-{{ 'success' if room.status == 'running' else 'info' }}">{{ 'En cours' if room.status == 'running' else 'Salon ouvert' }}</span></td>
           <td><code>{{ room.code }}</code></td>
+          <td>
+            {% if room.status == 'lobby' %}
+            <a class="badge badge-info" href="{{ url_for('admin.battle_questions', battle_id=room.id) }}"
+               title="Choisir ou créer les questions">{{ icon('layers', 13) }} {{ room.question_count }}</a>
+            {% else %}
+            <span class="badge badge-neutral">{{ icon('layers', 13) }} {{ room.question_count }}</span>
+            {% endif %}
+          </td>
           <td>{{ room.members|length }}</td>
           <td class="text-xs text-muted">{{ fmt_dt(room.created_at) }}</td>
         </tr>

@@ -134,14 +134,43 @@ Détails techniques :
 
 ---
 
+## 10. Vague 5 — Questions des battles & groupes libres — ✔
+
+### 10.1 L'administrateur et le super administrateur créent les questions des battles
+
+| Étape | Où | Détail |
+|---|---|---|
+| 1 | **Administration → Battles à valider** (`/admin/battles`) | chaque demande (solo **ou groupe**) affiche une colonne **Questions** avec le nombre |
+| 2 | Clic sur le badge **Questions** | écran **Questions de la battle** (`/admin/battles/<id>/questions`) |
+| 3 | Colonne de gauche | cocher les questions existantes dans la banque (recherche, « tout cocher »), puis **Enregistrer la sélection** |
+| 4 | Colonne de droite | **Créer une question** : énoncé, 2 à 4 propositions, bonne réponse, points, explication — elle est **ajoutée immédiatement** à la battle |
+| 5 | | Accepter la demande, puis l'élève démarre la battle : **ce sont ces questions qui sont posées** |
+
+- Accessible à **l'administrateur** et au **super administrateur** (`admin_required`) ; un élève reçoit **403**.
+- Modifiable **uniquement avant le démarrage** (sinon retour à la liste avec un message).
+- Les questions créées depuis cet écran sont rangées dans l'exercice brouillon « **Banque de questions Battle** » (invisible pour les élèves), ou dans l'exercice de votre choix.
+- Les questions déjà créées dans *Administration → Exercices* sont utilisables aussi : la banque les propose toutes (au moins 2 propositions requises).
+
+### 10.2 Le groupe du dossier scolaire accepte n'importe quel numéro
+
+| Avant | Maintenant |
+|---|---|
+| seulement 1, 2 ou 3 | **1, 2, 3… jusqu'à 99** — le super administrateur saisit le numéro qu'il veut |
+
+- Champ **numérique avec suggestions** (1, 2, 3 + tous les groupes déjà utilisés) dans le formulaire d'inscription et dans la fiche élève.
+- La **liste de classe**, l'**export CSV**, les **filtres** et les **bulletins** affichent automatiquement « Groupe 4 », « Groupe 12 »…
+- Contrôle serveur : `0`, `100` ou une valeur non numérique sont **refusés** (message explicite) ; un **administrateur** ne peut toujours pas changer le groupe (lecture seule).
+
+---
+
 ## Vérifications automatiques
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **46 tests réussis** |
-| `tools/verify.py` (local) | **150 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **151 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **151 contrôles conformes, 0 échec** |
+| `pytest -q` | **48 tests réussis** |
+| `tools/verify.py` (local) | **159 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | *(mesuré après déploiement — voir `docs/VERIFICATION.md`)* |
+| `tools/verify.py` sur PythonAnywhere | *(idem)* |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.
