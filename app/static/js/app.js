@@ -170,7 +170,20 @@
   }
 
   /* ---------- État de chargement des formulaires ---------- */
+  function resetFormButtons() {
+    // Android : au retour depuis l'historique (bfcache), un bouton déjà cliqué
+    // resterait grisé — on le réactive systématiquement.
+    $$("form .btn.is-loading, form button[type=submit][disabled]").forEach(function (btn) {
+      btn.disabled = false;
+      btn.classList.remove("is-loading");
+    });
+  }
+
   function initForms() {
+    window.addEventListener("pageshow", resetFormButtons);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") resetFormButtons();
+    });
     $$("form").forEach(function (form) {
       if (form.hasAttribute("data-no-loading")) return;
       on(form, "submit", function () {

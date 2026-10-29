@@ -87,7 +87,7 @@ def manifest():
 def service_worker():
     """Service worker minimal : coquille applicative hors-ligne, sans mise en cache des pages privées."""
     js = """
-const CACHE = 'ticmaster-v1';
+const CACHE = 'ticmaster-v2';
 const ASSETS = [
   '/static/css/app.css',
   '/static/js/app.js',
@@ -110,12 +110,17 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== location.origin) return;
   // Jamais de cache pour les pages dynamiques et l'API
   if (!url.pathname.startsWith('/static/')) return;
+  // « stale-while-revalidate » : la version en cache s'affiche tout de suite et la
+  // nouvelle (nouveau design mobile) est téléchargée en arrière-plan pour la visite suivante.
   event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request).then((response) => {
-      const copy = response.clone();
-      caches.open(CACHE).then((cache) => cache.put(request, copy));
-      return response;
-    }))
+    caches.match(request).then((cached) => {
+      const network = fetch(request).then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE).then((cache) => cache.put(request, copy));
+        return response;
+      }).catch(() => cached);
+      return cached || network;
+    })
   );
 });
 """

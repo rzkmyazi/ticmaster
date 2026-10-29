@@ -1128,3 +1128,60 @@ def test_questions_dune_battle_composees_par_ladmin(app):
         db.session.get(BattleRoom, room_id).status = "running"
         db.session.commit()
     assert admin.get(f"/admin/battles/{room_id}/questions").status_code == 302
+
+
+# ---------------------------------------------------------------------------
+# Vague 6 : confort Android (barre d'onglets, connexion tactile)
+# ---------------------------------------------------------------------------
+def test_barre_donglets_mobile(app):
+    _make_user(app, "apprenant")
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    _make_user(app, "modo", role=ROLE_ADMIN)
+    mobile = {"User-Agent": "Mozilla/5.0 (Linux; Android 14; Pixel 7) Mobile Safari/537.36"}
+
+    student = app.test_client()
+    _login(student, "apprenant", "MotDePasse2026!")
+    page = student.get("/espace", headers=mobile).get_data(as_text=True)
+    assert 'class="mobile-tabs"' in page
+    assert 'class="mobile-tab is-active" href="/espace"' in page
+    for label in ("Accueil", "Cours", "Exercices", "Battle", "Messages", "Profil"):
+        assert f'>{label}<' in page
+    # chaque onglet pointe vers une vraie page
+    assert 'href="/cours"' in page and 'href="/exercices"' in page and 'href="/battle"' in page
+
+    # l'onglet correspondant à la page courante est mis en avant
+    assert 'class="mobile-tab is-active" href="/battle"' in student.get("/battle", headers=mobile).get_data(as_text=True)
+
+    # le super administrateur a son propre jeu d'onglets (notes, élèves)
+    chief = app.test_client()
+    _login(chief, "chef", "MotDePasse2026!")
+    admin_page = chief.get("/admin/bulletins", headers=mobile).get_data(as_text=True)
+    assert 'href="/admin/utilisateurs"' in admin_page
+    # la page courante (Bulletins) est rattachée à l'onglet « Notes »
+    assert 'class="mobile-tab is-active" href="/admin/notes"' in admin_page
+
+    # un administrateur simple n'a pas les onglets du super administrateur
+    admin = app.test_client()
+    _login(admin, "modo", "MotDePasse2026!")
+    modest = admin.get("/admin/", headers=mobile).get_data(as_text=True)
+    assert 'href="/admin/utilisateurs"' in modest
+    assert 'class="mobile-tab is-active" href="/admin/notes"' not in modest
+
+    # la page publique de connexion n'affiche pas la barre d'onglets
+    public = app.test_client().get("/auth/connexion", headers=mobile).get_data(as_text=True)
+    assert 'class="mobile-tabs"' not in public
+
+
+def test_connexion_confortable_sur_android(app):
+    html = app.test_client().get("/auth/connexion").get_data(as_text=True)
+    # plus de clavier virtuel imposé : le focus est géré par un script (pointer: coarse)
+    assert "autofocus" not in html.split("<script")[0].replace("data-autofocus", "")
+    assert "data-autofocus" in html
+    assert 'enterkeyhint="next"' in html and 'enterkeyhint="go"' in html
+    assert "pointer: coarse" in html
+
+    css = app.test_client().get("/static/css/app.css").get_data(as_text=True)
+    assert ".mobile-tabs" in css and ".mobile-tab.is-active" in css
+    assert "env(safe-area-inset-bottom)" in css      # encoche et barre gestuelle
+    assert "font-size: 16px" in css                  # pas de zoom automatique des champs
+    assert "display: none !important" in css         # l'attribut hidden gagne toujours

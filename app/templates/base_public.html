@@ -4,6 +4,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TIC MASTER">
+<meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#060b18">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>{% block title %}{{ site_name }} — Apprendre les TIC{% endblock %}</title>
@@ -45,7 +49,7 @@
       {{ toggle_theme() }}
       {% if current_user %}
         <a class="btn btn--primary btn--sm" href="{{ url_for('admin.dashboard') if current_user.is_admin else url_for('user.dashboard') }}">{{ icon('grid', 15) }} Mon espace</a>
-      {% else %}
+      {% elif request.endpoint != 'auth.login' %}
         <a class="btn btn--primary btn--sm" href="{{ url_for('auth.login') }}">{{ icon('lock', 15) }} Se connecter</a>
       {% endif %}
     </span>

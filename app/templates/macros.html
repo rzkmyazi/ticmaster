@@ -3,6 +3,9 @@
    ========================================================================== #}
 
 {% macro icon(name, size=20, cls='') -%}
+{#- tolérant : icon('users', 'stat-icon') applique une classe au lieu d'une taille -#}
+{%- if size is string -%}{% set cls = (cls ~ ' ' ~ size)|trim %}{% set size = 20 %}{%- endif -%}
+{%- if not size -%}{% set size = 20 %}{%- endif -%}
 <svg class="ic {{ cls }}" width="{{ size }}" height="{{ size }}" aria-hidden="true" focusable="false"><use href="#i-{{ name }}"></use></svg>
 {%- endmacro %}
 

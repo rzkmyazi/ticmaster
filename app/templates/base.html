@@ -4,6 +4,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TIC MASTER">
+<meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#060b18">
 <meta name="description" content="TIC MASTER — plateforme d'apprentissage des Technologies de l'Information et de la Communication.">
 <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -166,6 +170,51 @@
     <span>Apprentissage des TIC · {{ site_name }}</span>
   </footer>
 </div>
+
+
+{# --------- Navigation rapide Android (barre d'onglets en bas) --------- #}
+<nav class="mobile-tabs" aria-label="Navigation rapide">
+  {% if current_user.is_super_admin %}
+  <a class="mobile-tab{{ ' is-active' if request.endpoint == 'admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}">
+    <span class="mobile-tab-icon">{{ icon('home', 21) }}</span><span class="mobile-tab-label">Accueil</span>
+  </a>
+  <a class="mobile-tab{{ ' is-active' if request.endpoint in ['admin.users', 'admin.user_detail', 'admin.user_new', 'admin.user_edit'] }}" href="{{ url_for('admin.users') }}">
+    <span class="mobile-tab-icon">{{ icon('users', 21) }}</span><span class="mobile-tab-label">Élèves</span>
+  </a>
+  <a class="mobile-tab{{ ' is-active' if request.endpoint in ['admin.grades', 'admin.bulletins', 'admin.student_sheet', 'admin.class_list', 'admin.statistics'] }}" href="{{ url_for('admin.grades') }}">
+    <span class="mobile-tab-icon">{{ icon('award', 21) }}</span><span class="mobile-tab-label">Notes</span>
+  </a>
+  {% elif current_user.is_admin %}
+  <a class="mobile-tab{{ ' is-active' if request.endpoint == 'admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}">
+    <span class="mobile-tab-icon">{{ icon('home', 21) }}</span><span class="mobile-tab-label">Accueil</span>
+  </a>
+  <a class="mobile-tab{{ ' is-active' if request.endpoint in ['admin.users', 'admin.user_detail', 'admin.user_new', 'admin.user_edit'] }}" href="{{ url_for('admin.users') }}">
+    <span class="mobile-tab-icon">{{ icon('users', 21) }}</span><span class="mobile-tab-label">Élèves</span>
+  </a>
+  <a class="mobile-tab{{ ' is-active' if request.endpoint in ['admin.modules', 'admin.module_edit', 'admin.lesson_edit', 'admin.exercises', 'admin.exercise_edit'] }}" href="{{ url_for('admin.modules') }}">
+    <span class="mobile-tab-icon">{{ icon('book-open', 21) }}</span><span class="mobile-tab-label">Cours</span>
+  </a>
+  {% else %}
+  <a class="mobile-tab{{ ' is-active' if request.endpoint == 'user.dashboard' }}" href="{{ url_for('user.dashboard') }}">
+    <span class="mobile-tab-icon">{{ icon('home', 21) }}</span><span class="mobile-tab-label">Accueil</span>
+  </a>
+  <a class="mobile-tab{{ ' is-active' if request.endpoint in ['learning.catalog', 'learning.module_detail', 'learning.lesson'] }}" href="{{ url_for('learning.catalog') }}">
+    <span class="mobile-tab-icon">{{ icon('book', 21) }}</span><span class="mobile-tab-label">Cours</span>
+  </a>
+  <a class="mobile-tab{{ ' is-active' if request.endpoint == 'learning.exercises' }}" href="{{ url_for('learning.exercises') }}">
+    <span class="mobile-tab-icon">{{ icon('clipboard', 21) }}</span><span class="mobile-tab-label">Exercices</span>
+  </a>
+  <a class="mobile-tab{{ ' is-active' if request.endpoint in ['social.battle_home', 'social.battle_room'] }}" href="{{ url_for('social.battle_home') }}">
+    <span class="mobile-tab-icon">{{ icon('zap', 21) }}</span><span class="mobile-tab-label">Battle</span>
+  </a>
+  {% endif %}
+  <a class="mobile-tab{{ ' is-active' if request.endpoint == 'social.messages' }}" href="{{ url_for('social.messages') }}">
+    <span class="mobile-tab-icon">{{ icon('message', 21) }}</span><span class="mobile-tab-label">Messages</span>
+  </a>
+  <a class="mobile-tab{{ ' is-active' if request.endpoint in ['user.profile', 'user.history', 'user.announcements'] }}" href="{{ url_for('user.profile') }}">
+    <span class="mobile-tab-icon">{{ avatar(current_user, 'xs') }}</span><span class="mobile-tab-label">Profil</span>
+  </a>
+</nav>
 
 <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
 

@@ -41,15 +41,15 @@
         <div class="field">
           <label for="identifier">Identifiant ou nom d'utilisateur</label>
           <input type="text" id="identifier" name="identifier" value="{{ identifier or '' }}"
-                 autocomplete="username" autocapitalize="none" spellcheck="false"
-                 placeholder="Ex. apprenant" required autofocus>
+                 autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"
+                 enterkeyhint="next" placeholder="Ex. apprenant" required data-autofocus>
         </div>
 
         <div class="field">
           <label for="password">Mot de passe</label>
           <div class="input-group">
             <input type="password" id="password" name="password" autocomplete="current-password"
-                   placeholder="••••••••" required>
+                   enterkeyhint="go" placeholder="••••••••" required>
             <button type="button" class="pw-toggle" data-pw-toggle aria-label="Afficher le mot de passe">
               <span class="pw-off">{{ icon('eye') }}</span>
               <span class="pw-on" hidden>{{ icon('eye-off') }}</span>
@@ -67,6 +67,10 @@
         </button>
       </form>
 
+      <noscript>
+        <p class="auth-note">{{ icon('info') }} JavaScript est désactivé : la connexion fonctionne normalement.</p>
+      </noscript>
+
       <p class="auth-note">
         {{ icon('info') }} Vous n'avez pas de compte ?<br>
         Les comptes sont créés <strong>exclusivement par l'administration</strong>.<br>
@@ -74,4 +78,25 @@
       </p>
 </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    // Sur Android / tablette tactile : pas de clavier virtuel ouvert d'office,
+    // il masquerait le bouton « Se connecter ». Le focus reste automatique sur ordinateur.
+    var field = document.querySelector("[data-autofocus]");
+    var touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    if (field && !touch) {
+      try { field.focus(); } catch (e) {}
+    }
+    // Retour arrière depuis le navigateur : on réactive le bouton de connexion
+    window.addEventListener("pageshow", function () {
+      document.querySelectorAll("form .btn.is-loading, form .btn[disabled]").forEach(function (btn) {
+        btn.disabled = false;
+        btn.classList.remove("is-loading");
+      });
+    });
+  })();
+</script>
 {% endblock %}

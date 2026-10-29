@@ -755,6 +755,38 @@ def main() -> int:
     ok("déconnexion", r.status_code == 302, str(r.status_code))
     ok("session révoquée", p.get(BASE + "/espace", allow_redirects=False).status_code == 302)
 
+    # ------------------------------------------------- vue Android / mobile
+    print("▸ Vue Android (barre d'onglets, connexion tactile)")
+    mobile = {"User-Agent": ("Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 "
+                             "(KHTML, like Gecko) Chrome/124 Mobile Safari/537.36")}
+    page = u.get(BASE + "/espace", headers=mobile, timeout=20).text
+    ok("barre d'onglets en bas de l'écran", 'class="mobile-tabs"' in page)
+    ok("onglets de l'élève : accueil, cours, exercices, battle, messages, profil",
+       all(f'>{label}<' in page for label in
+           ("Accueil", "Cours", "Exercices", "Battle", "Messages", "Profil")))
+    ok("onglet de la page courante mis en avant",
+       'class="mobile-tab is-active" href="/espace"' in page)
+    page_battle = u.get(BASE + "/battle", headers=mobile, timeout=20).text
+    ok("onglet Battle actif sur la page Battle",
+       'class="mobile-tab is-active" href="/battle"' in page_battle)
+    page_admin = sa.get(BASE + "/admin/bulletins", headers=mobile, timeout=20).text
+    ok("onglets du super administrateur (élèves, notes)",
+       'href="/admin/utilisateurs"' in page_admin
+       and 'class="mobile-tab is-active" href="/admin/notes"' in page_admin)
+    page_modo = a.get(BASE + "/admin/", headers=mobile, timeout=20).text
+    ok("pas d'onglet « Notes » réservé au super administrateur",
+       'class="mobile-tab is-active" href="/admin/notes"' not in page_modo)
+    login_page = requests.get(BASE + "/auth/connexion", headers=mobile, timeout=20).text
+    ok("aucune barre d'onglets sur la page de connexion", 'class="mobile-tabs"' not in login_page)
+    ok("connexion : clavier virtuel non imposé (data-autofocus + pointer: coarse)",
+       "data-autofocus" in login_page and "pointer: coarse" in login_page
+       and 'enterkeyhint="go"' in login_page)
+    css = requests.get(BASE + "/static/css/app.css", timeout=30).text
+    ok("CSS mobile : marges de sécurité, champs 16 px, zone tactile",
+       "env(safe-area-inset-bottom)" in css and "font-size: 16px" in css
+       and "[hidden] { display: none !important; }" in css)
+    ok("CSS mobile : aucun débordement horizontal prévu", "overflow-wrap: anywhere" in css)
+
     # -------------------------------------------------------------- nettoyage
     print("▸ Nettoyage des comptes de test")
     removed = cleanup_accounts(sa)

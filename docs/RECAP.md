@@ -163,14 +163,40 @@ Détails techniques :
 
 ---
 
+## 11. Vague 6 — Vue Android améliorée & connexion sans changement d'onglet — ✔
+
+### 11.1 Le site est pensé pour le téléphone
+
+| Amélioration | Détail |
+|---|---|
+| **Barre d'onglets fixe en bas** | Nouvelle navigation rapide, toujours visible, avec l'onglet de la page courante surligné : **Accueil · Cours · Exercices · Battle · Messages · Profil** (élève) et **Accueil · Élèves · Notes · Messages · Profil** (super administrateur ; **Accueil · Élèves · Cours** pour un administrateur). |
+| **Zones tactiles** | Boutons, liens de menu, onglets et icônes font au moins **44 px** de haut ; le menu latéral devient un tiroir lisible (48 px par lien). |
+| **Champs sans zoom** | Tous les champs passent à **16 px** sur mobile : Android ne zoome plus automatiquement quand on tape, la page ne « saute » plus. |
+| **Encoche et barre gestuelle** | Marges de sécurité (`env(safe-area-inset-…)`) en haut et en bas : rien n'est masqué par la barre de navigation du téléphone. |
+| **Lisibilité** | Barre du haut compacte (le sous-titre n'occupe plus 3 lignes), cartes de statistiques en **2 colonnes** dès 360 px, icônes réduites, actions de page sur deux colonnes. |
+| **Tableaux** | Défilement horizontal fluide avec repère visuel ; aucun débordement horizontal sur les pages testées (0 px). |
+| **Confort** | `100dvh` (plus de barre d'adresse qui coupe le contenu), pas d'effet de survol collant au doigt, boutons réactivés au retour depuis l'historique Android. |
+| **Installation** | Métadonnées « mobile web app » : ajout à l'écran d'accueil depuis Chrome, ouverture plein écran via le manifeste. |
+| **Mise à jour visible** | Service worker en version 2 (stale-while-revalidate) : un nouveau design arrive **dès la deuxième visite**, sans vider le cache à la main. |
+
+### 11.2 Page de connexion : plus de changement d'onglet
+
+- Le module d'authentification forçait le clavier du téléphone à s'ouvrir : la page se décalait et le bouton **Se connecter** passait sous le clavier → impression de « changement d'onglet ». Le focus automatique est désormais réservé aux écrans avec souris ; sur tactile, la page reste **parfaitement stable**.
+- Le bouton **« Se connecter »** du menu public est masqué lorsque l'on est **déjà** sur la connexion (plus de doublon en haut et au milieu).
+- Le clavier affiche **« suivant »** puis **« go »** : la touche Entrée enchaîne identifiant → mot de passe → connexion.
+- Titre et logo de la page restaurés : le logo animé (anneau + pastille) est de nouveau visible à côté de « Connexion », sur une seule ligne, sans texte coupé.
+- Aucune barre d'onglets sur les écrans publics : la connexion reste une page isolée.
+
+---
+
 ## Vérifications automatiques
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **48 tests réussis** |
-| `tools/verify.py` (local) | **159 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **160 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **160 contrôles conformes, 0 échec** |
+| `pytest -q` | **50 tests réussis** |
+| `tools/verify.py` (local) | **169 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | *(mesuré après déploiement)* |
+| `tools/verify.py` sur PythonAnywhere | *(idem)* |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.

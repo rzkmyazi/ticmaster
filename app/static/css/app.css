@@ -392,6 +392,9 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 1.4rem 0; }
 }
 .avatar-dot--online { background: var(--green); box-shadow: 0 0 0 3px rgba(52, 211, 153, .18); }
 
+/* L'attribut HTML « hidden » l'emporte toujours sur les styles d'affichage */
+[hidden] { display: none !important; }
+
 /* ---------- 7. Formulaires ---------- */
 .field { display: block; margin-bottom: 1rem; }
 .field-label { display: block; font-size: .82rem; font-weight: 650; color: var(--text-2); margin-bottom: .35rem; }
@@ -998,7 +1001,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: .86rem; min-wid
 }
 @media (max-width: 480px) {
   .grid-4 { grid-template-columns: 1fr; }
-  .stats-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
   .content { padding: .9rem; }
   .card { padding: .9rem; border-radius: var(--radius); }
   .page-title { font-size: 1.2rem; }
@@ -1102,7 +1105,8 @@ a.module-card:hover { color: inherit; }
 
 /* Statistiques (ancienne nomenclature) */
 .stat { padding: 1rem 1.05rem; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); position: relative; overflow: hidden; }
-.stat-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: var(--accent-soft); color: var(--accent); margin-bottom: .6rem; }
+.stat-icon { display: grid; place-items: center; flex: none; width: 38px; height: 38px; padding: 8px; border-radius: 11px; background: var(--accent-soft); color: var(--accent); margin-bottom: .6rem; box-sizing: border-box; }
+.stat svg { max-width: 40px; max-height: 40px; }
 .stat-value { font-size: 1.55rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
 .stat-label { font-size: .78rem; color: var(--text-2); font-weight: 600; }
 .stat-foot { font-size: .72rem; color: var(--text-3); margin-top: .3rem; display: flex; align-items: center; gap: .35rem; }
@@ -1245,7 +1249,7 @@ table.data tbody tr:hover { background: var(--surface-3); }
 .alert.is-out, .flash.is-out, .toast.is-out { opacity: 0; transform: translateY(-4px); transition: all .2s var(--ease); }
 
 /* Authentification (ancienne nomenclature) */
-.auth-brand { display: flex; align-items: center; gap: .7rem; }
+/* (mise en page du bloc titre définie en 26.3) */
 .auth-by { font-size: .8rem; color: #93c5fd; font-weight: 700; }
 .auth-links { display: flex; justify-content: space-between; gap: .6rem; flex-wrap: wrap; font-size: .82rem; margin-top: 1rem; }
 .auth-error { display: flex; align-items: flex-start; gap: .5rem; padding: .7rem .9rem; border-radius: 11px; background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.34); color: #fecaca; font-size: .85rem; margin-bottom: 1rem; }
@@ -1655,7 +1659,7 @@ table.data tbody tr:hover { background: var(--surface-3); }
   place-items: center;
   align-content: center;
   padding: clamp(1.4rem, 5vw, 3.2rem) clamp(1rem, 4vw, 2rem);
-  min-height: calc(100vh - var(--header-h, 0px));
+  min-height: calc(100dvh - var(--header-h, 0px));
 }
 .auth-wrap--center .auth-card { max-width: 430px; }
 
@@ -1695,4 +1699,243 @@ table.data tbody tr:hover { background: var(--surface-3); }
 .bulletin-card-foot {
   display: flex; align-items: center; justify-content: space-between; gap: .5rem;
   padding-top: .55rem; border-top: 1px dashed var(--line); flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   26. Vue Android / écrans tactiles
+   Barre d'onglets fixe, zones tactiles de 44 px, champs sans zoom automatique,
+   marges de sécurité (encoche et barre gestuelle), tableaux défilables.
+   ========================================================================== */
+
+/* --- 26.1 Barre d'onglets (mobile uniquement) --- */
+.mobile-tabs { display: none; }
+
+.mobile-tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .15rem; min-height: 52px; padding: .32rem .18rem;
+  border-radius: 13px; color: var(--text-3);
+  font-size: .65rem; font-weight: 750; letter-spacing: .01em; line-height: 1;
+  position: relative; text-decoration: none;
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.mobile-tab .ic { color: currentColor; }
+.mobile-tab:hover { color: var(--text-2); }
+.mobile-tab.is-active { color: var(--accent); background: var(--accent-soft); }
+.mobile-tab.is-active::after {
+  content: ""; position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+  width: 22px; height: 2px; border-radius: 2px; background: var(--grad);
+  box-shadow: 0 0 10px var(--glow);
+}
+.mobile-tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-tab .avatar { width: 21px; height: 21px; font-size: .58rem; }
+
+/* --- 26.2 Confort tactile général --- */
+a, button, .btn, .icon-btn, .nav-link, .mobile-tab, .tab, .pw-toggle, .react-btn, .post-action {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@media (hover: none) {
+  .btn:hover, .nav-link:hover, .card:hover, .statcard:hover, .post:hover { transform: none; }
+}
+
+@media (max-width: 900px) {
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body, .app-shell { min-height: 100dvh; }
+
+  /* la barre inférieure ne doit jamais masquer le contenu */
+  .main { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+  .toast-root, .toast-stack { bottom: calc(86px + env(safe-area-inset-bottom)) !important; }
+
+  .mobile-tabs {
+    position: fixed; inset: auto 0 0 0; z-index: 45;
+    display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: .1rem;
+    padding: .3rem .35rem calc(.3rem + env(safe-area-inset-bottom));
+    background: var(--header-bg);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -16px 34px -26px rgba(2, 8, 23, .95);
+  }
+
+  /* champs à 16 px : plus de zoom automatique au clic */
+  input[type="text"], input[type="email"], input[type="password"], input[type="number"],
+  input[type="search"], input[type="url"], input[type="date"], input[type="datetime-local"],
+  select, textarea { font-size: 16px; }
+
+  /* zones tactiles confortables */
+  .btn, .nav-link, .tab, .filterbar select, .filter-form select, .file-btn { min-height: 44px; }
+  .icon-btn, .pw-toggle { min-width: 44px; min-height: 44px; }
+  .sidebar { width: min(86vw, 330px); padding-bottom: calc(1rem + env(safe-area-inset-bottom)); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .nav-link { min-height: 48px; font-size: .95rem; }
+  .sidebar-nav { -webkit-overflow-scrolling: touch; }
+
+  /* barre du haut compacte et sûre (encoche) */
+  :root { --topbar-h: 58px; }
+  .topbar {
+    height: auto; min-height: calc(var(--topbar-h) + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) .75rem 0; gap: .5rem;
+  }
+  .topbar-title { font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-actions { gap: .15rem; }
+  .content { padding: .95rem .85rem 1.2rem; }
+  .foot { padding: .9rem; font-size: .74rem; }
+
+  /* actions de page empilées et pleine largeur */
+  .page-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
+  .page-actions .btn { flex: 1 1 auto; }
+  .form-actions .btn { flex: 1 1 auto; }
+  .filterbar { flex-direction: column; align-items: stretch; }
+  .filterbar select, .filterbar input { width: 100%; }
+
+  /* fichiers, images, graphiques : jamais de débordement */
+  img, video, canvas, iframe { max-width: 100%; height: auto; }
+  .bar-chart { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  pre, code { overflow-wrap: anywhere; }
+
+  /* tableaux : défilement horizontal fluide + repère visuel de fin */
+  .table-wrap {
+    -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+    background:
+      linear-gradient(to right, var(--surface) 30%, rgba(0, 0, 0, 0)) left center / 24px 100% no-repeat local,
+      linear-gradient(to left, var(--surface) 30%, rgba(0, 0, 0, 0)) right center / 24px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, rgba(2, 8, 23, .5), transparent) left center / 12px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, rgba(2, 8, 23, .5), transparent) right center / 12px 100% no-repeat scroll;
+  }
+  .table { min-width: 520px; }
+  .table th, .table td { padding: .6rem .65rem; }
+
+  /* cartes de statistiques : deux colonnes lisibles même sur petit écran */
+  .statgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
+  .statcard { padding: .8rem .85rem; gap: .55rem; position: relative; }
+  .statcard-icon { width: 30px; height: 30px; padding: 6px; flex: none; }
+  .statcard-icon .ic { width: 18px; height: 18px; }
+  .statcard-value { font-size: 1.12rem; }
+  .statcard-label { font-size: .73rem; }
+  .statcard-hint { font-size: .66rem; }
+  .stat { padding: .8rem .85rem; }
+  .stat-icon {
+    position: absolute; top: .65rem; right: .65rem; margin: 0;
+    width: 30px; height: 30px; padding: 6px;
+  }
+  .stat svg { max-width: 30px; max-height: 30px; }
+  .stat-value { font-size: 1.3rem; }
+  .stat-label { font-size: .74rem; }
+  .stat-foot { font-size: .68rem; margin-top: .2rem; }
+  .bulletin-grid { grid-template-columns: minmax(0, 1fr); }
+
+  /* espaces réservés aux claviers virtuels */
+  input, select, textarea { scroll-margin-bottom: 130px; }
+  .chat-main { height: min(62dvh, 460px); }
+
+  /* éditeur de photo de profil : empilé, boutons pleine largeur */
+  .avatar-editor { flex-direction: column; align-items: stretch; gap: .8rem; }
+  .avatar-editor .hero-avatar { align-self: center; }
+  .avatar-actions { width: 100%; }
+  .avatar-actions .file-pill,
+  .avatar-actions .btn { width: 100%; justify-content: center; min-height: 46px; }
+  .avatar-preview { justify-content: flex-start; }
+}
+
+@media (max-width: 560px) {
+  body { font-size: 15.5px; }
+  .page-sub { font-size: .72rem; }
+  .welcome-actions .btn { width: 100%; }
+  .page-actions .btn { flex: 1 1 46%; width: auto; }
+  .card { border-radius: 15px; }
+  .card-head { flex-wrap: wrap; gap: .4rem; }
+  .msg { max-width: 94%; }
+  .mobile-tab-label { font-size: .62rem; }
+}
+
+/* --- 26.3 Titre de la page de connexion : portrait ou paysage, jamais cassé --- */
+.auth-brand {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: .75rem;
+  row-gap: .1rem;
+  margin-bottom: 1.15rem;
+  text-align: left;
+}
+.auth-brand > h1 { grid-column: 2; font-size: 1.45rem; line-height: 1.2; margin: 0; }
+.auth-brand > p { grid-column: 2; color: var(--text-2); font-size: .84rem; line-height: 1.35; margin: 0; }
+.auth-brand > .auth-by { grid-column: 2; font-size: .72rem; }
+/* logo (ou pastille d'icône) devant le titre, quelle que soit la page */
+.auth-brand > .brand-mark,
+.auth-brand > .empty-icon { grid-column: 1; grid-row: 1 / span 3; align-self: center; justify-self: start; }
+
+/* Logo animé des écrans d'authentification (le SVG n'avait aucune taille) */
+.auth-brand > .brand-mark { width: 46px; height: 46px; flex: none; align-self: start; margin-top: .15rem; }
+.auth-brand > .brand-mark svg { width: 46px; height: 46px; display: block; }
+.auth-brand .logo-ring { fill: none; stroke: rgba(56, 189, 248, .55); stroke-width: 1.6; }
+.auth-brand .logo-orbit {
+  fill: none; stroke: #22d3ee; stroke-width: 1.1; opacity: .6;
+  transform-origin: 24px 24px; animation: auth-orbit 16s linear infinite;
+}
+.auth-brand .logo-chip { fill: rgba(37, 99, 235, .3); stroke: #38bdf8; stroke-width: 1.8; }
+.auth-brand .logo-node { stroke: #7dd3fc; stroke-width: 2; stroke-linecap: round; }
+.auth-brand .logo-pulse {
+  fill: #22d3ee; filter: drop-shadow(0 0 6px rgba(34, 211, 238, .9));
+  transform-origin: 24px 24px; animation: auth-pulse 2.6s ease-in-out infinite;
+}
+@keyframes auth-orbit { to { transform: rotate(360deg); } }
+@keyframes auth-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+
+/* Le bouton « afficher le mot de passe » et ses deux icônes */
+.pw-toggle .pw-off, .pw-toggle .pw-on { display: grid; place-items: center; }
+.pw-toggle [hidden] { display: none !important; }
+
+/* --- 26.4 Site public et page de connexion sur Android --- */
+@media (max-width: 760px) {
+  .public-header {
+    flex-wrap: wrap; gap: .45rem;
+    padding: calc(.6rem + env(safe-area-inset-top)) .85rem .6rem;
+  }
+  .public-header .brand { padding: 0; }
+  .public-nav {
+    width: 100%; margin-left: 0; justify-content: space-between; gap: .1rem;
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    padding-bottom: .1rem;
+  }
+  .public-nav::-webkit-scrollbar { display: none; }
+  .public-nav a, .public-nav .btn {
+    white-space: nowrap; flex: none;
+    min-height: 42px; display: inline-flex; align-items: center;
+    padding: .35rem .55rem; font-size: .78rem;
+  }
+  .public-nav .btn { gap: .3rem; }
+  .hero-visual { min-height: 0; margin-bottom: .4rem; }
+  .hero-visual .orb { width: min(240px, 62vw); }
+  .public-footer { flex-direction: column; gap: .35rem; padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+
+  .auth-wrap--center { min-height: calc(100dvh - 132px); padding: .9rem .8rem 1.6rem; }
+  .auth-wrap--center .auth-card { max-width: 100%; padding: 1.25rem 1.05rem; border-radius: 18px; }
+  .auth-brand h1 { font-size: 1.35rem; }
+  .auth-brand p { font-size: .84rem; }
+  .auth-note { font-size: .78rem; }
+  .auth-links { flex-direction: column; gap: .35rem; }
+}
+
+@media print {
+  .mobile-tabs { display: none !important; }
+}
+
+@media (max-width: 400px) {
+  .public-nav a[href$="#programme"] { display: none; }
+}
+
+@media (max-width: 560px) {
+  /* barre du haut compacte : le sous-titre prenait 3 lignes sur téléphone */
+  .topbar-heading .page-sub { display: none; }
+  .topbar-title { font-size: .95rem; }
+}
+
+@media (max-width: 380px) {
+  .statgrid, .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .auth-brand { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+  .auth-brand > .brand-mark, .auth-brand > .empty-icon { grid-row: auto; margin-bottom: .4rem; }
+  .auth-brand > h1, .auth-brand > p, .auth-brand > .auth-by { grid-column: 1; }
+  .mobile-tab { font-size: .6rem; }
+  .mobile-tab .ic { width: 19px; height: 19px; }
 }
