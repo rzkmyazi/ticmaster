@@ -674,7 +674,8 @@
      Le serveur rend la cloche et son panneau ; ici on rafraîchit le compteur
      toutes les 25 s (pause automatique quand l'onglet est en arrière-plan) et
      on affiche une bannière discrète à chaque nouveauté. */
-  var notifState = { latest: 0, timer: null, ouverte: false, premier: true, initialise: false };
+  var notifState = { latest: 0, timer: null, ouverte: false, premier: true,
+                     initialise: false, items: null };
 
   function notifPanel() { return $("#notif-panel"); }
 
@@ -786,9 +787,17 @@
       panel.removeAttribute("hidden");
       toggle.setAttribute("aria-expanded", "true");
       window.setTimeout(function () { panel.classList.add("is-open"); }, 10);
+      // On affiche tout de suite les dernières données connues, puis on
+      // interroge le serveur : le panneau n'est jamais en retard d'un cycle.
+      if (notifState.items) renderNotifList(notifState.items);
+      pollNotifications();
       // Ce qui est affiché est considéré comme vu : le compteur retombe.
       window.setTimeout(function () {
-        if (notifState.ouverte) markAllRead();
+        if (!notifState.ouverte) return;
+        markAllRead();
+        panel.querySelectorAll(".notif-item").forEach(function (el) {
+          el.classList.add("is-read");
+        });
       }, 900);
     } else {
       panel.classList.remove("is-open");
@@ -811,6 +820,7 @@
         if (!data || !data.ok) return;
         setNotifBadge(data.count || 0);
         notifState.latest = data.latest_id || 0;
+        notifState.items = data.items || notifState.items;
 
         var panelVisible = notifState.ouverte;
         if (panelVisible) renderNotifList(data.items || []);
@@ -818,7 +828,8 @@
         // Bannière discrète pour les nouveautés (jamais au premier chargement)
         if (!notifState.premier && data.new && data.new.length) {
           data.new.slice(0, 3).forEach(function (item) {
-            toast(item.actor ? item.actor + " — " + item.title : item.title, "info", 6000);
+            var deja = item.actor && item.title.indexOf(item.actor) !== -1;
+            toast(deja || !item.actor ? item.title : item.actor + " — " + item.title, "info", 6000);
           });
         }
         notifState.premier = false;

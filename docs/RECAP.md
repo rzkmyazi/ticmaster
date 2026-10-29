@@ -409,6 +409,8 @@ Aucune n'est simulée ni fabriquée côté navigateur.
 | Compteur à zéro | Cas particulier corrigé : quand on n'avait **aucune** notification, la toute première nouveauté déclenche bien sa bannière (le curseur `since=0` est transmis explicitement). |
 | Rien de bloquant | Aucune fenêtre native, aucun clignotement : la bannière apparaît et disparaît en fondu. |
 | Économie | La réponse ne contient que 8 notifications et un compteur ; rien n'est rechargé d'autre. |
+| Panneau toujours juste | Ouvrir le panneau affiche immédiatement les dernières données reçues puis interroge le serveur : jamais de liste vide à tort. |
+| Bannière lisible | Le nom de l'auteur n'est pas répété quand le titre le contient déjà (« Nouveau message de … »). |
 
 ### 15.4 Lecture et historique
 
