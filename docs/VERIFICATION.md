@@ -549,4 +549,25 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 
 ---
 
+## 18. Mise à jour du 29/10/2026 — Actions de la fiche élève (vague 9)
+
+| Contrôle | Résultat |
+|---|---|
+| Confirmation dessinée dans la page (`.confirm-backdrop`, `askConfirm`) | ✔ |
+| Plus aucun `window.confirm` sur le chemin normal | ✔ |
+| `requestSubmit()` : le formulaire repart après validation | ✔ |
+| Libellés explicites : Réinitialiser / Suspendre / Supprimer définitivement | ✔ |
+| Suppression en rouge (`data-confirm-danger="1"`) | ✔ |
+| Réinitialiser → nouveau mot de passe temporaire affiché + bouton Copier | ✔ |
+| Suspendre → statut « suspendu », bouton devient « Réactiver » | ✔ |
+| Supprimer sans le bon nom → refus explicite | ✔ |
+| Supprimer avec le nom exact → compte effacé, retour à la liste | ✔ |
+| Test navigateur Android simulé avec `window.confirm` cassé | actions exécutées, 0 erreur JS |
+| Réinitialisation : défilement automatique vers le mot de passe + message | ✔ |
+
+- `pytest -q` → **62 tests réussis** (3 nouveaux).
+- `tools/verify.py` → **194** contrôles en local, **196** sur PythonAnywhere (0 échec).
+
+---
+
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*

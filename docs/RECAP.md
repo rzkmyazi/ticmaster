@@ -314,14 +314,63 @@ depuis l'agent demande un jeton neuf (ou une reconnexion du compte GitHub).
 
 ---
 
+## 14. Vague 9 — Fiche élève : suspendre, réinitialiser, supprimer — ✔
+
+### 14.1 Ce qui se passait
+
+Les trois boutons de la fiche (Réinitialiser le mot de passe, Suspendre,
+Supprimer le compte) demandaient une confirmation par la **boîte de dialogue
+native du navigateur** (`window.confirm`). Sur Android, Chrome peut **désactiver
+définitivement** ces fenêtres (case « Empêcher cette page de créer d'autres
+boîtes de dialogue ») : la confirmation ne s'affichait plus, le formulaire
+n'était jamais envoyé… alors que le serveur, lui, fonctionnait. D'où l'impression
+que rien ne marchait.
+
+### 14.2 La correction
+
+Une **boîte de dialogue intégrée** remplace toutes les confirmations natives :
+
+| Point | Détail |
+|---|---|
+| Apparence | Fond assombri, panneau centré sur ordinateur, **feuille glissante** sur téléphone. |
+| Contenu | Icône, titre parlant (« Suspendre le compte », « Réinitialiser le mot de passe », « Suppression définitive »), phrase qui nomme l'élève et l'effet de l'action. |
+| Boutons | « Annuler » et un bouton d'action dont le libellé est explicite ; la suppression s'affiche en **rouge**. |
+| Clavier / accessibilité | Touche **Échap** pour annuler, focus piégé dans la boîte, `role="dialog"`, `aria-modal`, retour du focus sur le bouton d'origine. |
+| Impossibilité de blocage | Le navigateur ne peut pas la désactiver : elle fait partie de la page. |
+| Secours | Si un navigateur très ancien n'a pas `requestSubmit`, on revient au `form.submit()` classique. |
+
+### 14.3 Compléments
+
+- **Réinitialisation** : après validation, la fiche **défile automatiquement
+  jusqu'au nouveau mot de passe temporaire** et un message prévient qu'il ne
+  sera plus affiché. Le mot de passe reste haché (Argon2id) et toutes les
+  sessions de l'élève sont révoquées.
+- **Suppression** : toujours protégée par la saisie du nom exact (« mauvais-nom »
+  est refusé avec un message clair).
+- La suppression d'une publication du fil utilise la même boîte (plus de
+  `confirm` natif nulle part dans l'application).
+
+### 14.4 Preuves
+
+| Contrôle | Résultat |
+|---|---|
+| Navigateur Android simulé, `window.confirm` volontairement cassé | 0 dialogue natif, boîte affichée, action exécutée |
+| Suspendre → statut « suspendu » et bouton devient « Réactiver » | ✔ |
+| Réinitialiser → mot de passe temporaire affiché + bouton Copier | ✔ |
+| Supprimer avec un nom erroné → refus explicite | ✔ |
+| Supprimer avec le nom exact → compte supprimé, retour à la liste | ✔ |
+| Aucune erreur JavaScript | ✔ |
+
+---
+
 ## Vérifications automatiques
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **59 tests réussis** |
-| `tools/verify.py` (local) | **187 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **189 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **189 contrôles conformes, 0 échec** |
+| `pytest -q` | **62 tests réussis** |
+| `tools/verify.py` (local) | **194 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | **attend un nouveau déploiement** (jeton GitHub expiré) |
+| `tools/verify.py` sur PythonAnywhere | **196 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.
