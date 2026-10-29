@@ -684,7 +684,9 @@ PythonAnywhere**, pas seulement en local.
 | Après correctif : jeton lu dans `<meta name="csrf-token">` | ✔ |
 | Les messages d'erreur s'affichent (bannière) | ✔ |
 | Bouton « Lancer la battle » réactivé dès l'acceptation | ✔ |
-| Battle solo jouée de bout en bout dans le navigateur (Android simulé) | ✔ 0 erreur |
+| Battle solo jouée de bout en bout dans le navigateur (Android simulé) | ✔ |
+| Battle jouée en production (Render) : création, acceptation, lancement, 5 questions, corrections | ✔ |
+| Erreurs dans la console sur la page de changement de mot de passe obligatoire | 0 (après correctif) |
 
 ### Battle : déroulement complet
 

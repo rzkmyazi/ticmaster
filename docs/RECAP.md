@@ -554,6 +554,8 @@ mettent à jour en direct quand le professeur accepte.
 * **Notification d'acceptation** : l'élève reçoit une alerte « Votre battle est acceptée »
   (ou « a été refusée ») avec le lien direct vers la salle.
 * Le renommage d'un groupe met à jour le titre affiché sans recharger la page.
+* Sur la page « changement de mot de passe obligatoire », la cloche est mise en veille :
+  l'API étant fermée à ce moment-là, elle n'affiche plus d'erreur inutile dans la console.
 
 ### 17.3 Transférer un message, et savoir qu'il est arrivé
 

@@ -846,6 +846,9 @@
   function initNotifications() {
     var root = $("#notif-root");
     if (!root) return;
+    // Page « changement de mot de passe obligatoire » : l'API est fermée,
+    // inutile d'interroger la cloche (cela produirait une erreur 428).
+    if (window.location.pathname.indexOf("/auth/changer-mot-de-passe") === 0) return;
 
     var toggle = $("#notif-toggle");
     on(toggle, "click", function (e) {
