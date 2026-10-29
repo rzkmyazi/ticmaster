@@ -520,4 +520,33 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 
 ---
 
+## 17. Mise à jour du 29/10/2026 — Disponibilité 24 h/24 (vague 8)
+
+### 17.1 Le service ne s'endort plus
+
+| Contrôle | Résultat |
+|---|---|
+| Auto-appel `/sante` toutes les 10 minutes sur Render | ✔ (journaux : 05:20:49, 05:30:49, 05:40:49, 05:50:50) |
+| Aucune visite extérieure pendant 26 minutes | ✔ test réalisé |
+| Temps de réponse à la requête suivante | **0,24 s** (réveil à froid = 30 à 50 s) |
+| `/sante` publie `"veille": true` et l'heure du dernier passage | ✔ |
+| Premier appel 30 s après un redémarrage | ✔ |
+| Historique conservé (`instance/veille.json`, 20 derniers passages) | ✔ |
+| Carte « Disponibilité 24 h/24 » dans *Administration → Paramètres* | ✔ |
+| Un échec réseau n'arrête pas la veille (erreur exacte enregistrée) | ✔ |
+
+### 17.2 Pistes écartées, mesures à l'appui
+
+| Piste | Raison |
+|---|---|
+| Réveil depuis PythonAnywhere | Son proxy sortant répond `403 Forbidden` : `Tunnel connection failed` — vérifié dans les journaux de l'application. |
+| Robot GitHub Actions | Le jeton OAuth n'a pas le scope `workflow`, puis a expiré (`401`) le 29/10. Le fichier `veille.yml` est conservé hors du dépôt. |
+
+### Résultats des tests
+
+- `pytest -q` → **59 tests réussis** (3 nouveaux sur la veille).
+- `tools/verify.py` → **187** contrôles en local, **189** sur Render, **189** sur PythonAnywhere (0 échec).
+
+---
+
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*

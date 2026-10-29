@@ -272,6 +272,12 @@ Dès que l'application tourne sur Render, un **fil discret** appelle
 compteur d'inactivité : le service ne s'endort plus et répond immédiatement,
 **à n'importe quelle heure**.
 
+**Mesure réelle (29/10)** : aucune visite extérieure pendant **26 minutes**,
+puis une requête → **HTTP 200 en 0,24 s** (un réveil à froid aurait pris
+30 à 50 s). Les journaux Render montrent les auto-appels toutes les 10 minutes
+(`GET /sante … "TIC-MASTER-veille/1.0"` à 05:20:49, 05:30:49, 05:40:49,
+05:50:50).
+
 | Point | Détail |
 |---|---|
 | Mise en service | Automatique sur Render, grâce à la variable `RENDER_EXTERNAL_URL` fournie par l'hébergeur : **aucune configuration** à faire. |
@@ -281,15 +287,15 @@ compteur d'inactivité : le service ne s'endort plus et répond immédiatement,
 | Panne | Si un appel échoue, le fil continue (aucune exception ne l'arrête) et l'erreur exacte est enregistrée. |
 | Hors Render | Sur un poste de développement ou sur PythonAnywhere, la veille ne démarre pas. |
 
-### 13.3 Deux pistes étudiées et écartées
+### 13.3 Pistes étudiées et écartées
 
 - **PythonAnywhere comme réveil** : testé puis abandonné. Son proxy sortant
   refuse les sites non listés (`Tunnel connection failed: 403 Forbidden`) —
   l'appel n'arrive jamais à Render.
-- **Robot GitHub Actions** : la tâche planifiée est prête (`veille.yml`), mais
-  le jeton OAuth utilisé pour les déploiements n'a pas le droit d'écrire dans
-  `.github/workflows` (scope `workflow` manquant). Le fichier est conservé hors
-  du dépôt, prêt à être ajouté si besoin.
+- **Robot GitHub Actions** : la tâche planifiée est prête (`veille.yml`),
+  conservée hors du dépôt. Deux obstacles : le jeton OAuth des déploiements
+  n'a pas le droit d'écrire dans `.github/workflows` (scope `workflow`
+  manquant), et ce même jeton a expiré le 29/10 (voir §13.5).
 
 ### 13.4 Ce qui reste vrai
 
@@ -299,6 +305,13 @@ compteur d'inactivité : le service ne s'endort plus et répond immédiatement,
   réapparaîtrait que si le fil de veille était interrompu (par exemple si
   l'instance épuisait les 750 heures du mois).
 
+### 13.5 Jeton GitHub
+
+Le jeton OAuth utilisé jusqu'ici pour pousser sur GitHub a **expiré** le
+29/10 (réponse `401` de l'API). Render continue de se déployer depuis le dépôt
+via sa propre intégration GitHub : seule la publication de nouveaux commits
+depuis l'agent demande un jeton neuf (ou une reconnexion du compte GitHub).
+
 ---
 
 ## Vérifications automatiques
@@ -307,8 +320,8 @@ compteur d'inactivité : le service ne s'endort plus et répond immédiatement,
 |---|---|
 | `pytest -q` | **59 tests réussis** |
 | `tools/verify.py` (local) | **187 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | *(mesuré après déploiement)* |
-| `tools/verify.py` sur PythonAnywhere | *(idem)* |
+| `tools/verify.py` sur Render | **189 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **189 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.
