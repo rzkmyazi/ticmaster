@@ -884,3 +884,119 @@ def test_export_des_notes_contient_la_classe(app):
     body = chief.get("/admin/notes/export.csv").get_data(as_text=True)
     assert "numero_classe" in body and "niveau_etude" in body and "groupe" in body
     assert "Rasoa;Marie;Mimi;Terminale;Groupe 2;Fille" in body
+
+
+# ---------------------------------------------------------------------------
+# Vague 4 : connexion épurée, photo de profil, onglet Bulletins, groupe
+# ---------------------------------------------------------------------------
+def test_connexion_sans_detail_du_programme(client):
+    html = client.get("/auth/connexion").get_data(as_text=True)
+    assert "auth-aside" not in html
+    assert "auth-wrap--center" in html
+    assert "Programme" not in html  # le lien du menu public est masqué
+
+
+def test_photo_de_profil_upload_et_retrait(app):
+    import io
+    import struct
+    import zlib
+
+    def png(w=8, h=8, color=(30, 120, 220)):
+        def chunk(tag, data):
+            payload = tag + data
+            return struct.pack(">I", len(data)) + payload + struct.pack(">I", zlib.crc32(payload) & 0xFFFFFFFF)
+        raw = b"".join(b"\x00" + bytes(color) * w for _ in range(h))
+        return (b"\x89PNG\r\n\x1a\n"
+                + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+                + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+    uid = _make_user(app, "photo")
+    client = app.test_client()
+    _login(client, "photo", "MotDePasse2026!")
+    token = _csrf(client)
+
+    sent = client.post("/mon-profil/photo",
+                       data={"csrf_token": token, "photo": (io.BytesIO(png()), "moi.png")},
+                       content_type="multipart/form-data")
+    assert sent.status_code == 302
+    with app.app_context():
+        user = db.session.get(User, uid)
+        assert user.has_avatar and user.avatar_filename
+        stored = user.avatar_filename
+
+    page = client.get("/mon-profil").get_data(as_text=True)
+    assert f"/avatar/{stored}" in page and 'class="avatar-img"' in page
+    assert client.get(f"/avatar/{stored}").status_code == 200
+
+    # fichier inconnu → 404, et la photo n'est jamais publique
+    assert client.get("/avatar/inconnu.png").status_code == 404
+    assert app.test_client().get(f"/avatar/{stored}").status_code == 302  # retour connexion
+
+    # un faux fichier est refusé
+    fake = client.post("/mon-profil/photo",
+                       data={"csrf_token": token, "photo": (io.BytesIO(b"<?php ?>"), "moi.png")},
+                       content_type="multipart/form-data")
+    assert fake.status_code == 302
+    with app.app_context():
+        assert db.session.get(User, uid).avatar_filename == stored
+
+    client.post("/mon-profil/photo", data={"csrf_token": token, "action": "remove"})
+    with app.app_context():
+        assert not db.session.get(User, uid).has_avatar
+    assert client.get(f"/avatar/{stored}").status_code == 404
+
+
+def test_onglet_bulletins_reserve_au_super_admin(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    _make_user(app, "adjoint", role=ROLE_ADMIN)
+    _make_user(app, "eleve", role=ROLE_USER)
+
+    chief = app.test_client()
+    _login(chief, "chef", "MotDePasse2026!")
+    page = chief.get("/admin/bulletins")
+    html = page.get_data(as_text=True)
+    assert page.status_code == 200
+    assert "Bulletins" in html and "bulletin-card" in html
+    assert "Élève" in html and "/20" in html
+
+    # le lien est présent dans la navigation du super administrateur
+    assert 'href="/admin/bulletins"' in chief.get("/admin/").get_data(as_text=True)
+
+    admin = app.test_client()
+    _login(admin, "adjoint", "MotDePasse2026!")
+    assert admin.get("/admin/bulletins").status_code == 403
+    assert 'href="/admin/bulletins"' not in admin.get("/admin/").get_data(as_text=True)
+
+    student = app.test_client()
+    _login(student, "eleve", "MotDePasse2026!")
+    assert student.get("/admin/bulletins").status_code == 403
+
+
+def test_bulletins_affichent_la_note_de_chaque_eleve(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    with app.app_context():
+        from app.models import Attempt, Exercise, Module
+
+        module = Module(title="Bureautique", slug="bureautique", status="published",
+                        order_index=1)
+        db.session.add(module)
+        db.session.flush()
+        exercise = Exercise(module_id=module.id, title="Quiz 1", kind="exercise",
+                            published=True, pass_score=50, created_by=1)
+        db.session.add(exercise)
+        db.session.flush()
+        for index, score in enumerate((8, 15), start=1):
+            student = User(username=f"eleve{index}", full_name=f"Élève {index}",
+                           role=ROLE_USER, status=STATUS_ACTIVE, must_change_password=False)
+            student.set_password("MotDePasse2026!")
+            db.session.add(student)
+            db.session.flush()
+            db.session.add(Attempt(user_id=student.id, exercise_id=exercise.id,
+                                   score=score, max_score=20, status="submitted"))
+        db.session.commit()
+
+    chief = app.test_client()
+    _login(chief, "chef", "MotDePasse2026!")
+    html = chief.get("/admin/bulletins").get_data(as_text=True)
+    assert "Bureautique" in html
+    assert "8.0" in html and "15.0" in html  # notes /20 calculées depuis les vraies copies

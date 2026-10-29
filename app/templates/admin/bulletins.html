@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, stat %}
+
+{% block title %}Bulletins{% endblock %}
+{% block page_title %}Bulletins{% endblock %}
+{% block page_subtitle %}<p class="page-sub">Le bulletin de chaque élève — note sur 20, mention et résultats par module</p>{% endblock %}
+
+{% block content %}
+<div class="page-actions no-print">
+  <a class="btn btn-ghost" href="{{ url_for('admin.grades') }}">{{ icon('award', 16) }} Notes des élèves</a>
+  <a class="btn btn-ghost" href="{{ url_for('admin.class_list') }}">{{ icon('users', 16) }} Liste de classe</a>
+  <a class="btn btn-outline" href="{{ url_for('admin.bulletins') }}">{{ icon('refresh', 16) }} Actualiser</a>
+  <button class="btn btn-primary" type="button" data-print>{{ icon('download', 16) }} Imprimer tous les bulletins</button>
+</div>
+
+<div class="statgrid no-print">
+  {{ stat(summary.students, 'Élèves', 'users', 'bulletins disponibles') }}
+  {{ stat(summary.graded, 'Élèves notés', 'award', 'note sur 20 disponible') }}
+  {{ stat(summary.average ~ '/20', 'Moyenne générale', 'chart', 'toutes classes confondues') }}
+  {{ stat(summary.mentions.items()|list|length, 'Mentions attribuées', 'trophy', 'répartition ci-dessous') }}
+</div>
+
+{% if cards %}
+<div class="bulletin-grid">
+  {% for card in cards %}
+  <article class="card bulletin-card">
+    <div class="bulletin-card-head">
+      {{ avatar(card.user, 'md') }}
+      <div class="bulletin-card-id">
+        <strong>{{ card.user.display_name }}</strong>
+        <small>
+          {% if card.user.class_number %}N° {{ card.user.class_number }} · {% endif %}
+          {{ card.user.class_label or 'sans classe' }}
+        </small>
+      </div>
+      {% if card.row.rank %}
+      <span class="rank {{ 'rank--1' if card.row.rank == 1 }}{{ ' rank--2' if card.row.rank == 2 }}{{ ' rank--3' if card.row.rank == 3 }}">{{ card.row.rank }}</span>
+      {% endif %}
+    </div>
+
+    <div class="bulletin-card-score">
+      <div class="ring ring--{{ card.row.note is not none and ('good' if card.row.note >= 14 else ('mid' if card.row.note >= 10 else 'low')) or 'low' }}"
+           style="--p:{{ card.row.average or 0 }}">
+        <span class="ring-text">{{ card.row.note if card.row.note is not none else '—' }}<small>/20</small></span>
+      </div>
+      <div>
+        {% if card.row.note is not none %}
+          {% set m = mention_for(card.row.note) %}
+          <span class="badge badge--mention-{{ m[1] }}">{{ m[0] }}</span>
+          <div class="text-xs text-muted mt-1">
+            {{ card.row.exercises }} exercice(s) · {{ card.row.exams }} examen(s)
+          </div>
+        {% else %}
+          <span class="badge badge-neutral">Non noté</span>
+          <div class="text-xs text-muted mt-1">Aucune copie remise</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if card.modules %}
+    <div class="bulletin-modules">
+      {% for item in card.modules[:6] %}
+      <div class="row-between text-xs">
+        <span class="cell-name">{{ item.module.title }}</span>
+        <span class="note note--{{ 'good' if item.note >= 14 else ('mid' if item.note >= 10 else 'low') }}">{{ item.note }}/20</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if card.terms %}
+    <div class="bulletin-terms">
+      {% for term in card.terms %}
+      <span class="badge badge-neutral">{{ term.term }} : {{ term.note }}/20</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="bulletin-card-foot">
+      <a class="btn btn-sm btn-ghost no-print" href="{{ url_for('admin.student_sheet', user_id=card.user.id) }}">Bulletin complet {{ icon('arrow-right', 14) }}</a>
+      <span class="text-xs text-muted">{{ card.row.progress }} % de progression</span>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+  <div class="empty-icon">{{ icon('award') }}</div>
+  <h3>Aucun bulletin à afficher</h3>
+  <p>Les bulletins apparaissent dès qu'un élève est inscrit et a remis une première évaluation.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+  document.querySelectorAll("[data-print]").forEach(function (btn) {
+    btn.addEventListener("click", function () { window.print(); });
+  });
+</script>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  @media print {
+    .sidebar, .topbar, .no-print, .nav-toggle, .toast-stack, .flash-stack { display: none !important; }
+    body { background: #fff !important; color: #000 !important; }
+    .app-shell, .main, .content { display: block !important; margin: 0 !important; padding: 0 !important; }
+    .bulletin-grid { display: block !important; }
+    .bulletin-card { border: 1px solid #999 !important; box-shadow: none !important; background: #fff !important;
+      break-inside: avoid; page-break-inside: avoid; margin-bottom: 10px; }
+    .table th, .table td { color: #000 !important; }
+    .badge, .note { border: 1px solid #999 !important; color: #000 !important; background: none !important; }
+  }
+</style>
+{% endblock %}

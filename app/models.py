@@ -64,6 +64,7 @@ class User(db.Model):
     study_level = db.Column(db.String(60), default="")
     gender = db.Column(db.String(12), default="")  # garcon / fille
     class_group = db.Column(db.Integer)            # 1, 2 ou 3 (modifiable)
+    avatar_filename = db.Column(db.String(255), default="")  # photo de profil envoyée
 
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
     last_login_at = db.Column(db.DateTime)
@@ -117,6 +118,10 @@ class User(db.Model):
                                    f"N° {self.class_number}" if self.class_number else "")
                  if part]
         return " · ".join(parts)
+
+    @property
+    def has_avatar(self) -> bool:
+        return bool((self.avatar_filename or "").strip())
 
     @property
     def has_class_record(self) -> bool:

@@ -25,6 +25,7 @@ USER_COLUMNS = {
     "study_level": "VARCHAR(60)",
     "gender": "VARCHAR(12)",
     "class_group": "INTEGER",
+    "avatar_filename": "VARCHAR(255)",
 }
 
 

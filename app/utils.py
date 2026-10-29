@@ -108,6 +108,28 @@ def allowed_file(filename: str) -> bool:
     return ext in current_app.config["ALLOWED_UPLOAD_EXTENSIONS"]
 
 
+IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+_IMAGE_MAGIC = {
+    b"\x89PNG\r\n\x1a\n": "png",
+    b"\xff\xd8\xff": "jpg",
+    b"GIF87a": "gif",
+    b"GIF89a": "gif",
+}
+
+
+def is_real_image(stream) -> bool:
+    """Vérifie la signature binaire d'une image (un .php renommé est refusé)."""
+    if stream is None:
+        return False
+    position = stream.tell() if hasattr(stream, "tell") else None
+    head = stream.read(12)
+    if position is not None:
+        stream.seek(position)
+    if any(head.startswith(sig) for sig in _IMAGE_MAGIC):
+        return True
+    return head[:4] == b"RIFF" and head[8:12] == b"WEBP"
+
+
 def save_upload(file_storage) -> tuple[str, str, int] | tuple[None, str, int]:
     """Enregistre un fichier avec un nom aléatoire. Retourne (nom_stocké, nom_original, taille)."""
     if not file_storage or not file_storage.filename:

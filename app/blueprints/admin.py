@@ -12,6 +12,7 @@ from flask import (
     Response, send_file, url_for,
 )
 from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload
 
 from ..extensions import db
 from ..models import (
@@ -196,6 +197,10 @@ def _read_user_form(user: User | None):
 
     if len(full_name) < 2:
         return False, "Le nom complet est obligatoire (2 caractères minimum).", user
+    # Le groupe est réservé au super administrateur : un admin ne peut pas le changer
+    if not g.user.is_super_admin:
+        group_raw = str(user.class_group) if (user and user.class_group) else ""
+
     if gender not in ("", "garcon", "fille"):
         return False, "Sexe invalide : choisissez Garçon ou Fille.", user
     if group_raw and group_raw not in {str(g) for g in GROUPS}:
@@ -357,6 +362,10 @@ def user_class(user_id: int):
     if group_raw and group_raw not in {str(g) for g in GROUPS}:
         flash("Le groupe doit être 1, 2 ou 3.", "danger")
         return redirect(url_for("admin.user_detail", user_id=user.id))
+
+    if not g.user.is_super_admin:
+        # l'administrateur peut ajuster le numéro et le niveau, pas le groupe
+        group_raw = str(user.class_group) if user.class_group else ""
     if number_raw and not (number_raw.isdigit() and 1 <= int(number_raw) <= 999):
         flash("Le numéro en classe doit être un nombre entre 1 et 999.", "danger")
         return redirect(url_for("admin.user_detail", user_id=user.id))
@@ -1333,6 +1342,78 @@ def student_sheet(user_id: int):
     log_audit("grades.viewed", target=report["user"].username)
     return render_template(
         "admin/student_sheet.html", r=report, mention_for=mention_for, note20=note20,
+    )
+
+
+@bp.route("/bulletins")
+@super_admin_required
+def bulletins():
+    """Onglet « Bulletins » : le bulletin de chaque élève sur une seule page."""
+    from collections import defaultdict
+
+    rows = student_rows(sort="groupe")
+    modules = Module.query.filter_by(status="published").order_by(Module.order_index).all()
+    module_index = {module.id: index for index, module in enumerate(modules)}
+
+    # une seule requête pour toutes les notes par élève / module / trimestre
+    per_user_module = defaultdict(lambda: defaultdict(list))
+    per_user_term = defaultdict(lambda: defaultdict(list))
+    attempts = (
+        Attempt.query.options(joinedload(Attempt.exercise))
+        .filter(Attempt.status == "submitted")
+        .all()
+    )
+    for attempt in attempts:
+        exercise = attempt.exercise
+        if exercise is None or not attempt.max_score:
+            continue
+        value = attempt.score * 100.0 / attempt.max_score
+        if exercise.module_id:
+            per_user_module[attempt.user_id][exercise.module_id].append(value)
+        if exercise.kind == "exam":
+            per_user_term[attempt.user_id][exercise.term or "—"].append(value)
+
+    cards = []
+    for row in rows:
+        user = row["user"]
+        mod_notes = []
+        for module_id, values in per_user_module.get(user.id, {}).items():
+            if module_id not in module_index:
+                continue
+            average = sum(values) / len(values)
+            mod_notes.append({
+                "module": modules[module_index[module_id]],
+                "note": note20(average),
+                "attempts": len(values),
+                "order": module_index[module_id],
+            })
+        mod_notes.sort(key=lambda item: item["order"])
+        term_notes = [
+            {"term": term, "note": note20(sum(values) / len(values)), "count": len(values)}
+            for term, values in sorted(per_user_term.get(user.id, {}).items())
+        ]
+        cards.append({
+            "row": row,
+            "user": user,
+            "modules": mod_notes,
+            "terms": term_notes,
+        })
+
+    graded = [card for card in cards if card["row"]["note"] is not None]
+    summary = {
+        "students": len(cards),
+        "graded": len(graded),
+        "average": round(sum(c["row"]["note"] for c in graded) / len(graded), 1) if graded else 0,
+        "mentions": {},
+    }
+    for card in graded:
+        label = mention_for(card["row"]["note"])[0]
+        summary["mentions"][label] = summary["mentions"].get(label, 0) + 1
+
+    log_audit("bulletins.viewed", details=f"{len(cards)} élèves")
+    return render_template(
+        "admin/bulletins.html", cards=cards, summary=summary,
+        note20=note20, mention_for=mention_for,
     )
 
 

@@ -4,26 +4,7 @@
 {% block title %}Connexion{% endblock %}
 
 {% block content %}
-<div class="auth-wrap">
-  <div class="auth-split">
-    <aside class="auth-aside reveal">
-      <span class="eyebrow">{{ icon('sparkles') }} Espace membre</span>
-      <h2 class="section-title">Content de vous revoir.</h2>
-      <p class="section-sub">Retrouvez vos cours, votre progression et vos résultats. Votre espace personnel est sécurisé et accessible depuis n'importe quel appareil.</p>
-      <div class="feature-grid">
-        <article class="feature">
-          <div class="feature-icon">{{ icon('book-open') }}</div>
-          <h3>Reprendre où vous en étiez</h3>
-          <p>Votre progression est sauvegardée automatiquement à chaque leçon terminée.</p>
-        </article>
-        <article class="feature">
-          <div class="feature-icon">{{ icon('shield') }}</div>
-          <h3>Connexion sécurisée</h3>
-          <p>Sessions chiffrées, protection anti-force brute et journalisation des accès.</p>
-        </article>
-      </div>
-    </aside>
-
+<div class="auth-wrap auth-wrap--center">
     <div class="auth-card">
       <div class="auth-brand">
         <span class="brand-mark">
@@ -91,7 +72,6 @@
         Les comptes sont créés <strong>exclusivement par l'administration</strong>.<br>
         Aucune inscription publique n'est disponible.
       </p>
-    </div>
-  </div>
+</div>
 </div>
 {% endblock %}

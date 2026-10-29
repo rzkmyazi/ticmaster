@@ -52,6 +52,7 @@
       <a class="nav-link{{ ' is-active' if request.endpoint in ['admin.grades', 'admin.student_sheet'] }}" href="{{ url_for('admin.grades') }}">{{ icon('award', 18) }} Notes des élèves</a>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.statistics' }}" href="{{ url_for('admin.statistics') }}">{{ icon('chart', 18) }} Statistiques de la classe</a>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.class_list' }}" href="{{ url_for('admin.class_list') }}">{{ icon('users', 18) }} Liste de classe</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint in ['admin.bulletins', 'admin.student_sheet'] }}" href="{{ url_for('admin.bulletins') }}">{{ icon('award', 18) }} Bulletins</a>
     </div>
     {% endif %}
 

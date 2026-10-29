@@ -136,13 +136,18 @@
           </div>
           <div class="field">
             <label for="class_group">Groupe</label>
+            {% if current_user.is_super_admin %}
             <select id="class_group" name="class_group">
               <option value="">— aucun —</option>
               {% for group in groups %}
               <option value="{{ group }}" {{ 'selected' if form.class_group|string == group|string }}>Groupe {{ group }}</option>
               {% endfor %}
             </select>
-            <span class="hint">Le groupe reste modifiable à tout moment depuis cette fiche.</span>
+            <span class="hint">Réservé au super administrateur. Modifiable à tout moment.</span>
+            {% else %}
+            <input type="text" id="class_group" value="{{ ('Groupe ' ~ form.class_group) if form.class_group else 'Aucun groupe' }}" readonly>
+            <span class="hint">Seul le super administrateur attribue ou change le groupe.</span>
+            {% endif %}
           </div>
         </div>
         <div class="alert alert-info">

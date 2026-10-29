@@ -19,7 +19,7 @@ from ..models import (
     Question, REACTION_KINDS, User, utcnow, STATUS_ACTIVE,
 )
 from ..security.core import login_required, log_audit
-from ..utils import save_upload
+from ..utils import is_real_image, save_upload
 
 bp = Blueprint("social", __name__)
 
@@ -329,13 +329,18 @@ def api_create_battle():
     mode = payload.get("mode") if payload.get("mode") in ("solo", "group") else "solo"
     name = (payload.get("name") or "").strip()[:120]
 
-    # Un seul battle actif à la fois par utilisateur
+    # Un seul battle actif à la fois par utilisateur (les parties terminées ou
+    # périmées ne bloquent plus la création d'une nouvelle battle)
     active = (
         BattleRoom.query.join(BattleMember, BattleMember.room_id == BattleRoom.id)
         .filter(BattleMember.user_id == g.user.id,
                 BattleRoom.status.in_(["pending", "lobby", "running"]))
         .first()
     )
+    if active is not None:
+        _advance_if_needed(active)   # une partie dont le temps est écoulé est clôturée
+        if active.status in ("finished", "refused"):
+            active = None
     if active:
         return jsonify({"ok": True, "code": active.code, "existing": True})
 
@@ -499,21 +504,7 @@ def api_battle_answer():
 # Fil d'actualité : publications, réactions emoji, commentaires
 # ---------------------------------------------------------------------------
 IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
-IMAGE_MAGIC = {
-    b"\x89PNG\r\n\x1a\n": "png",
-    b"\xff\xd8\xff": "jpg",
-    b"GIF87a": "gif",
-    b"GIF89a": "gif",
-}
-
-
-def _is_real_image(stream) -> bool:
-    """Vérifie la signature binaire (un .jpg renommé en .php est refusé)."""
-    head = stream.read(12)
-    stream.seek(0)
-    if any(head.startswith(sig) for sig in IMAGE_MAGIC):
-        return True
-    return head[:4] == b"RIFF" and head[8:12] == b"WEBP"
+_is_real_image = is_real_image
 
 
 def _feed_posts(limit: int = 30):

@@ -1245,15 +1245,13 @@ table.data tbody tr:hover { background: var(--surface-3); }
 .alert.is-out, .flash.is-out, .toast.is-out { opacity: 0; transform: translateY(-4px); transition: all .2s var(--ease); }
 
 /* Authentification (ancienne nomenclature) */
-.auth-split { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,.95fr); min-height: 100vh; }
-.auth-aside { display: flex; flex-direction: column; justify-content: space-between; gap: 2rem; padding: clamp(1.6rem,4vw,3rem); background: radial-gradient(700px 460px at 20% 10%, rgba(37,99,235,.4), transparent 60%), linear-gradient(160deg,#071021,#0a1730 60%,#071528); border-right: 1px solid var(--line); }
 .auth-brand { display: flex; align-items: center; gap: .7rem; }
 .auth-by { font-size: .8rem; color: #93c5fd; font-weight: 700; }
 .auth-links { display: flex; justify-content: space-between; gap: .6rem; flex-wrap: wrap; font-size: .82rem; margin-top: 1rem; }
 .auth-error { display: flex; align-items: flex-start; gap: .5rem; padding: .7rem .9rem; border-radius: 11px; background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.34); color: #fecaca; font-size: .85rem; margin-bottom: 1rem; }
 [data-theme="light"] .auth-error { color: #991b1b; }
 .pw-on, .pw-off { display: grid; place-items: center; }
-@media (max-width: 900px) { .auth-split { grid-template-columns: 1fr; } .auth-aside { display: none; } .course-layout { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .course-layout { grid-template-columns: 1fr; } }
 
 /* Titre de barre supérieure / sous-titre */
 .topbar-heading { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -1649,4 +1647,52 @@ table.data tbody tr:hover { background: var(--surface-3); }
   .reaction-bar { flex-wrap: wrap; }
   .post-action { margin-left: 0; }
   .post-media img { max-height: 360px; }
+}
+
+/* ---------- 20. Connexion épurée (sans détail du programme) ---------- */
+.auth-wrap--center {
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  align-content: center;
+  padding: clamp(1.4rem, 5vw, 3.2rem) clamp(1rem, 4vw, 2rem);
+  min-height: calc(100vh - var(--header-h, 0px));
+}
+.auth-wrap--center .auth-card { max-width: 430px; }
+
+/* ---------- 21. Photo de profil ---------- */
+.avatar.has-photo { background: var(--surface-3); overflow: hidden; padding: 0; }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
+.avatar-editor { display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; }
+.avatar-editor .hero-avatar { position: relative; }
+.avatar-editor .hero-avatar .avatar { box-shadow: 0 12px 30px -18px rgba(2, 8, 23, .9); }
+.avatar-actions { display: grid; gap: .4rem; }
+.file-pill {
+  display: inline-flex; align-items: center; gap: .4rem; cursor: pointer;
+  padding: .42rem .8rem; border-radius: 10px; font-size: .8rem; font-weight: 650;
+  border: 1px dashed var(--line-strong); background: var(--surface-3); color: var(--text);
+}
+.file-pill:hover { border-color: var(--accent); color: var(--accent); }
+.file-pill input[type="file"] { display: none; }
+.avatar-preview { display: flex; align-items: center; gap: .5rem; font-size: .78rem; color: var(--text-3); }
+.avatar-preview img { width: 46px; height: 46px; border-radius: 12px; object-fit: cover; border: 1px solid var(--line-strong); }
+
+/* ---------- 22. Onglet Bulletins ---------- */
+.bulletin-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: .9rem;
+  align-items: start;
+}
+.bulletin-card { padding: .95rem 1rem; display: grid; gap: .7rem; }
+.bulletin-card-head { display: flex; align-items: center; gap: .6rem; }
+.bulletin-card-id { display: grid; gap: .1rem; min-width: 0; flex: 1; }
+.bulletin-card-id strong { font-size: .95rem; }
+.bulletin-card-id small { color: var(--text-3); font-size: .72rem; }
+.bulletin-card-score { display: flex; align-items: center; gap: .8rem; }
+.bulletin-card-score .ring { --size: 62px; }
+.bulletin-card-score .ring-text { font-size: .95rem; }
+.bulletin-modules { display: grid; gap: .22rem; padding-top: .55rem; border-top: 1px dashed var(--line); }
+.bulletin-modules .cell-name { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bulletin-terms { display: flex; gap: .3rem; flex-wrap: wrap; }
+.bulletin-card-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  padding-top: .55rem; border-top: 1px dashed var(--line); flex-wrap: wrap;
 }

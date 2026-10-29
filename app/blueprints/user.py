@@ -2,7 +2,12 @@
 """Espace apprenant : tableau de bord, profil, présence, annonces, historique."""
 from __future__ import annotations
 
-from flask import Blueprint, current_app, flash, g, redirect, render_template, request, url_for
+from pathlib import Path
+
+from flask import (
+    Blueprint, abort, current_app, flash, g, redirect, render_template, request,
+    send_from_directory, url_for,
+)
 from sqlalchemy import func
 
 from ..extensions import db
@@ -11,6 +16,7 @@ from ..models import (
     utcnow, STATUS_ACTIVE,
 )
 from ..security.core import login_required, log_audit
+from ..utils import IMAGE_EXTENSIONS, is_real_image, save_upload
 
 bp = Blueprint("user", __name__)
 
@@ -155,6 +161,69 @@ def history():
 
     logs = []
     return render_template("user/history.html", attempts=attempts, kind=kind, logs=logs)
+
+
+def _delete_avatar_file(user) -> None:
+    """Supprime le fichier de la photo de profil (sans toucher au reste)."""
+    name = (user.avatar_filename or "").strip()
+    if not name:
+        return
+    try:
+        (Path(current_app.config["UPLOAD_FOLDER"]) / name).unlink(missing_ok=True)
+    except OSError:
+        pass
+    user.avatar_filename = ""
+
+
+@bp.route("/mon-profil/photo", methods=["POST"])
+@login_required
+def avatar_upload():
+    """Change la photo de profil depuis la galerie du téléphone."""
+    user = g.user
+
+    if request.form.get("action") == "remove":
+        _delete_avatar_file(user)
+        db.session.commit()
+        log_audit("avatar.removed", target=user.username)
+        flash("Photo de profil supprimée.", "info")
+        return redirect(url_for("user.profile") + "#infos")
+
+    upload = request.files.get("photo")
+    if not upload or not upload.filename:
+        flash("Choisissez une image dans votre galerie.", "danger")
+        return redirect(url_for("user.profile") + "#infos")
+
+    name = upload.filename
+    ext = (name.rsplit(".", 1)[-1] if "." in name else "").lower()
+    if ext not in IMAGE_EXTENSIONS:
+        flash("Format non pris en charge : utilisez une image PNG, JPG, GIF ou WEBP.", "danger")
+        return redirect(url_for("user.profile") + "#infos")
+    if not is_real_image(upload.stream):
+        flash("Ce fichier n'est pas une image valide.", "danger")
+        return redirect(url_for("user.profile") + "#infos")
+
+    stored, original, size = save_upload(upload)
+    if not stored:
+        flash("L'envoi de la photo a échoué.", "danger")
+        return redirect(url_for("user.profile") + "#infos")
+
+    _delete_avatar_file(user)
+    user.avatar_filename = stored
+    db.session.commit()
+    log_audit("avatar.updated", target=user.username, details=f"{original} ({size} octets)")
+    flash("Photo de profil mise à jour.", "success")
+    return redirect(url_for("user.profile") + "#infos")
+
+
+@bp.route("/avatar/<path:filename>")
+@login_required
+def avatar(filename: str):
+    """Sert une photo de profil (authentification obligatoire)."""
+    if "/" in filename or "\\" in filename or filename.startswith("."):
+        abort(404)
+    if User.query.filter_by(avatar_filename=filename).first() is None:
+        abort(404)
+    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename, as_attachment=False)
 
 
 @bp.route("/mon-profil", methods=["GET", "POST"])

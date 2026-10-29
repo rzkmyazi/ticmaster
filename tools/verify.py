@@ -165,6 +165,21 @@ def db_rows(query: str, params=()):
         con.close()
 
 
+def png_bytes(width: int = 8, height: int = 8, color=(30, 120, 220)) -> bytes:
+    """Petit PNG valide (pour tester l'envoi d'une photo de profil)."""
+    import struct
+    import zlib
+
+    def chunk(tag: bytes, data: bytes) -> bytes:
+        payload = tag + data
+        return struct.pack(">I", len(data)) + payload + struct.pack(">I", zlib.crc32(payload) & 0xFFFFFFFF)
+
+    raw = b"".join(b"\x00" + bytes(color) * width for _ in range(height))
+    return (b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+
 def rand_suffix(n: int = 5) -> str:
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=n))
 
@@ -324,6 +339,69 @@ def main() -> int:
 
     r = u.get(BASE + "/admin/classe", allow_redirects=False)
     ok("liste de classe interdite à un élève", r.status_code in (403, 302), str(r.status_code))
+
+    # ------------------------------------------------ vague 4 (4 demandes)
+    print("▸ Connexion épurée, photo de profil, bulletins, groupe")
+    page = requests.get(BASE + "/auth/connexion", timeout=20).text
+    ok("connexion : plus de panneau « détail du programme »",
+       "auth-aside" not in page and "auth-wrap--center" in page)
+    ok("connexion : lien « Programme » masqué", "Programme" not in page)
+
+    r = sa.get(BASE + "/admin/bulletins", timeout=20)
+    ok("/admin/bulletins accessible au super administrateur", r.status_code == 200,
+       str(r.status_code))
+    ok("onglet Bulletins : une fiche par élève",
+       "bulletin-card" in r.text and "Andriamana Soa" in r.text)
+    ok("onglet Bulletins : note sur 20 affichée", "/20" in r.text)
+    ok("onglet Bulletins dans le menu du super administrateur",
+       'href="/admin/bulletins"' in sa.get(BASE + "/admin/", timeout=20).text)
+    ok("onglet Bulletins interdit à un élève",
+       u.get(BASE + "/admin/bulletins", allow_redirects=False).status_code in (403, 302))
+    ok("onglet Bulletins interdit à un administrateur",
+       a.get(BASE + "/admin/bulletins", allow_redirects=False).status_code == 403)
+    ok("onglet Bulletins absent du menu d'un administrateur",
+       'href="/admin/bulletins"' not in a.get(BASE + "/admin/", timeout=20).text)
+
+    # photo de profil : envoi réel d'un PNG, affichage, retrait
+    token = csrf(u, "/mon-profil")
+    r = u.post(BASE + "/mon-profil/photo", data={"csrf_token": token, "action": "upload"},
+               files={"photo": ("verif-photo.png", png_bytes(), "image/png")},
+               allow_redirects=False)
+    ok("photo de profil : envoi accepté", r.status_code == 302, str(r.status_code))
+    profile = u.get(BASE + "/mon-profil", timeout=20).text
+    found = re.search(r'src="(/avatar/[^"]+)"', profile)
+    ok("photo de profil : image affichée sur la page", bool(found))
+    avatar_path = found.group(1) if found else "/avatar/inconnu.png"
+    ok("photo de profil : image servie", u.get(BASE + avatar_path).status_code == 200)
+    ok("photo de profil : service protégé par la connexion",
+       requests.get(BASE + avatar_path, allow_redirects=False).status_code in (302, 401))
+    ok("photo de profil : fichier inconnu → 404",
+       u.get(BASE + "/avatar/inconnu-verif.png").status_code == 404)
+    token = csrf(u, "/mon-profil")
+    u.post(BASE + "/mon-profil/photo", data={"csrf_token": token, "action": "remove"})
+    ok("photo de profil : retrait possible", u.get(BASE + avatar_path).status_code == 404)
+    ok("photo de profil : retour aux initiales",
+       'class="avatar-img"' not in u.get(BASE + "/mon-profil", timeout=20).text)
+
+    # groupe : réservé au super administrateur
+    form = sa.get(BASE + f"/admin/utilisateurs/{eleve_id}/modifier", timeout=20).text
+    ok("dossier scolaire : sélecteur de groupe pour le super administrateur",
+       'name="class_group"' in form and 'id="class_group"' in form)
+    token = csrf(a, "/admin/utilisateurs")
+    a.post(BASE + f"/admin/utilisateurs/{eleve_id}/classe",
+           data={"csrf_token": token, "class_group": "3", "class_number": "14",
+                 "study_level": "Terminale"}, allow_redirects=False)
+    after = sa.get(BASE + f"/admin/utilisateurs/{eleve_id}", timeout=20).text
+    ok("groupe inchangé par un administrateur",
+       'badge-info">Groupe 1</span>' in after and 'badge-info">Groupe 3</span>' not in after)
+    ok("fiche élève : groupe en lecture seule pour un administrateur",
+       "readonly" in a.get(BASE + f"/admin/utilisateurs/{eleve_id}", timeout=20).text)
+    token = csrf(sa, "/admin/utilisateurs")
+    sa.post(BASE + f"/admin/utilisateurs/{eleve_id}/classe",
+            data={"csrf_token": token, "class_group": "3", "class_number": "14",
+                  "study_level": "Terminale"}, allow_redirects=False)
+    after = sa.get(BASE + f"/admin/utilisateurs/{eleve_id}", timeout=20).text
+    ok("groupe choisi par le super administrateur", 'badge-info">Groupe 3</span>' in after)
 
     # ------------------------------------------- compte jetable pour les tests
     print("▸ Création d'un compte de test (super admin)")

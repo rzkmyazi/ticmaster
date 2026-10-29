@@ -19,8 +19,34 @@
       {{ role_badge(user.role) }}
     </div>
     <div class="card-body">
-      <div class="row mb-2" style="gap:.8rem">
-        {{ avatar(user, 'xl', true) }}
+      <div class="avatar-editor mb-2">
+        <span class="hero-avatar">{{ avatar(user, 'xl', true) }}</span>
+        <div class="avatar-actions">
+          <form method="post" action="{{ url_for('user.avatar_upload') }}" enctype="multipart/form-data" id="avatar-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="file-pill" for="avatar-input">
+              {{ icon('upload', 15) }} Choisir une photo dans la galerie
+              <input type="file" id="avatar-input" name="photo" accept="image/png,image/jpeg,image/gif,image/webp">
+            </label>
+            <div class="avatar-preview" id="avatar-preview" hidden>
+              <img id="avatar-preview-img" alt="Aperçu de la nouvelle photo">
+              <span id="avatar-preview-name"></span>
+            </div>
+            <button class="btn btn-primary btn-sm" type="submit" id="avatar-submit" hidden>
+              {{ icon('check', 15) }} Enregistrer la photo
+            </button>
+          </form>
+          {% if user.has_avatar %}
+          <form method="post" action="{{ url_for('user.avatar_upload') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="remove">
+            <button class="btn btn-ghost btn-sm" type="submit" data-confirm="Retirer votre photo de profil ?">
+              {{ icon('trash', 15) }} Retirer la photo
+            </button>
+          </form>
+          {% endif %}
+          <span class="text-xs text-muted">PNG, JPG, GIF ou WEBP — 30 Mo maximum.</span>
+        </div>
         <div>
           <strong style="font-size:1.1rem">{{ user.display_name }}</strong>
           <div class="text-sm text-muted">@{{ user.username }}{% if user.pseudo %} · « {{ user.pseudo }} »{% endif %}</div>
@@ -170,4 +196,25 @@
     </aside>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    var input = document.getElementById("avatar-input");
+    var preview = document.getElementById("avatar-preview");
+    var image = document.getElementById("avatar-preview-img");
+    var name = document.getElementById("avatar-preview-name");
+    var submit = document.getElementById("avatar-submit");
+    if (!input || !preview || !image) return;
+    input.addEventListener("change", function () {
+      var file = input.files && input.files[0];
+      if (!file) { preview.hidden = true; if (submit) submit.hidden = true; return; }
+      image.src = URL.createObjectURL(file);
+      if (name) name.textContent = file.name;
+      preview.hidden = false;
+      if (submit) submit.hidden = false;
+    });
+  })();
+</script>
 {% endblock %}
