@@ -316,6 +316,49 @@ sert l'application ; il est idempotent grâce au marqueur `~/.tic_bootstrap_done
 - Les colonnes sont ajoutées **automatiquement au démarrage** (`ALTER TABLE users ADD COLUMN …`), sans perte
   de données et sans intervention manuelle sur Render ou PythonAnywhere.
 - Le rôle reste stocké en base sous la valeur `user` (compatibilité) : seul le libellé affiché est « Élève ».
+---
+
+## 13. Mise à jour du 29/10/2026 — Connexion épurée, photo de profil, Bulletins, groupe (vague 4)
+
+**Commit déployé :** `a8d78ec` · **instances :** Render, PythonAnywhere, local.
+
+### Les quatre demandes
+
+| Demande | Contrôle | Résultat |
+|---|---|---|
+| Connexion sans détail du programme | `/auth/connexion` : plus d'`auth-aside`, carte centrée (`auth-wrap--center`), lien « Programme » absent du menu public sur cet écran | ✔ |
+| Photo de profil depuis la galerie | envoi réel d'un PNG via `POST /mon-profil/photo` ⇒ 302, `avatar-img` affiché, `GET /avatar/<fichier>` = 200 | ✔ |
+| | photo protégée : sans session ⇒ redirection vers la connexion ; fichier inconnu ⇒ **404** | ✔ |
+| | faux fichier (`<?php` renommé `.png`) refusé, photo précédente conservée | ✔ |
+| | bouton « Retirer » ⇒ retour aux initiales, ancienne URL en **404** | ✔ |
+| Onglet Bulletins | `/admin/bulletins` : une fiche par élève, note /20, mention, rang, modules, trimestres | ✔ |
+| | lien présent dans le menu *Scolarité* du super administrateur uniquement | ✔ |
+| | **403** pour un administrateur et pour un élève (page et entrée de menu) | ✔ |
+| Groupe du dossier scolaire | sélecteur de groupe visible et actif pour le super administrateur | ✔ |
+| | `POST /admin/utilisateurs/<id>/classe` par un **administrateur** ⇒ groupe **inchangé** (contrôle serveur) | ✔ |
+| | fiche affichée en **lecture seule** (`readonly`) pour un administrateur | ✔ |
+| | changement par le super administrateur ⇒ groupe mis à jour | ✔ |
+
+### Robustesse corrigée au passage
+
+| Sujet | Correction | Résultat |
+|---|---|---|
+| Suppression de compte sur SQLite | `PRAGMA foreign_keys=ON` : les `ON DELETE CASCADE` s'appliquent comme sur PostgreSQL (plus de lignes orphelines) | ✔ |
+| Battle | une battle terminée/expirée ne bloque plus la création d'une nouvelle battle | ✔ |
+| CSS | anciennes règles `.auth-aside` / `.auth-split` retirées (plus de styles morts) | ✔ |
+
+### Résultats des tests
+
+- `pytest -q` → **46 tests réussis** (4 nouveaux : connexion épurée, photo de profil, onglet Bulletins, notes réelles dans les bulletins).
+- `tools/verify.py` → **150 contrôles conformes** en local, **151** sur Render et **151** sur PythonAnywhere (0 échec).
+
+### Déploiement
+
+| Cible | État |
+|---|---|
+| GitHub `rzkmyazi/ticmaster` | commit `a8d78ec` poussé sur `main` |
+| Render (principale) | déploiement `live` sur `a8d78ec` — **151 contrôles conformes** |
+| PythonAnywhere | **18 fichiers** synchronisés + rechargement (`200 OK`) — **151 contrôles conformes** |
 
 ---
 

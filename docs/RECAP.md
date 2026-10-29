@@ -116,14 +116,32 @@ Deux améliorations liées :
 
 ---
 
+## 9. Vague 4 — Connexion épurée, photo de profil, onglet Bulletins, groupe — ✔
+
+| Demande | Réponse | Où vérifier |
+|---|---|---|
+| « Effacer le détail du programme dans la page de login » | La page de connexion est **une carte unique centrée** : plus de panneau latéral, plus de liste des fonctionnalités, plus de lien « Programme » sur cet écran. | `/auth/connexion` |
+| « Modifier sa photo de profil en uploadant dans la galerie » | Bouton **Changer la photo** dans *Mon profil → Mes informations* : accepte PNG, JPG, GIF, WEBP (30 Mo max), aperçu immédiat, bouton **Retirer**. La photo remplace les initiales partout (menu, fil, messages, listes, bulletins). | `/mon-profil` |
+| « Un onglet Bulletins qui affiche le bulletin de chaque élève » | Nouvel onglet **Bulletins** (`/admin/bulletins`) : une fiche par élève avec **note /20**, mention, rang, résultats par module et par trimestre, progression, bouton **Bulletin complet** et **Imprimer tous les bulletins**. | Menu *Scolarité → Bulletins* |
+| « Dans le dossier scolaire, le groupe est modifiable ; le Super Admin l'insère et choisit le groupe » | Le groupe (1, 2, 3) est **modifiable à tout moment** depuis la fiche élève ; **seul le super administrateur** peut le choisir — un administrateur voit le groupe **en lecture seule**, et le serveur refuse tout changement (le groupe reste inchangé). | `/admin/utilisateurs/<élève>` |
+
+Détails techniques :
+
+- **Photo de profil** : colonne `users.avatar_filename` (ajoutée automatiquement au démarrage, aucune migration manuelle). Routes : `POST /mon-profil/photo` (envoi / `action=remove`) et `GET /avatar/<fichier>` — cette dernière **exige une connexion** et renvoie **404** pour un fichier inconnu. Le fichier est contrôlé par sa **signature binaire** : un `.php` renommé en `.png` est refusé.
+- **Onglet Bulletins** : réservé au super administrateur (403 pour un administrateur ou un élève), calculé sur les **vraies copies** (`Attempt`), pas de note simulée. Le lien n'apparaît pas dans le menu des autres rôles.
+- **Groupe** : contrôle **côté serveur** (`POST /admin/utilisateurs/<id>/classe`) — la valeur est ignorée si l'auteur n'est pas super administrateur, même avec une requête forgée.
+- **Bonus de robustesse** : SQLite applique désormais `PRAGMA foreign_keys=ON`, donc la suppression d'un compte efface réellement ses données liées (copies, battle, messages, publications) comme sur PostgreSQL ; et une battle terminée ne bloque plus la création d'une nouvelle.
+
+---
+
 ## Vérifications automatiques
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **42 tests réussis** |
-| `tools/verify.py` (local) | **131 contrôles conformes** |
-| `tools/verify.py` sur Render | **132 contrôles conformes, 0 échec** |
-| PythonAnywhere | pages identiques, `/sante` ok, base migrée automatiquement |
+| `pytest -q` | **46 tests réussis** |
+| `tools/verify.py` (local) | **150 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | **151 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **151 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.
