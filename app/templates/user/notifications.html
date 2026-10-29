@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+{% block page_subtitle %}
+<p class="page-sub">
+  {% if non_lues %}{{ non_lues }} non lue{{ 's' if non_lues > 1 else '' }}
+  {% else %}Tout est à jour{% endif %} · {{ total }} au total
+</p>
+{% endblock %}
+
+{% block content %}
+<div class="row-between mb-2" style="flex-wrap:wrap;gap:.6rem">
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('user.profile') }}">{{ icon('arrow-left') }} Mon profil</a>
+  {% if non_lues %}
+  <form method="post" action="{{ url_for('notifications.mark_all_and_back') }}" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-outline btn-sm" type="submit">{{ icon('check-circle', 16) }} Tout marquer comme lu</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if tout_lu %}
+<div class="alert alert-success mb-2" role="status">
+  {{ icon('check-circle', 18) }}<div>Toutes vos notifications ont été marquées comme lues.</div>
+</div>
+{% endif %}
+
+{% if groupes %}
+<div class="stack">
+  {% for jour, lignes in groupes %}
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">{{ icon('calendar', 17) }} {{ jour }}</h2>
+      <span class="text-xs text-muted">{{ lignes|length }} notification{{ 's' if lignes|length > 1 else '' }}</span>
+    </div>
+    <div class="card-body notif-history">
+      {% for n in lignes %}
+      <a class="notif-row{{ ' is-read' if n.is_read }}" href="{{ n.url or url_for('notifications.index') }}"
+         data-notif-row="{{ n.id }}">
+        <span class="notif-ic notif-ic--{{ n.kind }}">{{ icon(n.icon or 'bell', 18) }}</span>
+        <span class="notif-txt">
+          <strong>{{ n.title }}</strong>
+          {% if n.body %}<span class="notif-body">{{ n.body }}</span>{% endif %}
+          <time>{{ fmt_dt(n.created_at) }}{% if n.actor %} · par {{ n.actor.full_name or n.actor.username }}{% endif %}</time>
+        </span>
+        {% if not n.is_read %}<span class="notif-dot" aria-label="Non lue"></span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+  {{ icon('bell', 26) }}
+  <h3>Aucune notification</h3>
+  <p>Les nouveaux messages, les battles, les annonces et vos notes apparaîtront ici,
+     et une bannière s'affichera directement sur la page où vous êtes.</p>
+  <a class="btn btn-outline" href="{{ url_for('user.dashboard') }}">{{ icon('home', 16) }} Retour à mon espace</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    // Ouvrir une notification du historique la marque comme lue.
+    document.querySelectorAll("[data-notif-row]").forEach(function (row) {
+      row.addEventListener("click", function () {
+        var id = row.getAttribute("data-notif-row");
+        fetch("/api/notifications/" + id + "/lue", {
+          method: "POST",
+          headers: { "X-CSRF-Token": (window.TIC && TIC.csrf()) || "", "Content-Type": "application/json" },
+          body: "{}",
+          keepalive: true
+        }).catch(function () {});
+      });
+    });
+  })();
+</script>
+{% endblock %}

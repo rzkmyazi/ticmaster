@@ -669,6 +669,201 @@
   }
 
   /* ---------- Démarrage ---------- */
+
+  /* ---------- Notifications en temps réel ----------
+     Le serveur rend la cloche et son panneau ; ici on rafraîchit le compteur
+     toutes les 25 s (pause automatique quand l'onglet est en arrière-plan) et
+     on affiche une bannière discrète à chaque nouveauté. */
+  var notifState = { latest: 0, timer: null, ouverte: false, premier: true };
+
+  function notifPanel() { return $("#notif-panel"); }
+
+  function setNotifBadge(count) {
+    var badge = $("#notif-badge");
+    var toggle = $("#notif-toggle");
+    if (!badge) return;
+    if (count > 0) {
+      badge.textContent = count > 99 ? "99+" : String(count);
+      badge.removeAttribute("hidden");
+      if (toggle) toggle.setAttribute("aria-label", "Notifications (" + count + " non lues)");
+    } else {
+      badge.setAttribute("hidden", "");
+      if (toggle) toggle.setAttribute("aria-label", "Notifications");
+    }
+    document.querySelectorAll(".nav-count").forEach(function (el) {
+      if (count > 0) { el.textContent = count > 99 ? "99+" : String(count); el.removeAttribute("hidden"); }
+      else el.setAttribute("hidden", "");
+    });
+  }
+
+  function notifIcon(name) {
+    var safe = String(name || "bell").toLowerCase().replace(/[^a-z0-9-]/g, "") || "bell";
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "ic");
+    svg.setAttribute("width", "17");
+    svg.setAttribute("height", "17");
+    svg.setAttribute("aria-hidden", "true");
+    var use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttribute("href", "#i-" + safe);
+    svg.appendChild(use);
+    return svg;
+  }
+
+  function renderNotifList(items) {
+    var list = $("#notif-list");
+    if (!list) return;
+    list.textContent = "";
+    if (!items.length) {
+      var vide = document.createElement("li");
+      vide.className = "notif-empty";
+      vide.appendChild(notifIcon("bell"));
+      var txt = document.createElement("span");
+      txt.textContent = "Aucune notification pour le moment.";
+      vide.appendChild(txt);
+      list.appendChild(vide);
+      return;
+    }
+    items.forEach(function (item) {
+      var li = document.createElement("li");
+      li.className = "notif-item" + (item.read ? " is-read" : "");
+      li.dataset.id = item.id;
+
+      var a = document.createElement("a");
+      a.setAttribute("href", item.url || "/notifications");
+      a.setAttribute("data-notif-open", "");
+
+      var ic = document.createElement("span");
+      ic.className = "notif-ic notif-ic--" + (item.kind || "system");
+      ic.appendChild(notifIcon(item.icon));
+
+      var boite = document.createElement("span");
+      boite.className = "notif-txt";
+      var titre = document.createElement("strong");
+      titre.textContent = item.title;
+      boite.appendChild(titre);
+      if (item.body) {
+        var corps = document.createElement("span");
+        corps.className = "notif-body";
+        corps.textContent = item.body;
+        boite.appendChild(corps);
+      }
+      var heure = document.createElement("time");
+      heure.textContent = item.at || "";
+      boite.appendChild(heure);
+
+      a.appendChild(ic);
+      a.appendChild(boite);
+      li.appendChild(a);
+      list.appendChild(li);
+    });
+  }
+
+  function markAllRead() {
+    fetch("/api/notifications/tout-lire", {
+      method: "POST",
+      headers: { "X-CSRF-Token": csrf(), "Content-Type": "application/json" },
+      body: "{}"
+    }).then(function (r) { return r.json(); })
+      .then(function (data) { if (data && data.ok) setNotifBadge(0); })
+      .catch(function () {});
+  }
+
+  function markOneRead(id) {
+    if (!id) return;
+    fetch("/api/notifications/" + id + "/lue", {
+      method: "POST",
+      headers: { "X-CSRF-Token": csrf(), "Content-Type": "application/json" },
+      body: "{}"
+    }).catch(function () {});
+  }
+
+  function openNotifPanel(open) {
+    var panel = notifPanel();
+    var toggle = $("#notif-toggle");
+    if (!panel || !toggle) return;
+    notifState.ouverte = open;
+    if (open) {
+      panel.removeAttribute("hidden");
+      toggle.setAttribute("aria-expanded", "true");
+      window.setTimeout(function () { panel.classList.add("is-open"); }, 10);
+      // Ce qui est affiché est considéré comme vu : le compteur retombe.
+      window.setTimeout(function () {
+        if (notifState.ouverte) markAllRead();
+      }, 900);
+    } else {
+      panel.classList.remove("is-open");
+      toggle.setAttribute("aria-expanded", "false");
+      window.setTimeout(function () {
+        if (!notifState.ouverte) panel.setAttribute("hidden", "");
+      }, 160);
+    }
+  }
+
+  function pollNotifications() {
+    if (document.hidden) return;
+    var url = "/api/notifications";
+    if (notifState.latest) url += "?since=" + notifState.latest;
+    fetch(url, { headers: { "Accept": "application/json" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !data.ok) return;
+        setNotifBadge(data.count || 0);
+        if (data.latest_id) notifState.latest = data.latest_id;
+
+        var panelVisible = notifState.ouverte;
+        if (panelVisible) renderNotifList(data.items || []);
+
+        // Bannière discrète pour les nouveautés (jamais au premier chargement)
+        if (!notifState.premier && data.new && data.new.length) {
+          data.new.slice(0, 3).forEach(function (item) {
+            toast(item.actor ? item.actor + " — " + item.title : item.title, "info", 6000);
+          });
+        }
+        notifState.premier = false;
+      })
+      .catch(function () {});
+  }
+
+  function initNotifications() {
+    var root = $("#notif-root");
+    if (!root) return;
+
+    var toggle = $("#notif-toggle");
+    on(toggle, "click", function (e) {
+      e.stopPropagation();
+      openNotifPanel(!notifState.ouverte);
+    });
+
+    var tout = $("#notif-read-all");
+    on(tout, "click", function (e) {
+      e.stopPropagation();
+      markAllRead();
+      root.querySelectorAll(".notif-item").forEach(function (el) { el.classList.add("is-read"); });
+    });
+
+    // Un clic sur une notification la marque comme lue puis suit son lien.
+    root.addEventListener("click", function (e) {
+      var lien = e.target.closest("[data-notif-open]");
+      if (!lien) return;
+      var item = lien.closest(".notif-item");
+      markOneRead(item ? item.dataset.id : null);
+    });
+
+    on(document, "click", function (e) {
+      if (notifState.ouverte && !e.target.closest("#notif-root")) openNotifPanel(false);
+    });
+    on(document, "keydown", function (e) {
+      if (e.key === "Escape" && notifState.ouverte) openNotifPanel(false);
+    });
+
+    pollNotifications();                       // premier état (sans bannière)
+    notifState.timer = window.setInterval(pollNotifications, 25000);
+    on(document, "visibilitychange", function () {
+      if (!document.hidden) pollNotifications();   // retour sur l'onglet : mise à jour immédiate
+    });
+    on(window, "focus", pollNotifications);
+  }
+
   function boot() {
     applyTheme(currentTheme());
     initSidebar();
@@ -688,6 +883,7 @@
     initShareLink();
     initTabs();
     initFeed();
+    initNotifications();
 
     $$("[data-theme-toggle]").forEach(function (btn) {
       on(btn, "click", function () { TIC.theme.toggle(); });

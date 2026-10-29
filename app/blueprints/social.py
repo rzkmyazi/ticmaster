@@ -164,6 +164,17 @@ def api_send_message():
     db.session.add(msg)
     db.session.commit()
 
+    # Notification instantanée pour un message privé
+    if recipient_id:
+        from ..notifications import notify
+        notify(
+            recipient_id, "message",
+            f"Nouveau message de {g.user.full_name or g.user.username}",
+            body[:140],
+            url_for("social.messages") + "?room=" + room,
+            actor=g.user,
+        )
+
     return jsonify({
         "ok": True,
         "message": {
@@ -372,6 +383,14 @@ def api_create_battle():
     db.session.add(BattleMember(room_id=room.id, user_id=g.user.id))
     db.session.commit()
     log_audit("battle.created", target=room.code, details=f"mode={mode} statut={status}")
+
+    if status == "pending":
+        from ..notifications import notify_staff
+        notify_staff(
+            "battle", "Battle à valider",
+            f"{g.user.full_name or g.user.username} demande une battle ({mode}, code {room.code}).",
+            url_for("admin.battles"), actor=g.user,
+        )
     return jsonify({"ok": True, "code": room.code, "status": room.status,
                     "pending": room.status == "pending"}), 201
 
@@ -399,6 +418,14 @@ def api_join_battle():
         db.session.add(BattleMember(room_id=room.id, user_id=g.user.id))
         db.session.commit()
         log_audit("battle.joined", target=room.code)
+
+        from ..notifications import notify
+        notify(
+            room.owner_id, "battle",
+            f"{g.user.full_name or g.user.username} a rejoint votre battle",
+            f"Groupe « {room.name} » · code {room.code}",
+            url_for("social.battle_room", code=room.code), actor=g.user,
+        )
     return jsonify({"ok": True, "code": room.code})
 
 
@@ -451,6 +478,14 @@ def api_start_battle():
         member.answered_index = -1
     db.session.commit()
     log_audit("battle.started", target=room.code)
+
+    from ..notifications import notify_many
+    notify_many(
+        [m.user_id for m in room.members], "battle",
+        f"La battle « {room.name} » démarre",
+        f"{room.question_count} questions · 20 secondes par question. À vous de jouer !",
+        url_for("social.battle_room", code=room.code), actor=g.user, icon="zap",
+    )
     return jsonify({"ok": True})
 
 

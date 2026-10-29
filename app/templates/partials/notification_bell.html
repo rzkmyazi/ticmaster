@@ -1,0 +1,46 @@
+{# ------------------------------------------------------------------
+   Cloche de notifications — barre du haut (toutes les pages privées).
+   Le contenu est rendu côté serveur ; app.js le rafraîchit toutes les
+   25 secondes via /api/notifications.
+   ------------------------------------------------------------------ #}
+<div class="notif" id="notif-root">
+  <button type="button" class="icon-btn notif-btn" id="notif-toggle"
+          aria-label="Notifications{% if notifications_non_lues %} ({{ notifications_non_lues }} non lues){% endif %}"
+          aria-expanded="false" aria-controls="notif-panel" title="Notifications">
+    {{ icon('bell', 19) }}
+    <span class="notif-badge" id="notif-badge"{% if not notifications_non_lues %} hidden{% endif %}>
+      {{ notifications_non_lues if notifications_non_lues < 100 else '99+' }}
+    </span>
+  </button>
+
+  <div class="notif-panel" id="notif-panel" role="dialog" aria-label="Notifications" hidden>
+    <div class="notif-head">
+      <strong>Notifications</strong>
+      <button type="button" class="notif-read-all" id="notif-read-all">Tout marquer comme lu</button>
+    </div>
+
+    <ul class="notif-list" id="notif-list">
+      {% for n in notifications_recentes %}
+      <li class="notif-item{{ ' is-read' if n.is_read }}" data-id="{{ n.id }}">
+        <a href="{{ n.url or url_for('notifications.index') }}" data-notif-open>
+          <span class="notif-ic notif-ic--{{ n.kind }}">{{ icon(n.icon or 'bell', 17) }}</span>
+          <span class="notif-txt">
+            <strong>{{ n.title }}</strong>
+            {% if n.body %}<span class="notif-body">{{ n.body }}</span>{% endif %}
+            <time>{{ time_ago(n.created_at) }}</time>
+          </span>
+        </a>
+      </li>
+      {% else %}
+      <li class="notif-empty">
+        {{ icon('bell', 22) }}
+        <span>Aucune notification pour le moment.</span>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <a class="notif-foot" href="{{ url_for('notifications.index') }}">
+      Voir tout l'historique {{ icon('arrow-right', 15) }}
+    </a>
+  </div>
+</div>

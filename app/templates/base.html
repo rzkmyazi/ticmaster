@@ -93,6 +93,10 @@
     <div class="nav-section">
       <div class="nav-title">Mon compte</div>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'user.profile' }}" href="{{ url_for('user.profile') }}">{{ icon('settings', 18) }} Mon profil</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'notifications.index' }}" href="{{ url_for('notifications.index') }}">
+        {{ icon('bell', 18) }} Notifications
+        {% if notifications_non_lues %}<span class="nav-count">{{ notifications_non_lues if notifications_non_lues < 100 else '99+' }}</span>{% endif %}
+      </a>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'user.history' }}" href="{{ url_for('user.history') }}">{{ icon('history', 18) }} Mon historique</a>
       <a class="nav-link" href="{{ url_for('auth.change_password') }}">{{ icon('lock', 18) }} Mot de passe</a>
     </div>
@@ -120,6 +124,7 @@
     <div class="topbar-heading"><span class="topbar-title">{% block page_title %}{{ self.title() }}{% endblock %}</span>{% block page_subtitle %}{% endblock %}</div>
     <span class="topbar-spacer"></span>
     <div class="topbar-actions">
+      {% include "partials/notification_bell.html" %}
       {% if current_user.is_super_admin %}
       <a class="icon-btn" href="{{ url_for('admin.user_messages') }}" title="Messages des Utilisateurs" aria-label="Messages des Utilisateurs" style="color:var(--pink)">{{ icon('message', 19) }}</a>
       {% endif %}

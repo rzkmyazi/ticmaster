@@ -297,6 +297,16 @@ def submit(attempt_id: int):
     log_audit("exam.submitted", target=f"attempt={attempt.id}",
               details=f"score={attempt.score}/{attempt.max_score}")
     flash("Examen soumis et corrigé.", "success")
+
+    # « Note publiée » : l'élève est prévenu dès la correction
+    from ..notifications import notify
+    note = round(attempt.score * 20 / attempt.max_score, 1) if attempt.max_score else 0
+    notify(
+        attempt.user_id, "note", "Votre examen est corrigé",
+        f"{attempt.exercise.title if attempt.exercise else 'Examen'} : "
+        f"{attempt.score}/{attempt.max_score} ({note}/20).",
+        url_for("exam.exam_result", attempt_id=attempt.id), icon="award",
+    )
     return redirect(url_for("exam.exam_result", attempt_id=attempt.id))
 
 

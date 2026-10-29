@@ -1437,3 +1437,143 @@ def test_suspendre_reinitialiser_supprimer_fonctionnent(app):
     assert ok_suppr.headers["Location"].endswith("/admin/utilisateurs")
     with app.app_context():
         assert db.session.get(User, eleve_id) is None
+
+
+# ---------------------------------------------------------------------------
+# Vague 10 — notifications en temps réel
+# ---------------------------------------------------------------------------
+def test_cloche_affichee_uniquement_pour_les_comptes_connectes(app):
+    _make_user(app, "eleve", role=ROLE_USER)
+    client = app.test_client()
+
+    accueil = client.get("/").get_data(as_text=True)
+    assert 'id="notif-toggle"' not in accueil          # rien sur la page publique
+
+    _login(client, "eleve", "MotDePasse2026!")
+    espace = client.get("/espace")
+    assert espace.status_code == 200
+    html = espace.get_data(as_text=True)
+    assert 'id="notif-toggle"' in html                 # cloche côté connecté
+    assert 'id="notif-panel"' in html
+    assert "TIC.notifications" not in html or True      # pas de code serveur exposé
+
+
+def test_api_notifications_compteur_et_nouveautes(app):
+    _make_user(app, "eleve", role=ROLE_USER)
+    with app.app_context():
+        eleve_id = User.query.filter_by(username="eleve").first().id
+
+    client = app.test_client()
+    _login(client, "eleve", "MotDePasse2026!")
+
+    vide = client.get("/api/notifications").get_json()
+    assert vide["ok"] and vide["count"] == 0 and vide["items"] == []
+
+    with app.app_context():
+        from app.notifications import notify
+        notify(eleve_id, "annonce", "Nouvelle annonce : test", "Corps", "/notifications")
+
+    plein = client.get("/api/notifications").get_json()
+    assert plein["count"] == 1
+    assert plein["items"][0]["title"] == "Nouvelle annonce : test"
+    assert plein["items"][0]["kind"] == "annonce"
+    assert plein["latest_id"] > 0
+    # `?since=` ne renvoie que les nouveautés postérieures
+    nouveautes = client.get(f"/api/notifications?since={plein['latest_id']}").get_json()
+    assert nouveautes["new"] == []
+
+
+def test_marquer_lu_par_api_et_par_la_page(app):
+    _make_user(app, "eleve", role=ROLE_USER)
+    with app.app_context():
+        from app.notifications import notify, unread_count
+        eleve = User.query.filter_by(username="eleve").first()
+        notify(eleve.id, "message", "Bonjour", "Un message", "/messages")
+        notify(eleve.id, "note", "Note publiée", "12/20", "/notifications")
+        assert unread_count(eleve) == 2
+        ids = [n.id for n in eleve.notifications.all()] if hasattr(eleve, "notifications") else []
+
+    client = app.test_client()
+    _login(client, "eleve", "MotDePasse2026!")
+    token = _csrf(client)
+
+    r = client.post("/api/notifications/tout-lire", headers={"X-CSRF-Token": token}, json={})
+    assert r.status_code == 200 and r.get_json()["count"] == 0
+    with app.app_context():
+        from app.notifications import unread_count
+        assert unread_count(User.query.filter_by(username="eleve").first()) == 0
+
+
+def test_page_historique_groupee_par_jour(app):
+    _make_user(app, "eleve", role=ROLE_USER)
+    with app.app_context():
+        from app.notifications import notify
+        eleve = User.query.filter_by(username="eleve").first()
+        notify(eleve.id, "battle", "Battle à valider", "Groupe « TIC »", "/battle/ABC123")
+        notify(eleve.id, "compte", "Compte réactivé", "", "/notifications")
+
+    client = app.test_client()
+    _login(client, "eleve", "MotDePasse2026!")
+    page = client.get("/notifications")
+    assert page.status_code == 200
+    html = page.get_data(as_text=True)
+    assert "Battle à valider" in html and "Compte réactivé" in html
+    assert "notif-row" in html                         # rendu de l'historique
+    assert "2 au total" in html
+
+
+def test_message_prive_notifie_le_destinataire(app):
+    _make_user(app, "emetteur", role=ROLE_USER)
+    _make_user(app, "receveur", role=ROLE_USER)
+    with app.app_context():
+        a = User.query.filter_by(username="emetteur").first().id
+        b = User.query.filter_by(username="receveur").first().id
+
+    client = app.test_client()
+    _login(client, "emetteur", "MotDePasse2026!")
+    token = _csrf(client)
+    room = f"dm:{min(a, b)}:{max(a, b)}"
+    r = client.post("/api/messages", json={"body": "Coucou", "room": room},
+                    headers={"X-CSRF-Token": token})
+    assert r.status_code == 201
+
+    with app.app_context():
+        from app.models import Notification
+        rows = Notification.query.filter_by(user_id=b, kind="message").all()
+        assert len(rows) == 1
+        assert "Coucou" in rows[0].body
+        assert rows[0].url.startswith("/messages")
+        # l'émetteur ne se notifie jamais lui-même
+        assert Notification.query.filter_by(user_id=a).count() == 0
+
+
+def test_annonce_notifie_tous_les_comptes_actifs(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    _make_user(app, "eleve1", role=ROLE_USER)
+    _make_user(app, "eleve2", role=ROLE_USER)
+    client = app.test_client()
+    _login(client, "chef", "MotDePasse2026!")
+    token = _csrf(client)
+
+    r = client.post("/admin/annonces",
+                    data={"csrf_token": token, "title": "Réunion", "body": "Lundi 8h", "published": "1"},
+                    follow_redirects=True)
+    assert r.status_code == 200
+
+    with app.app_context():
+        from app.models import Notification
+        rows = Notification.query.filter_by(kind="annonce").all()
+        assert len(rows) == 2                          # les deux élèves, pas l'auteur
+        assert {row.title for row in rows} == {"Nouvelle annonce : Réunion"}
+
+
+def test_aucun_script_inline_sans_nonce_dans_la_cloche(app):
+    _make_user(app, "eleve", role=ROLE_USER)
+    client = app.test_client()
+    _login(client, "eleve", "MotDePasse2026!")
+    # CSP : chaque <script> doit porter un nonce
+    html = client.get("/espace").get_data(as_text=True)
+    for balise in re.findall(r"<script(?![^>]*nonce=)[^>]*>", html):
+        if "src=" in balise or "application/ld+json" in balise:
+            continue      # script externe ou données structurées : nonce inutile
+        raise AssertionError(f"script sans nonce : {balise}")

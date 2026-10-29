@@ -482,6 +482,38 @@ class BattleMember(db.Model):
     user = db.relationship("User")
 
 
+class Notification(db.Model):
+    """Notification destinée à un utilisateur (message, battle, annonce, note…).
+
+    Le champ `read_at` vide signifie « non lue ». Les notifications sont
+    supprimées en cascade avec le compte : aucune trace personnelle ne survit
+    à une suppression RGPD.
+    """
+    __tablename__ = "notifications"
+    __table_args__ = (
+        db.Index("ix_notifications_user_read", "user_id", "read_at"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    kind = db.Column(db.String(30), nullable=False, default="system", index=True)
+    title = db.Column(db.String(190), nullable=False)
+    body = db.Column(db.String(400), default="")
+    url = db.Column(db.String(255), default="")
+    icon = db.Column(db.String(30), default="bell")
+    actor_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
+    read_at = db.Column(db.DateTime, index=True)
+
+    user = db.relationship("User", foreign_keys=[user_id])
+    actor = db.relationship("User", foreign_keys=[actor_id])
+
+    @property
+    def is_read(self) -> bool:
+        return self.read_at is not None
+
+
 class Setting(db.Model):
     __tablename__ = "settings"
 

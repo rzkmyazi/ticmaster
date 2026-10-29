@@ -675,8 +675,12 @@ def main() -> int:
 
         # --- composition des questions par l'administration
         page = sa.get(BASE + "/admin/battles")
-        row = next((segment for segment in page.text.split("<tr") if code in segment), "")
-        q_link = re.search(r"/admin/battles/(\d+)/questions", row)
+        # le code peut apparaître dans un segment sans le lien (en-tête, JS) :
+        # on prend le premier segment qui contient réellement le bouton « questions »
+        q_link = next((hit for hit in
+                       (re.search(r"/admin/battles/(\d+)/questions", segment)
+                        for segment in page.text.split("<tr") if code in segment)
+                       if hit), None)
         ok("lien « questions » du battle pour l'administration", bool(q_link))
         created_ids: list[str] = []
         if q_link:
@@ -862,6 +866,62 @@ def main() -> int:
        "env(safe-area-inset-bottom)" in css and "font-size: 16px" in css
        and "[hidden] { display: none !important; }" in css)
     ok("CSS mobile : aucun débordement horizontal prévu", "overflow-wrap: anywhere" in css)
+
+    # ---------------------------------------------- notifications temps réel
+    print("▸ Notifications en temps réel")
+    # la section « Sécurité » vient de déconnecter p : on repart d'une session propre
+    pn = login(USER[0], USER[1])
+    css = requests.get(BASE + "/static/css/app.css", timeout=30).text
+    js = requests.get(BASE + "/static/js/app.js", timeout=30).text
+    ok("cloche présente dans la barre du haut", 'id="notif-toggle"' in pn.get(BASE + "/espace").text)
+    ok("compteur et panneau déroulant intégrés",
+       'id="notif-badge"' in pn.get(BASE + "/espace").text
+       and ".notif-panel" in css and ".notif-badge" in css)
+    ok("rafraîchissement automatique (25 s, pause onglet en arrière-plan)",
+       "pollNotifications" in js and "25000" in js and "visibilitychange" in js)
+    ok("aucune fenêtre native pour les notifications",
+       "alert(" not in js.split("function initNotifications")[1][:4000])
+
+    etat = pn.get(BASE + "/api/notifications", timeout=30)
+    data = etat.json() if etat.status_code == 200 else {}
+    ok("API /api/notifications", etat.status_code == 200 and data.get("ok") is True,
+       str(etat.status_code))
+    avant = int(data.get("count") or 0)
+    historique = pn.get(BASE + "/notifications", timeout=30)
+    ok("page d'historique des notifications",
+       historique.status_code == 200
+       and ("notif-row" in historique.text or "Aucune notification" in historique.text),
+       str(historique.status_code))
+
+    # Émission réelle : le super admin écrit en privé à l'apprenant
+    token_pn = csrf(pn, "/messages")
+    pn.post(BASE + "/api/messages", json={"room": "general", "body": "Ping notifications"},
+            headers={"X-CSRF-Token": token_pn}, timeout=30)
+    salon = pn.get(BASE + "/api/messages?room=general", timeout=30).json().get("messages", [])
+    moi = next((m["sender"]["id"] for m in salon if m.get("mine")), None)
+    if moi:
+        token = csrf(sa, "/messages")
+        room = f"dm:{min(1, moi)}:{max(1, moi)}"
+        envoi = sa.post(BASE + "/api/messages",
+                        json={"room": room, "body": "Notification vérifiée"},
+                        headers={"X-CSRF-Token": token}, timeout=30)
+        ok("message privé envoyé par le super administrateur", envoi.status_code == 201,
+           str(envoi.status_code))
+        apres = pn.get(BASE + "/api/notifications", timeout=30).json()
+        ok("le destinataire reçoit une notification immédiate",
+           int(apres.get("count") or 0) == avant + 1
+           and any(i.get("kind") == "message" for i in apres.get("items", [])),
+           f"{avant} → {apres.get('count')}")
+        token = csrf(pn, "/espace")
+        lu = pn.post(BASE + "/api/notifications/tout-lire",
+                    headers={"X-CSRF-Token": token}, json={}, timeout=30)
+        ok("le compteur retombe après lecture",
+           lu.status_code == 200 and lu.json().get("count") == 0, str(lu.status_code))
+    else:
+        skip("émission d'une notification réelle", "identifiant de l'apprenant introuvable")
+
+    ok("cloche absente de la page publique (aucune fuite)",
+       'id="notif-toggle"' not in requests.get(BASE + "/", timeout=30).text)
 
     # ------------------------------------- actions de la fiche d'un élève
     print("▸ Fiche élève : réinitialiser, suspendre, supprimer")

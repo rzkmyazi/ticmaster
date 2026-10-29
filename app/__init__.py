@@ -136,6 +136,7 @@ def create_app(config_object: str | None = None) -> Flask:
     from .blueprints.learning import bp as learning_bp
     from .blueprints.social import bp as social_bp
     from .blueprints.exam import bp as exam_bp
+    from .blueprints.notifications import bp as notifications_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(public_bp)
@@ -144,6 +145,7 @@ def create_app(config_object: str | None = None) -> Flask:
     app.register_blueprint(learning_bp)
     app.register_blueprint(social_bp)
     app.register_blueprint(exam_bp)
+    app.register_blueprint(notifications_bp)
 
     # ---------------- Veille 24 h/24 ----------------
     # Sur PythonAnywhere (toujours en ligne) un fil discret appelle /sante de
@@ -153,6 +155,8 @@ def create_app(config_object: str | None = None) -> Flask:
     veille.start()
 
     # ---------------- Template helpers ----------------
+    from .notifications import recent as recent_notifications, unread_count as unread_notifications
+
     @app.context_processor
     def inject_globals():
         from .models import REACTION_KINDS, REACTION_LABELS, ROLE_LABELS
@@ -202,6 +206,8 @@ def create_app(config_object: str | None = None) -> Flask:
             fmt_date=fmt_date,
             time_ago=time_ago,
             veille=veille.etat(),
+            notifications_non_lues=(unread_notifications(g.get("user")) if g.get("user") else 0),
+            notifications_recentes=(recent_notifications(g.get("user")) if g.get("user") else []),
             is_admin_area=request.path.startswith(("/admin", "/gestion")),
             render_content=render_content,
             human_size=human_size,

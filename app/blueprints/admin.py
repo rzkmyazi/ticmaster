@@ -440,6 +440,16 @@ def user_status(user_id: int):
     if new_status != STATUS_ACTIVE:
         revoke_all_sessions(user)
     log_audit(f"user.{action}", target=user.username)
+
+    from ..notifications import notify
+    if action == "activate":
+        notify(user.id, "compte", "Votre compte est de nouveau actif",
+               "Vous pouvez vous reconnecter avec vos identifiants habituels.",
+               url_for("public.index") + "#connexion", actor=g.user, icon="check-circle")
+    elif action == "suspend":
+        notify(user.id, "compte", "Votre compte a été suspendu",
+               "Contactez l'administration pour en connaître la raison.",
+               url_for("public.about"), actor=g.user, icon="ban")
     flash(message, "success")
     return redirect(url_for("admin.user_detail", user_id=user.id))
 
@@ -459,6 +469,14 @@ def user_reset_password(user_id: int):
     db.session.commit()
     revoke_all_sessions(user)
     log_audit("user.password_reset", target=user.username)
+
+    from ..notifications import notify
+    notify(
+        user.id, "compte", "Votre mot de passe a été réinitialisé",
+        "L'administration vous a communiqué un mot de passe temporaire. "
+        "Vous devrez le changer à votre prochaine connexion.",
+        url_for("auth.change_password"), actor=g.user, icon="key",
+    )
 
     attempts = Attempt.query.filter_by(user_id=user.id).order_by(Attempt.started_at.desc()).limit(10).all()
     sessions = AuthSession.query.filter_by(user_id=user.id).order_by(AuthSession.created_at.desc()).limit(10).all()
@@ -935,7 +953,20 @@ def announcements():
             db.session.add(announcement)
             db.session.commit()
             log_audit("announcement.created", target=str(announcement.id))
-            flash("Annonce publiée.", "success")
+
+            # Notification instantanée à toute la classe (comptes actifs)
+            if announcement.published:
+                from ..notifications import notify_many
+                destinataires = [
+                    row.id for row in User.query.filter_by(status=STATUS_ACTIVE).all()
+                ]
+                envoyees = notify_many(
+                    destinataires, "annonce", f"Nouvelle annonce : {title}",
+                    body[:160], url_for("user.announcements"), actor=g.user, icon="megaphone",
+                )
+                flash(f"Annonce publiée · {envoyees} personne(s) notifiée(s).", "success")
+            else:
+                flash("Annonce publiée.", "success")
         return redirect(url_for("admin.announcements"))
 
     items = Announcement.query.order_by(Announcement.created_at.desc()).all()
