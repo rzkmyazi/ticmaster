@@ -601,9 +601,11 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 | Ménage automatique : 45 jours, 200 par personne | ✔ |
 | Cloche absente de la page publique (aucune fuite d'interface) | ✔ |
 | Aucun `window.confirm` / `alert` dans le module de notifications | ✔ |
+| Premier chargement sans `since` → aucune bannière ; `since=N` → seules les nouveautés | ✔ |
+| Compteur à zéro puis première notification → bannière affichée (`since=0`) | ✔ |
 
-- `pytest -q` → **69 tests réussis** (7 nouveaux, dont un contrôle CSP sur les
-  scripts en ligne).
+- `pytest -q` → **70 tests réussis** (8 nouveaux, dont un contrôle CSP sur les
+  scripts en ligne et un test dédié au curseur `since`).
 - `tools/verify.py` → **206** contrôles en local, **208** sur PythonAnywhere,
   **208** sur Render (0 échec).
 
@@ -613,7 +615,7 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 |---|---|
 | Cloche visible sur `/espace` (Pixel, 393 × 851, tactile) | ✔ |
 | Clic sur la cloche → panneau `is-open` | ✔ |
-| Notification insérée en base → compteur 0 → 1 puis bannière | ✔ |
+| Notification réelle (message privé du super admin) → compteur 0 → 1 puis bannière | ✔ |
 | Page `/notifications` : lignes groupées par jour | ✔ |
 | Erreurs JavaScript | aucune |
 

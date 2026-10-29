@@ -406,6 +406,7 @@ Aucune n'est simulée ni fabriquée côté navigateur.
 | Onglet en arrière-plan | **Aucune requête** : le rafraîchissement reprend dès le retour sur la page (et au retour de focus). |
 | Bandeau | Affiché 6 secondes, un maximum de 3 nouveautés à la fois, sinon simple mise à jour du compteur. |
 | Premier chargement | Aucune bannière : seuls les événements **postérieurs** à l'ouverture de la page déclenchent une alerte. |
+| Compteur à zéro | Cas particulier corrigé : quand on n'avait **aucune** notification, la toute première nouveauté déclenche bien sa bannière (le curseur `since=0` est transmis explicitement). |
 | Rien de bloquant | Aucune fenêtre native, aucun clignotement : la bannière apparaît et disparaît en fondu. |
 | Économie | La réponse ne contient que 8 notifications et un compteur ; rien n'est rechargé d'autre. |
 
@@ -436,6 +437,7 @@ Aucune n'est simulée ni fabriquée côté navigateur.
 | Panneau déroulant ouvert au clic | ✔ |
 | Nouvelle notification insérée en base → compteur 0 → 1 et bannière | ✔ |
 | Page d'historique : notifications groupées par jour | ✔ |
+| Première notification alors que le compteur était à zéro → bannière affichée | ✔ |
 | Erreurs JavaScript | aucune |
 | Message privé du super admin → notification immédiate chez l'élève | ✔ |
 | Annonce publiée → tous les comptes actifs notifiés, jamais l'auteur | ✔ |
@@ -452,7 +454,7 @@ Captures : `apercus/android/prod-notifications-panneau.png`,
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **69 tests réussis** |
+| `pytest -q` | **70 tests réussis** |
 | `tools/verify.py` (local) | **206 contrôles conformes, 0 échec** |
 | `tools/verify.py` sur Render | **208 contrôles conformes, 0 échec** |
 | `tools/verify.py` sur PythonAnywhere | **208 contrôles conformes, 0 échec** |
