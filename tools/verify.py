@@ -863,6 +863,60 @@ def main() -> int:
        and "[hidden] { display: none !important; }" in css)
     ok("CSS mobile : aucun débordement horizontal prévu", "overflow-wrap: anywhere" in css)
 
+    # ------------------------------------- actions de la fiche d'un élève
+    print("▸ Fiche élève : réinitialiser, suspendre, supprimer")
+    css = requests.get(BASE + "/static/css/app.css", timeout=30).text
+    js = requests.get(BASE + "/static/js/app.js", timeout=30).text
+    ok("confirmation dessinée dans la page (plus de window.confirm)",
+       ".confirm-backdrop" in css and "askConfirm" in js and "requestSubmit" in js)
+
+    probe = f"verif.action{''.join(random.choice(string.ascii_lowercase) for _ in range(4))}"
+    created = _provision(sa, probe, "Vérification Actions", "user", "Action2026!")
+    ok("compte de test créé pour les actions", created, probe)
+    listing = sa.get(BASE + "/admin/utilisateurs?q=" + probe, timeout=20).text
+    ids = sorted({int(i) for i in re.findall(r'/admin/utilisateurs/(\d+)"', listing)})
+    cible = next((i for i in ids if f"@{probe}" in sa.get(BASE + f"/admin/utilisateurs/{i}", timeout=20).text), None)
+    if cible:
+        detail = sa.get(BASE + f"/admin/utilisateurs/{cible}", timeout=20).text
+        token = re.search(r'name="csrf_token" value="([^"]+)"', detail).group(1)
+        ok("la fiche annonce ses confirmations (titre, libellé, danger)",
+           "data-confirm-title" in detail and "data-confirm-ok" in detail
+           and 'data-confirm-danger="1"' in detail)
+
+        reset = sa.post(BASE + f"/admin/utilisateurs/{cible}/reinitialiser",
+                        data={"csrf_token": token}, timeout=30)
+        ok("réinitialiser le mot de passe", reset.status_code == 200
+           and "Nouveau mot de passe temporaire" in reset.text, str(reset.status_code))
+
+        detail = sa.get(BASE + f"/admin/utilisateurs/{cible}", timeout=20).text
+        token = re.search(r'name="csrf_token" value="([^"]+)"', detail).group(1)
+        susp = sa.post(BASE + f"/admin/utilisateurs/{cible}/statut",
+                       data={"csrf_token": token, "action": "suspend"}, allow_redirects=True, timeout=30)
+        ok("suspendre le compte", susp.status_code == 200 and "Réactiver" in susp.text,
+           str(susp.status_code))
+
+        detail = sa.get(BASE + f"/admin/utilisateurs/{cible}", timeout=20).text
+        token = re.search(r'name="csrf_token" value="([^"]+)"', detail).group(1)
+        sa.post(BASE + f"/admin/utilisateurs/{cible}/statut",
+                data={"csrf_token": token, "action": "activate"}, allow_redirects=True, timeout=30)
+
+        detail = sa.get(BASE + f"/admin/utilisateurs/{cible}", timeout=20).text
+        token = re.search(r'name="csrf_token" value="([^"]+)"', detail).group(1)
+        refus = sa.post(BASE + f"/admin/utilisateurs/{cible}/supprimer",
+                        data={"csrf_token": token, "confirm": "mauvais-nom"},
+                        allow_redirects=True, timeout=30)
+        ok("suppression refusée sans le nom exact", "La confirmation a échoué" in refus.text)
+
+        detail = sa.get(BASE + f"/admin/utilisateurs/{cible}", timeout=20).text
+        token = re.search(r'name="csrf_token" value="([^"]+)"', detail).group(1)
+        suppr = sa.post(BASE + f"/admin/utilisateurs/{cible}/supprimer",
+                        data={"csrf_token": token, "confirm": probe},
+                        allow_redirects=True, timeout=30)
+        ok("supprimer le compte", suppr.status_code == 200
+           and "a été supprimé" in suppr.text, str(suppr.status_code))
+    else:
+        ok("fiche du compte de test introuvable", False, probe)
+
     # -------------------------------------------------------------- nettoyage
     print("▸ Nettoyage des comptes de test")
     removed = cleanup_accounts(sa)

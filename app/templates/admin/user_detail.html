@@ -11,7 +11,7 @@
 </div>
 
 {% if temp_password %}
-<div class="card mb-2" style="border-color:rgba(251,191,36,.5)">
+<div class="card mb-2" id="mot-de-passe-temporaire" style="border-color:rgba(251,191,36,.5);scroll-margin-top:calc(var(--topbar-h) + 12px)">
   <div class="card-body">
     <span class="badge badge-warning mb-1">{{ icon('key') }} Mot de passe réinitialisé</span>
     <h2 class="card-title mt-1">Nouveau mot de passe temporaire</h2>
@@ -162,7 +162,9 @@
         <a class="btn btn-outline btn-block" href="{{ url_for('admin.user_edit', user_id=user.id) }}">{{ icon('edit') }} Modifier le compte</a>
 
         <form method="post" action="{{ url_for('admin.user_reset_password', user_id=user.id) }}"
-              data-confirm="Générer un nouveau mot de passe temporaire ? Toutes les sessions seront révoquées.">
+              data-confirm="Générer un nouveau mot de passe temporaire ? Toutes les sessions de {{ user.display_name }} seront immédiatement révoquées."
+              data-confirm-title="Réinitialiser le mot de passe"
+              data-confirm-ok="Réinitialiser">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="btn btn-outline btn-block" type="submit">{{ icon('key') }} Réinitialiser le mot de passe</button>
         </form>
@@ -174,7 +176,9 @@
 
         {% if user.status == 'active' %}
         <form method="post" action="{{ url_for('admin.user_status', user_id=user.id) }}"
-              data-confirm="Suspendre ce compte ? L'utilisateur sera déconnecté immédiatement.">
+              data-confirm="Suspendre le compte de {{ user.display_name }} ? Il sera déconnecté immédiatement et ne pourra plus se connecter jusqu'à sa réactivation."
+              data-confirm-title="Suspendre le compte"
+              data-confirm-ok="Suspendre">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="action" value="suspend">
           <button class="btn btn-warning btn-block" type="submit">{{ icon('ban') }} Suspendre</button>
@@ -195,7 +199,9 @@
       <div class="card-body">
         <p class="text-sm">La suppression efface les données personnelles (RGPD). Les traces d'audit sont anonymisées.</p>
         <form method="post" action="{{ url_for('admin.user_delete', user_id=user.id) }}"
-              data-confirm="Supprimer définitivement ce compte ? Cette action est irréversible.">
+              data-confirm="Supprimer définitivement le compte « {{ user.username }} » ? Les données personnelles seront effacées. Cette action est irréversible."
+              data-confirm-title="Suppression définitive"
+              data-confirm-ok="Supprimer définitivement" data-confirm-danger="1">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="field">
             <label for="confirm">Saisissez « {{ user.username }} » pour confirmer</label>
@@ -209,4 +215,24 @@
     {% endif %}
   </aside>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% if temp_password %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    // Le nouveau mot de passe est en haut de la fiche : on y amène l'administrateur
+    // et on le prévient, pour qu'il ne reparte pas sans l'avoir copié.
+    var carte = document.getElementById("mot-de-passe-temporaire");
+    if (carte) {
+      window.setTimeout(function () {
+        try { carte.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) { carte.scrollIntoView(); }
+      }, 150);
+    }
+    if (window.TIC && TIC.toast) {
+      TIC.toast("Mot de passe réinitialisé : copiez-le maintenant, il ne sera plus affiché.", "success", 7000);
+    }
+  })();
+</script>
+{% endif %}
 {% endblock %}

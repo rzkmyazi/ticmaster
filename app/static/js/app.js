@@ -148,24 +148,133 @@
     });
   }
 
-  /* ---------- Confirmations ---------- */
+  /* ---------- Confirmations (boîte de dialogue intégrée) ----------
+     Les navigateurs Android peuvent supprimer définitivement window.confirm()
+     (case « Empêcher cette page de créer d'autres boîtes de dialogue ») : le
+     formulaire ne partait alors plus jamais — « Suspendre », « Réinitialiser »
+     et « Supprimer » semblaient cassés. On dessine donc la confirmation dans
+     la page : elle ne peut pas être bloquée, elle est accessible et lisible
+     sur téléphone. */
+  var confirmBox = null;
+  var confirmCallback = null;
+  var confirmPreviousFocus = null;
+
+  function buildConfirmBox() {
+    var box = document.createElement("div");
+    box.className = "confirm-backdrop";
+    box.setAttribute("hidden", "");
+    box.innerHTML =
+      '<div class="confirm-dialog" role="dialog" aria-modal="true" ' +
+        'aria-labelledby="confirm-title" aria-describedby="confirm-text">' +
+        '<span class="confirm-icon" aria-hidden="true">' +
+          '<svg class="ic" width="22" height="22"><use href="#i-alert-triangle"></use></svg>' +
+        '</span>' +
+        '<h2 class="confirm-title" id="confirm-title">Confirmation</h2>' +
+        '<p class="confirm-text" id="confirm-text"></p>' +
+        '<div class="confirm-actions">' +
+          '<button type="button" class="btn btn-outline" data-confirm-cancel>Annuler</button>' +
+          '<button type="button" class="btn btn-primary" data-confirm-ok>Confirmer</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(box);
+
+    on(box.querySelector("[data-confirm-cancel]"), "click", function () { closeConfirm(false); });
+    on(box.querySelector("[data-confirm-ok]"), "click", function () { closeConfirm(true); });
+    on(box, "click", function (e) { if (e.target === box) closeConfirm(false); });
+    on(document, "keydown", function (e) {
+      if (box.hasAttribute("hidden")) return;
+      if (e.key === "Escape") { e.preventDefault(); closeConfirm(false); }
+      if (e.key === "Tab") {
+        var focusables = [box.querySelector("[data-confirm-cancel]"), box.querySelector("[data-confirm-ok]")];
+        var index = focusables.indexOf(document.activeElement);
+        e.preventDefault();
+        var next = e.shiftKey ? index - 1 : index + 1;
+        if (next < 0) next = focusables.length - 1;
+        if (next >= focusables.length) next = 0;
+        focusables[next].focus();
+      }
+    });
+    return box;
+  }
+
+  function closeConfirm(accepted) {
+    if (!confirmBox || confirmBox.hasAttribute("hidden")) return;
+    confirmBox.classList.remove("is-open");
+    confirmBox.setAttribute("hidden", "");
+    document.body.classList.remove("confirm-open");
+    var callback = confirmCallback;
+    confirmCallback = null;
+    if (confirmPreviousFocus && confirmPreviousFocus.focus) {
+      try { confirmPreviousFocus.focus({ preventScroll: true }); } catch (e) {}
+    }
+    confirmPreviousFocus = null;
+    if (accepted && typeof callback === "function") callback();
+  }
+
+  function askConfirm(question, options, callback) {
+    options = options || {};
+    try {
+      if (!confirmBox) confirmBox = buildConfirmBox();
+      confirmBox.querySelector(".confirm-text").textContent = question;
+      confirmBox.querySelector(".confirm-title").textContent = options.title || "Confirmation";
+      var ok = confirmBox.querySelector("[data-confirm-ok]");
+      ok.textContent = options.ok || "Confirmer";
+      ok.className = "btn " + (options.danger ? "btn-danger" : "btn-primary");
+      confirmBox.querySelector(".confirm-icon").className =
+        "confirm-icon" + (options.danger ? " confirm-icon--danger" : "");
+      confirmCallback = callback;
+      confirmPreviousFocus = document.activeElement;
+      confirmBox.removeAttribute("hidden");
+      document.body.classList.add("confirm-open");
+      // petit délai : l'animation d'ouverture doit être déclenchée après l'affichage
+      window.setTimeout(function () { confirmBox.classList.add("is-open"); }, 16);
+      confirmBox.querySelector("[data-confirm-cancel]").focus();
+      return true;
+    } catch (err) {
+      // Environnement très ancien : on retombe sur la boîte native
+      var fallback = window.confirm ? window.confirm(question) : true;
+      if (fallback && typeof callback === "function") callback();
+      return false;
+    }
+  }
+  TIC.askConfirm = askConfirm;
+
+  function optionsFor(el, suffix) {
+    return {
+      title: el.getAttribute("data-confirm-title" + suffix) || "Confirmation",
+      ok: el.getAttribute("data-confirm-ok" + suffix) || "Confirmer",
+      danger: el.getAttribute("data-confirm-danger") === "1"
+    };
+  }
+
   function initConfirm() {
+    // Formulaires : on intercepte avant l'envoi.
     document.addEventListener("submit", function (e) {
       var form = e.target;
       var question = form.getAttribute("data-confirm");
-      if (question && !form.dataset.confirmed) {
-        if (!window.confirm(question)) {
-          e.preventDefault();
-          return;
-        }
+      if (!question || form.dataset.confirmed === "1") return;
+      e.preventDefault();
+      e.stopPropagation();
+      askConfirm(question, optionsFor(form, ""), function () {
         form.dataset.confirmed = "1";
-      }
+        if (typeof form.requestSubmit === "function") {
+          form.requestSubmit();
+        } else {
+          form.submit();
+        }
+      });
     }, true);
 
+    // Liens : même boîte de dialogue.
     document.addEventListener("click", function (e) {
       var link = e.target.closest("a[data-confirm]");
-      if (!link) return;
-      if (!window.confirm(link.getAttribute("data-confirm"))) e.preventDefault();
+      if (!link || link.dataset.confirmed === "1") return;
+      e.preventDefault();
+      e.stopPropagation();
+      askConfirm(link.getAttribute("data-confirm"), optionsFor(link, ""), function () {
+        link.dataset.confirmed = "1";
+        link.click();
+      });
     });
   }
 
@@ -521,12 +630,15 @@
 
       var del = e.target.closest ? e.target.closest("[data-post-delete]") : null;
       if (del) {
-        if (!window.confirm("Supprimer définitivement cette publication ?")) return;
-        postJson("/api/posts/" + del.getAttribute("data-post-delete") + "/delete", {})
-          .then(function (result) {
-            if (!result.ok) { toast((result.data && result.data.error) || "Suppression impossible.", "error"); return; }
-            toast("Publication supprimée.", "success");
-            return refreshFeed(feed);
+        var cible = del.getAttribute("data-post-delete");
+        askConfirm("Supprimer définitivement cette publication ?", { danger: true, ok: "Supprimer" },
+          function () {
+            postJson("/api/posts/" + cible + "/delete", {})
+              .then(function (result) {
+                if (!result.ok) { toast((result.data && result.data.error) || "Suppression impossible.", "error"); return; }
+                toast("Publication supprimée.", "success");
+                return refreshFeed(feed);
+              });
           });
       }
     });

@@ -14,7 +14,7 @@ from app import create_app
 from app.extensions import db
 from app.models import (
     Attempt, BattleMember, BattleRoom, Exercise, Module, Question, Option, User, utcnow,
-    ROLE_ADMIN, ROLE_SUPER_ADMIN, ROLE_USER, STATUS_ACTIVE,
+    ROLE_ADMIN, ROLE_SUPER_ADMIN, ROLE_USER, STATUS_ACTIVE, STATUS_SUSPENDED,
 )
 from app.security.core import RateLimiter
 from app.security.hashing import hash_password, verify_password
@@ -1335,3 +1335,105 @@ def test_veille_est_configurable(monkeypatch):
     assert info["url"] == "https://exemple.test/sante"
     assert info["intervalle"] == 120
     assert info["active"] in (True, False)
+
+
+# ---------------------------------------------------------------------------
+# Vague 9 : les actions de la fiche élève fonctionnent sur Android
+# ---------------------------------------------------------------------------
+def test_confirmation_dans_la_page_et_non_native(app):
+    """window.confirm peut être bloqué par Android : on ne l'utilise plus."""
+    js = app.test_client().get("/static/js/app.js").get_data(as_text=True)
+
+    # boîte de dialogue intégrée, accessible
+    assert "confirm-backdrop" in js
+    assert 'role="dialog"' in js and 'aria-modal="true"' in js
+    assert "askConfirm" in js
+    assert "data-confirm-cancel" in js and "data-confirm-ok" in js
+    # la touche Échap ferme la boîte
+    assert '"Escape"' in js
+    # l'ancienne confirmation native n'est plus le chemin normal
+    assert 'if (!window.confirm(question))' not in js
+    # le formulaire repart une fois validé
+    assert "requestSubmit" in js
+
+    css = app.test_client().get("/static/css/app.css").get_data(as_text=True)
+    assert ".confirm-backdrop" in css and ".confirm-dialog" in css
+    assert "body.confirm-open" in css            # fond figé pendant la confirmation
+
+
+def test_fiche_eleve_decrit_ses_confirmations(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    _make_user(app, "eleve.conf", role=ROLE_USER)
+    with app.app_context():
+        eleve_id = User.query.filter_by(username="eleve.conf").first().id
+
+    client = app.test_client()
+    _login(client, "chef", "MotDePasse2026!")
+    page = client.get(f"/admin/utilisateurs/{eleve_id}").get_data(as_text=True)
+
+    assert "Réinitialiser le mot de passe" in page
+    assert "Suspendre" in page and "Supprimer le compte" in page
+    for attribut in ("data-confirm-title", "data-confirm-ok"):
+        assert attribut in page
+    assert 'data-confirm-danger="1"' in page          # suppression en rouge
+    assert "/reinitialiser" in page and "/statut" in page and "/supprimer" in page
+
+
+def test_suspendre_reinitialiser_supprimer_fonctionnent(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    _make_user(app, "eleve.act", role=ROLE_USER)
+    with app.app_context():
+        eleve = User.query.filter_by(username="eleve.act").first()
+        eleve_id, ancien_hash = eleve.id, eleve.password_hash
+
+    client = app.test_client()
+    _login(client, "chef", "MotDePasse2026!")
+    page = client.get(f"/admin/utilisateurs/{eleve_id}").get_data(as_text=True)
+    token = re.search(r'name="csrf_token" value="([^"]+)"', page).group(1)
+
+    # 1) suspension : le compte passe en « suspendu » et ses sessions tombent
+    r = client.post(f"/admin/utilisateurs/{eleve_id}/statut",
+                    data={"csrf_token": token, "action": "suspend"})
+    assert r.status_code == 302
+    with app.app_context():
+        assert db.session.get(User, eleve_id).status == STATUS_SUSPENDED
+
+    # 2) réactivation
+    page = client.get(f"/admin/utilisateurs/{eleve_id}").get_data(as_text=True)
+    token = re.search(r'name="csrf_token" value="([^"]+)"', page).group(1)
+    client.post(f"/admin/utilisateurs/{eleve_id}/statut",
+                data={"csrf_token": token, "action": "activate"})
+    with app.app_context():
+        assert db.session.get(User, eleve_id).status == STATUS_ACTIVE
+
+    # 3) réinitialisation : nouveau mot de passe affiché, ancien invalidé
+    page = client.get(f"/admin/utilisateurs/{eleve_id}").get_data(as_text=True)
+    token = re.search(r'name="csrf_token" value="([^"]+)"', page).group(1)
+    reset = client.post(f"/admin/utilisateurs/{eleve_id}/reinitialiser",
+                        data={"csrf_token": token})
+    assert reset.status_code == 200
+    html = reset.get_data(as_text=True)
+    assert "Nouveau mot de passe temporaire" in html
+    assert "data-copy=" in html                      # bouton « copier »
+    with app.app_context():
+        eleve = db.session.get(User, eleve_id)
+        assert eleve.password_hash != ancien_hash    # Argon2id, jamais en clair
+        assert eleve.must_change_password is True
+
+    # 4) suppression : refusée sans le nom exact, acceptée avec
+    page = client.get(f"/admin/utilisateurs/{eleve_id}").get_data(as_text=True)
+    token = re.search(r'name="csrf_token" value="([^"]+)"', page).group(1)
+    refus = client.post(f"/admin/utilisateurs/{eleve_id}/supprimer",
+                        data={"csrf_token": token, "confirm": "mauvais-nom"})
+    assert refus.status_code == 302
+    with app.app_context():
+        assert db.session.get(User, eleve_id) is not None
+
+    page = client.get(f"/admin/utilisateurs/{eleve_id}").get_data(as_text=True)
+    token = re.search(r'name="csrf_token" value="([^"]+)"', page).group(1)
+    ok_suppr = client.post(f"/admin/utilisateurs/{eleve_id}/supprimer",
+                           data={"csrf_token": token, "confirm": "eleve.act"})
+    assert ok_suppr.status_code == 302
+    assert ok_suppr.headers["Location"].endswith("/admin/utilisateurs")
+    with app.app_context():
+        assert db.session.get(User, eleve_id) is None
