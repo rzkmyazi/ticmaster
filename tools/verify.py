@@ -735,12 +735,74 @@ def main() -> int:
                    headers={"X-CSRF-Token": token})
         ok("renommage d'une battle solo refusé", r.status_code == 400, str(r.status_code))
 
+        # --- une partie jouée de bout en bout (réponses envoyées par le serveur)
+        etat = state
+        tours = 0
+        while tours < 8 and (etat.get("room") or {}).get("status") == "running":
+            options = ((etat.get("question") or {}).get("options") or [])
+            if not options:
+                break
+            rep = p.post(BASE + "/api/battle/answer",
+                         json={"code": code, "option_id": options[0]["id"]},
+                         headers={"X-CSRF-Token": token})
+            if rep.status_code != 200:
+                break
+            tours += 1
+            etat = p.get(BASE + f"/api/battle/state?code={code}").json() or {}
+        statut_final = (etat.get("room") or {}).get("status")
+        ok("partie jouée jusqu'à la fin", tours >= 1 and statut_final == "finished",
+           f"{tours} réponse(s), statut={statut_final}")
+        ok("avancement immédiat quand tout le monde a répondu", tours == len(etat.get("corrections") or [])
+           or statut_final == "finished", f"{tours} réponse(s) pour {len(etat.get('corrections') or [])} question(s)")
+        ok("corrections affichées en fin de partie", bool(etat.get("corrections")),
+           f"{len(etat.get('corrections') or [])} correction(s)")
+        ok("classement final calculé", bool(etat.get("ranking")))
+
         # nettoyage : les questions créées pour la vérification sont retirées
         if created_ids:
             token_q = csrf(sa, "/admin/battles")
             for question_id in created_ids:
                 sa.post(BASE + f"/admin/questions/{question_id}/supprimer",
                         data={"csrf_token": token_q}, allow_redirects=False)
+
+    # -------------------------- messages : remise, transfert, filtres
+    print("▸ Messages : remise, transfert et notifications filtrées")
+    token = csrf(p, "/messages")
+    r = p.post(BASE + "/api/messages",
+               json={"room": "general", "body": "Message de vérification (transfert)"},
+               headers={"X-CSRF-Token": token})
+    ok("envoi dans le salon général", r.status_code == 201, str(r.status_code))
+    msg_id = ((r.json() or {}).get("message") or {}).get("id")
+    listing = p.get(BASE + "/api/messages?room=general").json() or {}
+    ok("état de remise exposé par l'API", "delivery" in listing)
+    if msg_id:
+        meme_salon = p.post(BASE + "/api/messages/forward",
+                            json={"message_id": msg_id, "room": "general"},
+                            headers={"X-CSRF-Token": token})
+        ok("transfert vers le salon d'origine refusé", meme_salon.status_code == 400,
+           str(meme_salon.status_code))
+
+        page = p.get(BASE + "/messages").text
+        cible = re.search(r"/messages\?room=(dm:\d+:\d+)", page)
+        if cible:
+            r = p.post(BASE + "/api/messages/forward",
+                       json={"message_id": msg_id, "room": cible.group(1)},
+                       headers={"X-CSRF-Token": token})
+            ok("transfert vers une conversation privée", r.status_code == 201, str(r.status_code))
+            copie = ((r.json() or {}).get("message") or {})
+            ok("auteur d'origine conservé sur le message transféré", bool(copie.get("forwarded")),
+               str(copie.get("forwarded")))
+        transfert_interdit = p.post(BASE + "/api/messages/forward",
+                                    json={"message_id": 999999, "room": "general"},
+                                    headers={"X-CSRF-Token": token})
+        ok("transfert d'un message inexistant refusé", transfert_interdit.status_code == 404,
+           str(transfert_interdit.status_code))
+
+    filtres = p.get(BASE + "/notifications?type=message")
+    ok("notifications filtrables par type", filtres.status_code == 200
+       and "notif-chip" in filtres.text, str(filtres.status_code))
+    tout = p.get(BASE + "/notifications")
+    ok("lien « Tout » des notifications", tout.status_code == 200 and "notif-chip" in tout.text)
 
     # ------------------------------------------------------------ fil social
     print("▸ Fil d'actualité du profil")

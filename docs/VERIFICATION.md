@@ -672,4 +672,56 @@ PythonAnywhere**, pas seulement en local.
 
 ---
 
+## 21. Mise à jour du 29/10/2026 — Battle réparée, transfert et remise (vague 12)
+
+### La panne de la battle
+
+| Contrôle | Résultat |
+|---|---|
+| Reproduit avant correctif : `POST /api/battle/create` depuis le navigateur | ✘ **400 Jeton CSRF invalide** |
+| Cause : jeton lu dans `window.TIC_CSRF`, variable absente hors des pages d'examen | confirmé |
+| Erreurs invisibles : `window.ticToast` n'existait pas | confirmé |
+| Après correctif : jeton lu dans `<meta name="csrf-token">` | ✔ |
+| Les messages d'erreur s'affichent (bannière) | ✔ |
+| Bouton « Lancer la battle » réactivé dès l'acceptation | ✔ |
+| Battle solo jouée de bout en bout dans le navigateur (Android simulé) | ✔ 0 erreur |
+
+### Battle : déroulement complet
+
+| Contrôle | Résultat |
+|---|---|
+| Création solo → « En attente de validation » | ✔ |
+| Acceptation par le super administrateur → statut mis à jour **sans recharger** | ✔ |
+| Lancement, 3 questions, réponses, fin de partie | ✔ |
+| Correction finale (3 cartes) et classement | ✔ |
+| Groupe : création avec nom, code partagé, 2 joueurs, renommage | ✔ |
+| Scores des deux joueurs enregistrés (2 / 2) | ✔ |
+| Avancement immédiat quand tous les joueurs ont répondu | ✔ |
+
+### Messagerie : transférer, reçu, lu
+
+| Contrôle | Résultat |
+|---|---|
+| Envoi → « Envoyé » | ✔ |
+| Navigateur du destinataire en ligne → « Reçu » | ✔ |
+| Conversation ouverte par le destinataire → « Lu » | ✔ |
+| Transfert vers une conversation privée (201) | ✔ |
+| Mention « Message transféré de … » avec auteur et date | ✔ |
+| Transfert vers le salon d'origine refusé (400) | ✔ |
+| Message inexistant (404) / conversation d'un tiers (403) | ✔ |
+
+### Notifications
+
+| Contrôle | Résultat |
+|---|---|
+| Filtres par type avec pastilles de non-lues | ✔ |
+| `?type=message` ne montre que les messages | ✔ |
+| Notification « Votre battle est acceptée » / « a été refusée » | ✔ |
+| Remise d'un message privé enregistrée au passage de la cloche | ✔ |
+
+- `pytest -q` → **82 tests réussis** (5 nouveaux).
+- `tools/verify.py` → **230** contrôles en local, **232** sur PythonAnywhere et sur Render (0 échec).
+
+---
+
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*

@@ -113,7 +113,44 @@
 
 <p class="text-xs text-muted mt-2">
   {{ icon('info') }} Restez courtois. Tous les messages peuvent être consultés par le super administrateur.
+  Touchez <strong>Transférer</strong> sous un message pour l'envoyer ailleurs.
 </p>
+
+<div class="confirm-backdrop" id="forward-dialog" hidden>
+  <div class="confirm-dialog forward-dialog" role="dialog" aria-modal="true" aria-labelledby="forward-title">
+    <div class="confirm-icon">{{ icon('forward', 20) }}</div>
+    <h2 class="confirm-title" id="forward-title">Transférer le message</h2>
+    <p class="confirm-text" id="forward-preview"></p>
+    <label class="sr-only" for="forward-target">Destination</label>
+    <select id="forward-target" class="forward-select">
+      {% set classes_admin = current_user.is_admin and class_rooms %}
+      {% if classes_admin %}
+      <optgroup label="Messages de classe">
+        {% for c in class_rooms %}{% if c.room != room %}
+        <option value="{{ c.room }}">{{ c.label }}</option>
+        {% endif %}{% endfor %}
+      </optgroup>
+      {% endif %}
+      {% if room != 'general' %}
+      <optgroup label="Salon">
+        <option value="general">Salon général</option>
+      </optgroup>
+      {% endif %}
+      <optgroup label="Messages privés">
+        {% for contact in contacts %}
+        {% set cible = 'dm:' ~ ([current_user.id, contact.id]|sort|join(':')) %}
+        {% if cible != room %}
+        <option value="{{ cible }}">{{ contact.full_name or contact.username }}</option>
+        {% endif %}
+        {% endfor %}
+      </optgroup>
+    </select>
+    <div class="confirm-actions">
+      <button type="button" class="btn btn-ghost" data-forward-close>Annuler</button>
+      <button type="button" class="btn btn-primary" data-forward-send>{{ icon('send', 16) }} Transférer</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

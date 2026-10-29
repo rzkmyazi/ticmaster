@@ -39,6 +39,11 @@
     }, timeout || 3800);
   }
   TIC.toast = toast;
+  // Ancien nom utilisé par battle.js / chat.js / exam.js : conservé pour que
+  // les messages d'erreur s'affichent enfin (ils étaient silencieux).
+  window.ticToast = function (message, isError) {
+    toast(message, isError ? "error" : "success");
+  };
 
   /* ---------- Thème clair / sombre ---------- */
   function currentTheme() {

@@ -22,12 +22,12 @@
   </div>
 
   {% if room.status == 'pending' %}
-  <div class="alert alert-info mb-2">
+  <div class="alert alert-info mb-2" id="battle-notice" data-notice="pending">
     {{ icon('hourglass') }}
     <span>Cette battle attend la validation d'un administrateur. Aucun joueur ne peut la lancer avant l'accord du personnel.</span>
   </div>
   {% elif room.status == 'refused' %}
-  <div class="alert alert-danger mb-2">
+  <div class="alert alert-danger mb-2" id="battle-notice" data-notice="refused">
     {{ icon('ban') }}
     <span>Cette battle a été refusée par l'administration. Vous pouvez en créer une nouvelle depuis la page Battle.</span>
   </div>

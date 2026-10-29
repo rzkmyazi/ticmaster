@@ -1214,6 +1214,14 @@ def battle_accept(battle_id: int):
     room.status = "lobby"
     db.session.commit()
     log_audit("battle.accepted", target=room.code, details=f"par={g.user.username}")
+
+    # L'élève est prévenu immédiatement : sa battle peut démarrer
+    from ..notifications import notify
+    notify(
+        room.owner_id, "battle", "Votre battle est acceptée",
+        f"« {room.name} » · code {room.code} — vous pouvez lancer la partie.",
+        url_for("social.battle_room", code=room.code), actor=g.user, icon="zap",
+    )
     flash(f"Battle « {room.name} » acceptée : les joueurs peuvent démarrer.", "success")
     return redirect(url_for("admin.battles"))
 
@@ -1228,6 +1236,13 @@ def battle_refuse(battle_id: int):
     room.status = "refused"
     db.session.commit()
     log_audit("battle.refused", target=room.code, details=f"par={g.user.username}")
+
+    from ..notifications import notify
+    notify(
+        room.owner_id, "battle", "Votre battle a été refusée",
+        f"« {room.name} » · code {room.code} — parlez-en à votre professeur.",
+        url_for("social.battle_room", code=room.code), actor=g.user, icon="zap",
+    )
     flash(f"Battle « {room.name} » refusée.", "info")
     return redirect(url_for("admin.battles"))
 

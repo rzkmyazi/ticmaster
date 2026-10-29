@@ -528,14 +528,75 @@ Captures : `apercus/android/prof-accueil.png`, `prof-message-classe.png`,
 
 ---
 
+## 17. Vague 12 — Battle réparée, messages transférés, notifications affinées — ✔
+
+### 17.1 Pourquoi la battle ne marchait pas
+
+La battle était **inutilisable de bout en bout**, solo comme en groupe : appuyer sur
+« Créer une battle » ne produisait rien du tout.
+
+| Cause | Détail |
+|---|---|
+| **Jeton de sécurité introuvable** | Le script `battle.js` lisait le jeton CSRF dans une variable (`window.TIC_CSRF`) qui n'existe que sur les pages d'examen. Sur les autres pages la valeur était vide : le serveur refusait chaque appel (`400 Jeton CSRF invalide`) — création, code d'accès, lancement et réponses. |
+| **Erreurs muettes** | Les messages d'erreur étaient envoyés à une fonction (`window.ticToast`) qui n'existait pas : aucune alerte ne s'affichait, l'écran restait figé. |
+| **Bouton « Lancer » bloqué** | Le bouton était rendu inactif pour une demande en attente et **n'était jamais réactivé** une fois la battle acceptée par le professeur. |
+
+Correctifs : le jeton est désormais lu dans la balise `<meta name="csrf-token">` (présente sur
+**toutes** les pages), l'ancien nom `ticToast` est branché sur les notifications réelles de
+l'application, et le bouton de lancement comme la bannière « en attente de validation » se
+mettent à jour en direct quand le professeur accepte.
+
+### 17.2 La battle est aussi plus vivante
+
+* **Avancement immédiat** : dès que tous les joueurs ont répondu, la question suivante part.
+  On n'attend plus 20 secondes pour rien (les 20 s restent la limite maximale).
+* **Attente expliquée** : « Réponse enregistrée · en attente de 1 joueur ».
+* **Notification d'acceptation** : l'élève reçoit une alerte « Votre battle est acceptée »
+  (ou « a été refusée ») avec le lien direct vers la salle.
+* Le renommage d'un groupe met à jour le titre affiché sans recharger la page.
+
+### 17.3 Transférer un message, et savoir qu'il est arrivé
+
+| Nouveauté | Détail |
+|---|---|
+| **Bouton Transférer** | Sous chaque message, une flèche ouvre une fenêtre : on choisit la destination (salon général, message de classe pour le professeur, conversation privée) et le message part tel quel. |
+| **Auteur d'origine affiché** | Le message transféré porte la mention « Message transféré de … » avec la date de l'original. Le texte n'est jamais modifiable : aucune usurpation possible. |
+| **Trois états** | « **Envoyé** » (le serveur a le message), « **Reçu** » (le navigateur du destinataire l'a atteint), « **Lu** » (la conversation a été ouverte). La remise est enregistrée par la cloche des notifications et par l'ouverture du fil. |
+| **Contrôles serveur** | Impossible de transférer un message d'une conversation dont on n'est pas partie (403), de renvoyer un message vers son propre salon (400) ou de réécrire l'original. |
+
+### 17.4 Notifications plus utiles
+
+* **Filtres par type** en haut de l'historique : Tout, Message, Battle, Annonce, Note, Compte,
+  Système — avec le nombre de non-lues en pastille rose.
+* **Acceptation / refus d'une battle** notifiés à l'élève concerné.
+* **Remise des messages privés** déclenchée au passage de la cloche : le professeur voit
+  « Reçu » avant même que l'élève ouvre la conversation.
+
+### 17.5 Preuves
+
+| Contrôle | Résultat |
+|---|---|
+| Battle solo : création → validation → lancement → 3 questions → fin de partie | ✔ |
+| Battle en groupe : 2 joueurs, code, renommage, scores 2 / 2, corrections | ✔ |
+| « Reçu » puis « Lu » sur un message privé | ✔ |
+| Message transféré visible avec son auteur d'origine | ✔ |
+| Filtres de notifications (`?type=message`) | ✔ |
+| Aucune erreur JavaScript sur Android simulé | ✔ |
+
+Captures : `apercus/android/battle-solo-fini.png`, `battle-groupe-fini.png`,
+`v12-messages-accuses.png`, `v12-transferer.png`, `v12-message-transfere.png`,
+`v12-notifications-filtres.png`.
+
+---
+
 ## Vérifications automatiques
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **77 tests réussis** |
-| `tools/verify.py` (local) | **216 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **220 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **220 contrôles conformes, 0 échec** |
+| `pytest -q` | **82 tests réussis** |
+| `tools/verify.py` (local) | **230 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | **232 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **232 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.

@@ -2,8 +2,12 @@
 (function () {
   "use strict";
 
+  /* Le jeton vit dans <meta name="csrf-token">. Sans cette lecture, tous les
+     appels (créer, rejoindre, lancer, répondre) étaient refusés en 400. */
   function csrf() {
-    return window.TIC_CSRF || "";
+    if (window.TIC && window.TIC.csrf) return window.TIC.csrf();
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return (meta && meta.getAttribute("content")) || window.TIC_CSRF || "";
   }
 
   function post(url, payload) {
@@ -109,7 +113,7 @@
 
   function renderQuestion(state) {
     if (!state.question) {
-      if (state.status === "lobby") {
+      if (state.room && state.room.status === "lobby") {
         textEl.textContent = "En attente du lancement…";
         optionsEl.innerHTML = "";
         progressEl.textContent = state.count + " questions prêtes";
@@ -140,7 +144,15 @@
         optionsEl.appendChild(label);
       });
     }
-    if (waitingEl) waitingEl.hidden = !state.my_answered;
+    if (waitingEl) {
+      waitingEl.hidden = !state.my_answered;
+      if (state.my_answered) {
+        var restants = typeof state.waiting_for === "number" ? state.waiting_for : 0;
+        waitingEl.textContent = restants > 0
+          ? "Réponse enregistrée · en attente de " + restants + " joueur" + (restants > 1 ? "s" : "")
+          : "Réponse enregistrée · question suivante…";
+      }
+    }
   }
 
   function renderFinished(state) {
@@ -195,6 +207,14 @@
         if (timerEl) timerEl.textContent = state.room.status === "running" ? state.seconds_left + "s" : "—";
         if (state.room.status === "lobby" && lobbyActions) lobbyActions.hidden = false;
         if (state.room.status !== "lobby" && lobbyActions) lobbyActions.hidden = state.room.status !== "lobby";
+
+        // Acceptée entre-temps par le professeur : le bouton devient utilisable
+        var startBtn = document.querySelector("[data-battle-start]");
+        if (startBtn) startBtn.disabled = state.room.status !== "lobby";
+
+        // La bannière « en attente de validation » disparaît dès l'accord
+        var notice = document.getElementById("battle-notice");
+        if (notice) notice.hidden = state.room.status !== "pending" && state.room.status !== "refused";
         renderPlayers(state.members || []);
         if (state.room.status === "running") {
           if (lobbyActions) lobbyActions.hidden = true;
@@ -235,8 +255,10 @@
       post("/api/battle/rename", { code: code, name: name })
         .then(function (data) {
           if (window.ticToast) window.ticToast("Groupe renommé : " + data.name);
-          var title = document.querySelector(".page-title");
+          var title = document.querySelector(".topbar-title") || document.querySelector(".page-title");
           if (title) title.textContent = data.name;
+          var input = document.getElementById("room-name");
+          if (input) input.value = data.name;
         })
         .catch(function (error) { if (window.ticToast) window.ticToast(error.message, true); });
     }

@@ -25,6 +25,22 @@
 </div>
 {% endif %}
 
+{% if filtres %}
+<nav class="notif-filters" aria-label="Filtrer les notifications">
+  <a class="notif-chip{{ ' is-active' if not filtre }}" href="{{ url_for('notifications.index') }}">
+    {{ icon('bell', 15) }} Tout
+  </a>
+  {% for f in filtres %}
+  <a class="notif-chip{{ ' is-active' if filtre == f.kind }}"
+     href="{{ url_for('notifications.index', type=f.kind) }}">
+    {{ icon(f.icon, 15) }} {{ f.label }}
+    {% if f.unread %}<span class="notif-chip-count is-unread">{{ f.unread }}</span>
+    {% else %}<span class="notif-chip-count">{{ f.total }}</span>{% endif %}
+  </a>
+  {% endfor %}
+</nav>
+{% endif %}
+
 {% if groupes %}
 <div class="stack">
   {% for jour, lignes in groupes %}
@@ -53,10 +69,15 @@
 {% else %}
 <div class="empty">
   {{ icon('bell', 26) }}
-  <h3>Aucune notification</h3>
+  <h3>{{ 'Aucune notification de ce type' if filtre else 'Aucune notification' }}</h3>
+  {% if filtre %}
+  <p>Essayez un autre filtre ou revenez à la liste complète.</p>
+  <a class="btn btn-outline" href="{{ url_for('notifications.index') }}">{{ icon('bell', 16) }} Tout afficher</a>
+  {% else %}
   <p>Les nouveaux messages, les battles, les annonces et vos notes apparaîtront ici,
      et une bannière s'affichera directement sur la page où vous êtes.</p>
   <a class="btn btn-outline" href="{{ url_for('user.dashboard') }}">{{ icon('home', 16) }} Retour à mon espace</a>
+  {% endif %}
 </div>
 {% endif %}
 {% endblock %}

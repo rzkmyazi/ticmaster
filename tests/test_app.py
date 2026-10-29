@@ -1797,3 +1797,164 @@ def test_photo_manquante_affiche_les_initiales(app):
     assert reponse.status_code == 200
     assert "image/svg+xml" in reponse.headers["Content-Type"]
     assert b"<svg" in reponse.data
+
+
+def test_la_battle_avance_des_que_tous_ont_repondu(app):
+    """Deux joueurs répondent : la question suivante part sans attendre 20 s."""
+    _seed_quiz(app)
+    chef = _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    ami = _make_user(app, "ami", role=ROLE_USER)
+
+    from app.models import BattleMember, BattleRoom, Question
+    with app.app_context():
+        qids = [q.id for q in Question.query.order_by(Question.id).limit(2).all()]
+        room = BattleRoom(name="Duel", mode="group", code="AVANCE", owner_id=chef,
+                          status="running", question_count=2,
+                          question_ids=",".join(str(i) for i in qids),
+                          question_started_at=utcnow())
+        db.session.add(room)
+        db.session.commit()
+        db.session.add_all([BattleMember(room_id=room.id, user_id=chef),
+                            BattleMember(room_id=room.id, user_id=ami)])
+        db.session.commit()
+        room_id = room.id
+        options = {q.id: Option.query.filter_by(question_id=q.id, is_correct=True).first().id
+                   for q in Question.query.filter(Question.id.in_(qids)).all()}
+
+    joueur = app.test_client()
+    _login(joueur, "chef", "MotDePasse2026!")
+    token = _csrf(joueur)
+    premier = joueur.post("/api/battle/answer",
+                          json={"code": "AVANCE", "option_id": options[qids[0]]},
+                          headers={"X-CSRF-Token": token})
+    assert premier.status_code == 200
+    # il reste un joueur : on attend encore
+    assert premier.get_json()["waiting_for"] == 1
+    etat = joueur.get("/api/battle/state?code=AVANCE").get_json()
+    assert etat["index"] == 0
+
+    copain = app.test_client()
+    _login(copain, "ami", "MotDePasse2026!")
+    token2 = _csrf(copain)
+    copain.post("/api/battle/answer", json={"code": "AVANCE", "option_id": options[qids[0]]},
+                headers={"X-CSRF-Token": token2})
+
+    with app.app_context():
+        assert db.session.get(BattleRoom, room_id).current_index == 1
+
+
+def test_acceptation_dune_battle_notifie_leleve(app):
+    _seed_quiz(app)
+    owner = _make_user(app, "apprenant", role=ROLE_USER)
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+
+    from app.models import BattleRoom, Notification
+    with app.app_context():
+        room = BattleRoom(name="Duel", mode="solo", code="MERCI1", owner_id=owner, status="pending")
+        db.session.add(room)
+        db.session.commit()
+        room_id = room.id
+
+    chef = app.test_client()
+    _login(chef, "chef", "MotDePasse2026!")
+    token = _csrf(chef)
+    assert chef.post(f"/admin/battles/{room_id}/accepter", data={"csrf_token": token}).status_code == 302
+
+    with app.app_context():
+        notif = Notification.query.filter_by(user_id=owner, kind="battle").first()
+        assert notif is not None
+        assert "acceptée" in notif.title
+        assert "/battle/MERCI1" in notif.url
+
+
+def test_transferer_un_message_reprend_lauteur_dorigine(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    _make_user(app, "eleve", role=ROLE_USER)
+    with app.app_context():
+        eleve_id = User.query.filter_by(username="eleve").first().id
+
+    prof = app.test_client()
+    _login(prof, "chef", "MotDePasse2026!")
+    token = _csrf(prof)
+    room = f"dm:{min(1, eleve_id)}:{max(1, eleve_id)}"
+    envoye = prof.post("/api/messages", json={"room": room, "body": "Consigne importante"},
+                       headers={"X-CSRF-Token": token})
+    assert envoye.status_code == 201
+    message_id = envoye.get_json()["message"]["id"]
+
+    transfert = prof.post("/api/messages/forward",
+                          json={"message_id": message_id, "room": "general"},
+                          headers={"X-CSRF-Token": token})
+    assert transfert.status_code == 201
+    copie = transfert.get_json()["message"]
+    assert copie["body"] == "Consigne importante"
+    assert copie["forwarded"] is not None
+    assert copie["forwarded"]["author"] == "Chef Test" or copie["forwarded"]["author"]
+
+    # un tiers ne peut pas transférer un message d'une conversation privée
+    _make_user(app, "temoin", role=ROLE_USER)
+    tiers = app.test_client()
+    _login(tiers, "temoin", "MotDePasse2026!")
+    token_tiers = _csrf(tiers)
+    refuse = tiers.post("/api/messages/forward",
+                        json={"message_id": message_id, "room": "general"},
+                        headers={"X-CSRF-Token": token_tiers})
+    assert refuse.status_code == 403
+
+    # l'élève, lui, peut transférer ce message : il en est le destinataire
+    eleve_client = app.test_client()
+    _login(eleve_client, "eleve", "MotDePasse2026!")
+    permis = eleve_client.post("/api/messages/forward",
+                               json={"message_id": message_id, "room": "general"},
+                               headers={"X-CSRF-Token": _csrf(eleve_client)})
+    assert permis.status_code == 201
+
+
+def test_message_prive_marque_recu_puis_lu(app):
+    _make_user(app, "chef", role=ROLE_SUPER_ADMIN)
+    _make_user(app, "eleve", role=ROLE_USER)
+    with app.app_context():
+        eleve_id = User.query.filter_by(username="eleve").first().id
+
+    prof = app.test_client()
+    _login(prof, "chef", "MotDePasse2026!")
+    token = _csrf(prof)
+    room = f"dm:{min(1, eleve_id)}:{max(1, eleve_id)}"
+    prof.post("/api/messages", json={"room": room, "body": "Tu reçois ?"},
+              headers={"X-CSRF-Token": token})
+
+    avant = prof.get(f"/api/messages?room={room}").get_json()
+    assert avant["delivery"][str(avant["messages"][-1]["id"])] is False
+
+    eleve = app.test_client()
+    _login(eleve, "eleve", "MotDePasse2026!")
+    eleve.get("/api/notifications")            # le navigateur de l'élève est en ligne
+
+    apres = prof.get(f"/api/messages?room={room}").get_json()
+    dernier = apres["messages"][-1]
+    assert dernier["delivered"] is True
+    assert dernier["reads"] == 0               # remis, pas encore ouvert
+
+    eleve.get(f"/api/messages?room={room}")    # l'élève ouvre la conversation
+    lu = prof.get(f"/api/messages?room={room}").get_json()
+    assert lu["messages"][-1]["reads"] == 1
+
+
+def test_notifications_filtrees_par_type(app):
+    user = _make_user(app, "eleve", role=ROLE_USER)
+    from app.notifications import notify
+    with app.app_context():
+        notify(user, "battle", "Battle acceptée")
+        notify(user, "message", "Nouveau message")
+        notify(user, "battle", "Battle refusée")
+
+    client = app.test_client()
+    _login(client, "eleve", "MotDePasse2026!")
+    toutes = client.get("/notifications").get_data(as_text=True)
+    assert "Battle acceptée" in toutes and "Nouveau message" in toutes
+
+    battles = client.get("/notifications?type=battle").get_data(as_text=True)
+    assert "notif-chip" in battles                    # les filtres sont proposés
+    lignes = re.findall(r'class="notif-row[^"]*"[^>]*>(.*?)</a>', battles, re.S)
+    assert len(lignes) == 2
+    assert all("Battle" in ligne for ligne in lignes)   # aucun message dans le filtre

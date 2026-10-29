@@ -30,10 +30,21 @@ USER_COLUMNS = {
 }
 
 
+#: Colonnes ajoutées aux autres tables (messages : remise et transfert).
+TABLE_COLUMNS = {
+    "messages": {
+        "delivered_at": "DATETIME",
+        "forwarded_from_id": "INTEGER",
+    },
+}
+
+
 def _type_sql(sql_type: str) -> str:
     """Adapte un type générique au moteur en service (SQLite / PostgreSQL)."""
     if sql_type == "BLOB" and db.engine.dialect.name != "sqlite":
         return "BYTEA"
+    if sql_type == "DATETIME" and db.engine.dialect.name != "sqlite":
+        return "TIMESTAMP"
     return sql_type
 
 
@@ -60,4 +71,19 @@ def ensure_schema(app=None) -> list[str]:
             applied.append(name)
         except Exception:  # colonne ajoutée par un autre worker : on ignore
             db.session.rollback()
+
+    # Autres tables modifiées après la mise en production
+    for table, columns in TABLE_COLUMNS.items():
+        if table not in tables:
+            continue
+        presentes = {column["name"] for column in inspector.get_columns(table)}
+        for name, sql_type in columns.items():
+            if name in presentes:
+                continue
+            try:
+                db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {_type_sql(sql_type)}"))
+                db.session.commit()
+                applied.append(f"{table}.{name}")
+            except Exception:
+                db.session.rollback()
     return applied

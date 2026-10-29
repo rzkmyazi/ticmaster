@@ -2,7 +2,7 @@
 """Notifications : API temps réel + page d'historique — TIC MASTER #by_Myazirzk."""
 from __future__ import annotations
 
-from flask import Blueprint, g, jsonify, render_template, request
+from flask import Blueprint, g, jsonify, redirect, render_template, request, url_for
 from sqlalchemy import func
 
 from .. import notifications as service
@@ -21,6 +21,10 @@ PANEL_LIMIT = 8
 def api_list():
     """État courant : compteur, dernières notifications, nouveautés depuis `since`."""
     user = g.user
+    # Un message privé atteint enfin un navigateur : on le marque « Reçu »
+    from .social import mark_dm_delivered
+    mark_dm_delivered(user)
+
     # « since » absent = premier chargement (aucune bannière) ;
     # « since=0 » est valide et signifie « tout est nouveau ».
     brut = request.args.get("since")
@@ -72,13 +76,35 @@ def api_mark_all_read():
 @bp.route("/notifications")
 @login_required
 def index():
-    """Historique complet, groupé par jour."""
-    rows = (
-        Notification.query.filter_by(user_id=g.user.id)
-        .order_by(Notification.created_at.desc())
-        .limit(120)
+    """Historique complet, groupé par jour et filtrable par type."""
+    filtre = (request.args.get("type") or "").strip()
+    if filtre and filtre not in service.KINDS:
+        filtre = ""
+
+    query = Notification.query.filter_by(user_id=g.user.id)
+    if filtre:
+        query = query.filter(Notification.kind == filtre)
+    rows = query.order_by(Notification.created_at.desc()).limit(120).all()
+
+    # Compteurs par type (pour les pastilles de filtre)
+    compteurs = dict(
+        db.session.query(Notification.kind, func.count(Notification.id))
+        .filter(Notification.user_id == g.user.id)
+        .group_by(Notification.kind)
         .all()
     )
+    non_lues = dict(
+        db.session.query(Notification.kind, func.count(Notification.id))
+        .filter(Notification.user_id == g.user.id, Notification.read_at.is_(None))
+        .group_by(Notification.kind)
+        .all()
+    )
+    filtres = [
+        {"kind": kind, "label": infos["label"], "icon": infos["icon"],
+         "total": int(compteurs.get(kind, 0)), "unread": int(non_lues.get(kind, 0))}
+        for kind, infos in service.KINDS.items()
+        if compteurs.get(kind, 0)
+    ]
     groupes: list[tuple[str, list[Notification]]] = []
     for row in rows:
         jour = row.created_at.strftime("%d/%m/%Y") if row.created_at else "—"
@@ -91,6 +117,8 @@ def index():
         groupes=groupes,
         total=len(rows),
         non_lues=service.unread_count(g.user),
+        filtres=filtres,
+        filtre=filtre,
     )
 
 
@@ -99,10 +127,7 @@ def index():
 def mark_all_and_back():
     """Lien direct depuis la page (sans JavaScript)."""
     service.mark_read(g.user)
-    return render_template(
-        "user/notifications.html",
-        groupes=[], total=0, non_lues=0, tout_lu=True,
-    )
+    return redirect(url_for("notifications.index"))
 
 
 @bp.route("/api/notifications/ping")

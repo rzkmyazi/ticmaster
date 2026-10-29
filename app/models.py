@@ -454,9 +454,14 @@ class Message(db.Model):
     body = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, index=True)
     deleted = db.Column(db.Boolean, default=False, nullable=False)
+    # Remis au destinataire (son navigateur a chargé la conversation)
+    delivered_at = db.Column(db.DateTime, index=True)
+    # Message transféré : on garde l'auteur d'origine
+    forwarded_from_id = db.Column(db.Integer, db.ForeignKey("messages.id", ondelete="SET NULL"))
 
     sender = db.relationship("User", foreign_keys=[sender_id])
     recipient = db.relationship("User", foreign_keys=[recipient_id])
+    forwarded_from = db.relationship("Message", remote_side=[id], foreign_keys=[forwarded_from_id])
 
 
 class BattleRoom(db.Model):

@@ -271,6 +271,74 @@ def _mark_reads(room: str, rows, user: User) -> int:
     return len(nouveaux)
 
 
+def _mark_delivered(room: str, rows, user: User) -> int:
+    """Accusé de remise : le fil est arrivé jusqu'au destinataire (« Reçu »).
+
+    Réservé aux conversations privées : une classe compte trop de destinataires
+    pour un état de remise individuel, l'accusé de lecture suffit.
+    """
+    if not room.startswith("dm:"):
+        return 0
+    a_marquer = [m for m in rows if m.sender_id != user.id and not m.delivered_at]
+    if not a_marquer:
+        return 0
+    maintenant = utcnow()
+    for m in a_marquer:
+        m.delivered_at = maintenant
+    db.session.commit()
+    return len(a_marquer)
+
+
+def mark_dm_delivered(user: User) -> int:
+    """Marque « reçu » les messages privés qui atteignent le navigateur du destinataire.
+
+    Appelé quand le client du destinataire interroge ses notifications : le
+    message est bien arrivé, même s'il n'a pas encore ouvert la conversation.
+    """
+    if user is None:
+        return 0
+    rows = (
+        Message.query.filter(
+            Message.recipient_id == user.id,
+            Message.delivered_at.is_(None),
+            Message.deleted.is_(False),
+        ).limit(50).all()
+    )
+    if not rows:
+        return 0
+    maintenant = utcnow()
+    for m in rows:
+        m.delivered_at = maintenant
+    db.session.commit()
+    return len(rows)
+
+
+def _message_payload(message: Message, user: User, receipts: dict | None = None) -> dict:
+    """Forme JSON d'un message, avec transfert et état de remise."""
+    receipts = receipts or {}
+    auteur = message.sender
+    origine = message.forwarded_from
+    return {
+        "id": message.id,
+        "body": message.body,
+        "at": message.created_at.isoformat(timespec="minutes") if message.created_at else "",
+        "mine": message.sender_id == user.id,
+        "reads": receipts.get(str(message.id), 0),
+        "delivered": bool(message.delivered_at),
+        "forwarded": {
+            "author": (origine.sender.full_name or origine.sender.username)
+            if (origine and origine.sender) else "un membre",
+            "at": origine.created_at.strftime("%d/%m/%Y %H:%M") if (origine and origine.created_at) else "",
+        } if message.forwarded_from_id else None,
+        "sender": {
+            "id": message.sender_id,
+            "name": (auteur.full_name or auteur.username) if auteur else "Inconnu",
+            "initials": auteur.initials if auteur else "??",
+            "role": auteur.role if auteur else "user",
+        },
+    }
+
+
 def _receipts(rows, user: User) -> dict:
     """Nombre de lecteurs pour mes propres messages (accusés de lecture)."""
     mes_ids = [m.id for m in rows if m.sender_id == user.id]
@@ -299,30 +367,19 @@ def api_messages():
     rows = query.order_by(Message.id.asc()).limit(120).all()
 
     _mark_reads(room, rows, g.user)
+    _mark_delivered(room, rows, g.user)
     receipts = _receipts(rows, g.user)
+    # Remise de mes propres messages (même sans lecteur encore)
+    delivery = {str(m.id): bool(m.delivered_at) for m in rows if m.sender_id == g.user.id}
     total = _room_total(room)
 
     return jsonify({
         "ok": True,
         "room": room,
         "receipts": receipts,
+        "delivery": delivery,
         "total": total,
-        "messages": [
-            {
-                "id": m.id,
-                "body": m.body,
-                "at": m.created_at.isoformat(timespec="minutes"),
-                "mine": m.sender_id == g.user.id,
-                "reads": receipts.get(str(m.id), 0),
-                "sender": {
-                    "id": m.sender_id,
-                    "name": (m.sender.full_name or m.sender.username) if m.sender else "Inconnu",
-                    "initials": m.sender.initials if m.sender else "??",
-                    "role": m.sender.role if m.sender else "user",
-                },
-            }
-            for m in rows
-        ],
+        "messages": [_message_payload(m, g.user, receipts) for m in rows],
     })
 
 
@@ -384,22 +441,72 @@ def api_send_message():
             actor=g.user, icon="megaphone",
         )
 
-    return jsonify({
-        "ok": True,
-        "message": {
-            "id": msg.id,
-            "body": msg.body,
-            "at": msg.created_at.isoformat(timespec="minutes"),
-            "mine": True,
-            "reads": 0,
-            "sender": {
-                "id": g.user.id,
-                "name": g.user.full_name or g.user.username,
-                "initials": g.user.initials,
-                "role": g.user.role,
-            },
-        },
-    }), 201
+    return jsonify({"ok": True, "message": _message_payload(msg, g.user)}), 201
+
+
+@bp.route("/api/messages/forward", methods=["POST"])
+@login_required
+def api_forward_message():
+    """Transférer un message vers une autre conversation ou une classe.
+
+    Le texte d'origine est conservé ; l'auteur d'origine reste affiché
+    (« Message transféré de … »).
+    """
+    payload = request.get_json(silent=True) or request.form
+    try:
+        message_id = int(payload.get("message_id") or 0)
+    except (TypeError, ValueError):
+        message_id = 0
+    target = (payload.get("room") or "").strip()
+
+    origine = db.session.get(Message, message_id)
+    if origine is None or origine.deleted:
+        return jsonify({"ok": False, "error": "Message introuvable."}), 404
+    if not _can_access_room(g.user, origine.room):
+        return jsonify({"ok": False, "error": "Vous n'avez pas accès à ce message."}), 403
+    if not target:
+        return jsonify({"ok": False, "error": "Choisissez une destination."}), 400
+    if target == origine.room:
+        return jsonify({"ok": False, "error": "Le message est déjà dans cette conversation."}), 400
+
+    from ..security.core import limiter
+    if limiter.hit(f"msg:{g.user.id}", 20, 60):
+        return jsonify({"ok": False, "error": "Vous envoyez des messages trop rapidement."}), 429
+
+    recipient_id = None
+    classe = None
+    if target.startswith("dm:"):
+        if not _can_access_room(g.user, target):
+            return jsonify({"ok": False, "error": "Conversation non autorisée."}), 403
+        _, a, b = target.split(":")
+        recipient_id = int(b) if int(a) == g.user.id else int(a)
+    elif _is_class_room(target):
+        if not g.user.is_admin:
+            return jsonify({"ok": False, "error": "Seul un professeur peut écrire à une classe."}), 403
+        classe = _class_recipients(target)
+        if not classe:
+            return jsonify({"ok": False, "error": "Aucun élève dans cette classe."}), 400
+    elif target != "general":
+        return jsonify({"ok": False, "error": "Destination inconnue."}), 400
+
+    msg = Message(sender_id=g.user.id, room=target, recipient_id=recipient_id,
+                  body=origine.body, forwarded_from_id=origine.id)
+    db.session.add(msg)
+    db.session.commit()
+    log_audit("message.forwarded", target=str(msg.id), details=f"depuis={origine.id} vers={target}")
+
+    from ..notifications import notify, notify_many
+    auteur = g.user.full_name or g.user.username
+    if recipient_id:
+        notify(recipient_id, "message", f"{auteur} vous a transféré un message",
+               origine.body[:140], url_for("social.messages") + "?room=" + target, actor=g.user)
+    elif classe:
+        notify_many([u.id for u in classe], "message",
+                    f"Message transféré — {_class_room_label(target)}",
+                    origine.body[:140], url_for("social.messages", room=target),
+                    actor=g.user, icon="megaphone")
+
+    return jsonify({"ok": True, "message": _message_payload(msg, g.user), "room": target}), 201
 
 
 # ---------------------------------------------------------------------------
@@ -424,16 +531,34 @@ def _question_pool(limit: int = 40):
     return [q for q in rows if len(q.options) >= 2]
 
 
+def _all_answered(room: BattleRoom) -> bool:
+    """Tous les joueurs présents ont-ils répondu à la question courante ?"""
+    members = [m for m in room.members if m.user and m.user.status == STATUS_ACTIVE]
+    if not members:
+        return False
+    return all((m.answered_index if m.answered_index is not None else -1) >= room.current_index
+               for m in members)
+
+
 def _advance_if_needed(room: BattleRoom) -> None:
-    """Avancement autoritaire côté serveur : impossible à accélérer depuis le client."""
+    """Avancement autoritaire côté serveur : impossible à accélérer depuis le client.
+
+    Deux causes d'avancement : les 20 secondes sont écoulées, **ou** tout le
+    monde a répondu — on ne fait jamais patienter les joueurs pour rien.
+    """
     if room.status != "running" or not room.question_started_at:
         return
     qids = room.qids()
     now = utcnow()
     changed = False
-    while room.status == "running" and (now - room.question_started_at).total_seconds() >= QUESTION_SECONDS:
+    while room.status == "running":
+        ecoule = (now - room.question_started_at).total_seconds() >= QUESTION_SECONDS
+        if not ecoule and not _all_answered(room):
+            break
         room.current_index += 1
-        room.question_started_at = room.question_started_at + timedelta(seconds=QUESTION_SECONDS)
+        room.question_started_at = (
+            room.question_started_at + timedelta(seconds=QUESTION_SECONDS) if ecoule else now
+        )
         changed = True
         if room.current_index >= len(qids):
             room.status = "finished"
@@ -441,6 +566,17 @@ def _advance_if_needed(room: BattleRoom) -> None:
             break
     if changed:
         db.session.commit()
+
+
+def payload_waiting_for(room: BattleRoom) -> int:
+    """Nombre de joueurs qui n'ont pas encore répondu à la question courante."""
+    if room.status != "running":
+        return 0
+    return sum(
+        1 for m in room.members
+        if m.user_id != g.user.id
+        and (m.answered_index if m.answered_index is not None else -1) < room.current_index
+    )
 
 
 def _room_state(room: BattleRoom) -> dict:
@@ -468,8 +604,14 @@ def _room_state(room: BattleRoom) -> dict:
             "is_me": m.user_id == g.user.id,
         })
 
+    autres = [m for m in room.members if m.user_id != g.user.id]
     payload = {
         "ok": True,
+        "waiting_for": sum(
+            1 for m in autres
+            if room.status == "running"
+            and (m.answered_index if m.answered_index is not None else -1) < room.current_index
+        ),
         "room": {
             "id": room.id,
             "code": room.code,
@@ -742,7 +884,11 @@ def api_battle_answer():
     member.last_answer_correct = correct
     db.session.commit()
 
-    return jsonify({"ok": True, "correct": correct, "score": member.score})
+    # Si c'était le dernier joueur à répondre, la question suivante part
+    # immédiatement : plus de temps mort artificiel de 20 secondes.
+    _advance_if_needed(room)
+    return jsonify({"ok": True, "correct": correct, "score": member.score,
+                    "waiting_for": payload_waiting_for(room)})
 
 
 # ---------------------------------------------------------------------------
