@@ -403,6 +403,64 @@ sert l'application ; il est idempotent grâce au marqueur `~/.tic_bootstrap_done
 | GitHub `rzkmyazi/ticmaster` | commit `31fe36b` poussé sur `main` |
 | Render (principale) | déploiement `live` sur `31fe36b` — **160 contrôles conformes** |
 | PythonAnywhere | **9 fichiers** synchronisés + rechargement (`200 OK`) — **160 contrôles conformes** |
+---
+
+## 15. Mise à jour du 29/10/2026 — Vue Android & connexion stable (vague 6)
+
+**Commit déployé :** `acce003` · **instances :** Render, PythonAnywhere, local.
+
+### 15.1 Navigation mobile
+
+| Contrôle | Résultat |
+|---|---|
+| Barre d'onglets fixe présente sur les pages connectées | ✔ |
+| Onglets de l'élève : Accueil, Cours, Exercices, Battle, Messages, Profil | ✔ |
+| Onglet de la page courante surligné (`is-active`) | ✔ |
+| Onglets propres au super administrateur (Élèves, Notes) | ✔ |
+| Un administrateur n'obtient pas l'onglet « Notes » réservé au super administrateur | ✔ |
+| Aucune barre d'onglets sur la page de connexion (page publique isolée) | ✔ |
+| CSS : marges de sécurité, champs 16 px, `[hidden]` prioritaire, débordement maîtrisé | ✔ |
+
+### 15.2 Mesures réelles dans un navigateur mobile (Chromium, 390 × 844, Android)
+
+| Page | Débordement horizontal | Barre d'onglets | Onglet actif |
+|---|---|---|---|
+| `/auth/connexion` | 0 px | absente (normal) | — |
+| `/` (accueil public) | 0 px | absente (normal) | — |
+| `/espace` | 0 px | visible | Accueil |
+| `/cours` | 0 px | visible | Cours |
+| `/battle` | 0 px | visible | Battle |
+| `/mon-profil` | 0 px | visible | Profil |
+| `/admin/` | 0 px | visible | Accueil |
+| `/admin/notes` | 0 px | visible | Notes |
+| `/admin/bulletins` | 0 px | visible | Notes (page rattachée) |
+| `/admin/utilisateurs` | 0 px | visible | Élèves |
+
+Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 px de débordement**.
+
+### 15.3 Page de connexion
+
+| Contrôle | Résultat |
+|---|---|
+| Clavier virtuel non imposé sur tactile (`data-autofocus` + `pointer: coarse`) | ✔ |
+| Clavier « suivant » puis « go » (`enterkeyhint`) | ✔ |
+| Bouton « Se connecter » du menu public masqué sur la page de connexion | ✔ |
+| Logo animé visible et dimensionné (46 × 46, il était en 0 × 0) | ✔ |
+| Titre et sous-titre sur une ligne, texte jamais coupé | ✔ |
+| Service worker v2 : mise à jour du design dès la deuxième visite | ✔ |
+
+### Résultats des tests
+
+- `pytest -q` → **50 tests réussis** (2 nouveaux : barre d'onglets mobile, confort de connexion).
+- `tools/verify.py` → **169 contrôles conformes** en local, **170** sur Render et **170** sur PythonAnywhere (0 échec).
+
+### Déploiement
+
+| Cible | État |
+|---|---|
+| GitHub `rzkmyazi/ticmaster` | commits `acce003` puis documentation, poussés sur `main` |
+| Render (principale) | déploiement `live` — **170 contrôles conformes** |
+| PythonAnywhere | **10 fichiers** synchronisés + rechargement (`200 OK`) — **170 contrôles conformes** |
 
 ---
 
