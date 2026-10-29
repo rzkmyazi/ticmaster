@@ -255,14 +255,60 @@ connexion, dans l'espace de l'apprenant.
 
 ---
 
+## 13. Vague 8 — Site joignable 24 h/24 (plus de « service waking up ») — ✔
+
+### 13.1 Le problème
+
+L'offre **gratuite** de Render endort un service web après **15 minutes sans
+requête**. La visite suivante tombe alors sur la page *« service waking up »*
+pendant une cinquantaine de secondes — ce qui donne l'impression que le site
+est arrêté.
+
+### 13.2 La solution : le site s'appelle lui-même
+
+Dès que l'application tourne sur Render, un **fil discret** appelle
+`https://ticmaster.onrender.com/sante` **toutes les 10 minutes** (premier appel
+30 secondes après le démarrage). Chaque requête entrante remet à zéro le
+compteur d'inactivité : le service ne s'endort plus et répond immédiatement,
+**à n'importe quelle heure**.
+
+| Point | Détail |
+|---|---|
+| Mise en service | Automatique sur Render, grâce à la variable `RENDER_EXTERNAL_URL` fournie par l'hébergeur : **aucune configuration** à faire. |
+| Coût | Offre gratuite conservée : 750 heures d'instance par mois, la veille en consomme ~730 (un seul service). |
+| Charge | Un `GET /sante` (un simple `SELECT 1`) toutes les 10 minutes : négligeable. |
+| Traçabilité | Les 20 derniers passages sont conservés dans `instance/veille.json` et affichés dans *Administration → Paramètres → Disponibilité 24 h/24*. |
+| Panne | Si un appel échoue, le fil continue (aucune exception ne l'arrête) et l'erreur exacte est enregistrée. |
+| Hors Render | Sur un poste de développement ou sur PythonAnywhere, la veille ne démarre pas. |
+
+### 13.3 Deux pistes étudiées et écartées
+
+- **PythonAnywhere comme réveil** : testé puis abandonné. Son proxy sortant
+  refuse les sites non listés (`Tunnel connection failed: 403 Forbidden`) —
+  l'appel n'arrive jamais à Render.
+- **Robot GitHub Actions** : la tâche planifiée est prête (`veille.yml`), mais
+  le jeton OAuth utilisé pour les déploiements n'a pas le droit d'écrire dans
+  `.github/workflows` (scope `workflow` manquant). Le fichier est conservé hors
+  du dépôt, prêt à être ajouté si besoin.
+
+### 13.4 Ce qui reste vrai
+
+- Render redémarre le service à chaque déploiement : l'indisponibilité dure
+  alors ~1 minute, le temps du build.
+- Le réveil à froid ne peut plus se produire en usage normal ; il ne
+  réapparaîtrait que si le fil de veille était interrompu (par exemple si
+  l'instance épuisait les 750 heures du mois).
+
+---
+
 ## Vérifications automatiques
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **56 tests réussis** |
-| `tools/verify.py` (local) | **185 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **186 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **186 contrôles conformes, 0 échec** |
+| `pytest -q` | **59 tests réussis** |
+| `tools/verify.py` (local) | **187 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | *(mesuré après déploiement)* |
+| `tools/verify.py` sur PythonAnywhere | *(idem)* |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.

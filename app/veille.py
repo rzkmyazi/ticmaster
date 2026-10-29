@@ -56,7 +56,7 @@ def _charger() -> None:
     try:
         with open(_fichier(), encoding="utf-8") as fichier:
             data = json.load(fichier)
-        if isinstance(data, list):
+        if isinstance(data, list) and data:
             historique[:] = data[-20:]
     except Exception:  # noqa: BLE001 - fichier absent ou illisible : on repart de zéro
         pass
@@ -145,8 +145,10 @@ def start() -> bool:
 
 def etat() -> dict:
     """État de la veille (utilisé par la page Paramètres du super administrateur)."""
-    if not historique:
-        _charger()  # un redémarrage du serveur ne doit pas effacer l'historique
+    # Toujours relire le fichier : plusieurs processus (workers gunicorn)
+    # partagent la même veille, chacun avec sa mémoire. Le fichier est la
+    # référence commune, et il survit aux redémarrages.
+    _charger()
     return {
         "active": _started,
         "disponible": actif_sur_ce_serveur(),

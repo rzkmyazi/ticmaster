@@ -22,6 +22,7 @@ import re
 import sqlite3
 import string
 import sys
+import time
 
 import requests
 
@@ -189,16 +190,20 @@ def main() -> int:
 
     # ------------------------------------------------------------------ santé
     print("▸ Santé")
-    r = requests.get(BASE + "/sante", timeout=20)
+    debut = time.time()
+    r = requests.get(BASE + "/sante", timeout=90)
+    latence = round(time.time() - debut, 2)
     ok("/sante", r.status_code == 200 and r.json().get("status") == "ok", r.text[:60])
+    ok("réponse immédiate (pas de réveil à froid)", latence < 5,
+       f"{latence} s")
     sante = r.json()
     ok("/sante publie l'état de la veille 24 h/24", "veille" in sante, str(sante.get("veille")))
-    if "myazirzk1" in BASE:
-        ok("veille active sur ce serveur (site Render maintenu éveillé)",
-           sante.get("veille") is True, str(sante))
     if "ticmaster.onrender.com" in BASE:
-        ok("Render répond sans page « service waking up »",
-           sante.get("status") == "ok" and "veille" in sante)
+        ok("veille 24 h/24 active sur Render (auto-appel toutes les 10 minutes)",
+           sante.get("veille") is True, str(sante.get("veille")))
+    if "myazirzk1" in BASE:
+        # PythonAnywhere est secondaire : son proxy sortant ne peut pas appeler Render.
+        ok("PythonAnywhere : veille non requise sur ce serveur", "veille" in sante)
 
     print("▸ Pages publiques et absence d'inscription")
     for path, expected in (("/", 200), ("/a-propos", 200), ("/decouvrir", 200),
