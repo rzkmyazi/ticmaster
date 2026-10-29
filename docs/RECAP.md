@@ -366,14 +366,96 @@ Une **boîte de dialogue intégrée** remplace toutes les confirmations natives 
 
 ---
 
+## 15. Vague 10 — Notifications en temps réel — ✔
+
+### 15.1 Le principe
+
+Jusqu'ici, pour savoir qu'un message était arrivé, qu'une battle attendait une
+validation ou qu'une annonce venait d'être publiée, il fallait **rouvrir les
+pages** ou recharger. Désormais :
+
+* une **cloche** est présente dans la barre du haut de toutes les pages privées,
+  avec un **compteur rouge** du nombre de notifications non lues ;
+* un clic ouvre un **panneau déroulant** avec les dernières notifications ;
+* une **bannière discrète** apparaît en bas de l'écran dès qu'une nouveauté
+  arrive — sans recharger la page, sans bloquer la lecture ;
+* une page **« Notifications »** conserve l'historique complet, groupé par jour.
+
+### 15.2 Ce qui déclenche une notification
+
+| Événement | Destinataire | Texte de la notification |
+|---|---|---|
+| Message privé | Le destinataire | « Nouveau message de *nom* » + début du message |
+| Battle déposée par un élève | Tous les administrateurs | « Battle à valider » + nom de l'élève et code |
+| Quelqu'un rejoint une battle | Le créateur de la battle | « *nom* a rejoint votre battle » |
+| Battle lancée | Tous les participants | « La battle « *nom* » démarre » |
+| Annonce publiée | Tous les comptes actifs (jamais l'auteur) | « Nouvelle annonce : *titre* » |
+| Examen corrigé | L'élève | « Votre examen est corrigé » + note /20 |
+| Mot de passe réinitialisé par l'administration | L'élève | « Votre mot de passe a été réinitialisé » |
+| Compte suspendu / réactivé | L'élève | « Votre compte a été suspendu » / « de nouveau actif » |
+
+Toutes ces notifications sont **réelles** : elles sont créées par le serveur au
+moment où l'action a lieu, enregistrées en base, et propres à chaque compte.
+Aucune n'est simulée ni fabriquée côté navigateur.
+
+### 15.3 Comment le navigateur les reçoit
+
+| Point | Détail |
+|---|---|
+| Fréquence | Une requête légère (`/api/notifications`) toutes les **25 secondes**. |
+| Onglet en arrière-plan | **Aucune requête** : le rafraîchissement reprend dès le retour sur la page (et au retour de focus). |
+| Bandeau | Affiché 6 secondes, un maximum de 3 nouveautés à la fois, sinon simple mise à jour du compteur. |
+| Premier chargement | Aucune bannière : seuls les événements **postérieurs** à l'ouverture de la page déclenchent une alerte. |
+| Rien de bloquant | Aucune fenêtre native, aucun clignotement : la bannière apparaît et disparaît en fondu. |
+| Économie | La réponse ne contient que 8 notifications et un compteur ; rien n'est rechargé d'autre. |
+
+### 15.4 Lecture et historique
+
+- Ouvrir le panneau marque les notifications affichées comme lues (le compteur
+  retombe) ; « Tout marquer comme lu » fait la même chose d'un coup.
+- La page **/notifications** liste tout, **groupée par jour**, avec l'auteur,
+  l'heure et une pastille rouge pour ce qui reste à lire.
+- Chaque notification est un **lien direct** vers l'endroit concerné (le fil de
+  discussion, la battle, l'annonce, le résultat d'examen) ; seuls les chemins
+  internes sont acceptés, ce qui exclut toute redirection vers un site externe.
+
+### 15.5 Données et discrétion
+
+| Règle | Détail |
+|---|---|
+| Une ligne par destinataire | La suppression d'un compte efface ses notifications (cascade). |
+| Pas d'auto-notification | On n'est jamais prévenu de sa propre action. |
+| Ménage automatique | Les notifications lues de plus de **45 jours** sont effacées ; **200** au maximum par personne. |
+| Permissions | Seul le propriétaire peut lire et marquer ses notifications : l'API filtre systématiquement par compte. |
+
+### 15.6 Preuves
+
+| Contrôle | Résultat |
+|---|---|
+| Cloche et compteur sur téléphone Android simulé (Pixel, 393 px) | ✔ |
+| Panneau déroulant ouvert au clic | ✔ |
+| Nouvelle notification insérée en base → compteur 0 → 1 et bannière | ✔ |
+| Page d'historique : notifications groupées par jour | ✔ |
+| Erreurs JavaScript | aucune |
+| Message privé du super admin → notification immédiate chez l'élève | ✔ |
+| Annonce publiée → tous les comptes actifs notifiés, jamais l'auteur | ✔ |
+| Battle déposée par un élève → administrateurs notifiés | ✔ |
+| Le compteur retombe après lecture | ✔ |
+| Cloche absente de la page publique | ✔ |
+
+Captures : `apercus/android/prod-notifications-panneau.png`,
+`prod-notifications-banniere.png`, `prod-notifications-historique.png`.
+
+---
+
 ## Vérifications automatiques
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **62 tests réussis** |
-| `tools/verify.py` (local) | **194 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **196 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **196 contrôles conformes, 0 échec** |
+| `pytest -q` | **69 tests réussis** |
+| `tools/verify.py` (local) | **206 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | **208 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **208 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.

@@ -1577,3 +1577,34 @@ def test_aucun_script_inline_sans_nonce_dans_la_cloche(app):
         if "src=" in balise or "application/ld+json" in balise:
             continue      # script externe ou données structurées : nonce inutile
         raise AssertionError(f"script sans nonce : {balise}")
+
+def test_since_absent_puis_since_zero(app):
+    """Le premier chargement ne doit rien annoncer ; « since=0 » annonce tout."""
+    _make_user(app, "eleve", role=ROLE_USER)
+    with app.app_context():
+        from app.notifications import notify
+        eleve = User.query.filter_by(username="eleve").first()
+        notify(eleve.id, "annonce", "Annonce A", "", "/notifications")
+
+    client = app.test_client()
+    _login(client, "eleve", "MotDePasse2026!")
+
+    premier = client.get("/api/notifications").get_json()
+    assert premier["new"] == []                      # aucune bannière au chargement
+    assert premier["count"] == 1 and premier["latest_id"] > 0
+
+    apres = client.get(f"/api/notifications?since={premier['latest_id']}").get_json()
+    assert apres["new"] == []                        # rien de neuf depuis
+
+    with app.app_context():
+        from app.notifications import notify
+        eleve = User.query.filter_by(username="eleve").first()
+        notify(eleve.id, "message", "Message B", "Bonjour", "/messages")
+
+    neuf = client.get(f"/api/notifications?since={premier['latest_id']}").get_json()
+    assert [n["title"] for n in neuf["new"]] == ["Message B"]
+    assert neuf["count"] == 2
+
+    # since=0 (compteur à zéro au départ) : tout est considéré comme nouveau
+    tout = client.get("/api/notifications?since=0").get_json()
+    assert len(tout["new"]) == 2

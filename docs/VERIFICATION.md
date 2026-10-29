@@ -579,6 +579,44 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 | « Réinitialiser » → mot de passe temporaire affiché | ✔ |
 | Erreurs JavaScript | aucune |
 
+## 19. Mise à jour du 29/10/2026 — Notifications en temps réel (vague 10)
+
+| Contrôle | Résultat |
+|---|---|
+| Cloche dans la barre du haut (pages privées uniquement) | ✔ |
+| Compteur des non-lues, plafonné à « 99+ » | ✔ |
+| Panneau déroulant : dernières notifications, lire tout | ✔ |
+| Bannière discrète à chaque nouveauté, sans recharger la page | ✔ |
+| Rafraîchissement toutes les 25 s, **pause** quand l'onglet est en arrière-plan | ✔ |
+| Retour sur l'onglet → mise à jour immédiate | ✔ |
+| Page `/notifications` : historique groupé par jour, lien vers le contenu | ✔ |
+| `GET /api/notifications` → `{ok, count, latest_id, items[], new[]}` | ✔ |
+| `POST /api/notifications/<id>/lue` et `/tout-lire` protégés par CSRF | ✔ |
+| Message privé → notification immédiate du destinataire | ✔ |
+| Battle déposée par un élève → notification aux administrateurs | ✔ |
+| Annonce publiée → notification à tous les comptes actifs (jamais l'auteur) | ✔ |
+| Examen corrigé → notification « Votre examen est corrigé » avec la note | ✔ |
+| Réinitialisation / suspension / réactivation → notification au compte | ✔ |
+| Aucune auto-notification, suppression d'un compte = suppression de ses notifications | ✔ |
+| Ménage automatique : 45 jours, 200 par personne | ✔ |
+| Cloche absente de la page publique (aucune fuite d'interface) | ✔ |
+| Aucun `window.confirm` / `alert` dans le module de notifications | ✔ |
+
+- `pytest -q` → **69 tests réussis** (7 nouveaux, dont un contrôle CSP sur les
+  scripts en ligne).
+- `tools/verify.py` → **206** contrôles en local, **208** sur PythonAnywhere,
+  **208** sur Render (0 échec).
+
+### Vérification directe dans un navigateur Android (site de production)
+
+| Contrôle | Résultat |
+|---|---|
+| Cloche visible sur `/espace` (Pixel, 393 × 851, tactile) | ✔ |
+| Clic sur la cloche → panneau `is-open` | ✔ |
+| Notification insérée en base → compteur 0 → 1 puis bannière | ✔ |
+| Page `/notifications` : lignes groupées par jour | ✔ |
+| Erreurs JavaScript | aucune |
+
 ---
 
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*

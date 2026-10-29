@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from flask import Blueprint, g, jsonify, render_template, request
+from sqlalchemy import func
 
 from .. import notifications as service
 from ..extensions import db
@@ -20,13 +21,21 @@ PANEL_LIMIT = 8
 def api_list():
     """État courant : compteur, dernières notifications, nouveautés depuis `since`."""
     user = g.user
-    since = request.args.get("since", type=int) or 0
+    # « since » absent = premier chargement (aucune bannière) ;
+    # « since=0 » est valide et signifie « tout est nouveau ».
+    brut = request.args.get("since")
+    since = int(brut) if brut is not None and brut.isdigit() else None
 
     items = service.recent(user, PANEL_LIMIT)
-    latest = items[0].id if items else 0
+    dernier = (
+        db.session.query(func.max(Notification.id))
+        .filter(Notification.user_id == user.id)
+        .scalar()
+    )
+    latest = int(dernier or 0)
 
     nouveautes = []
-    if since:
+    if since is not None:
         rows = (
             Notification.query.filter(
                 Notification.user_id == user.id, Notification.id > since

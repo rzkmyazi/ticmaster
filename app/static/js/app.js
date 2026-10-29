@@ -674,7 +674,7 @@
      Le serveur rend la cloche et son panneau ; ici on rafraîchit le compteur
      toutes les 25 s (pause automatique quand l'onglet est en arrière-plan) et
      on affiche une bannière discrète à chaque nouveauté. */
-  var notifState = { latest: 0, timer: null, ouverte: false, premier: true };
+  var notifState = { latest: 0, timer: null, ouverte: false, premier: true, initialise: false };
 
   function notifPanel() { return $("#notif-panel"); }
 
@@ -802,13 +802,15 @@
   function pollNotifications() {
     if (document.hidden) return;
     var url = "/api/notifications";
-    if (notifState.latest) url += "?since=" + notifState.latest;
+    // Premier appel : sans « since » (aucune bannière). Ensuite on demande les
+    // nouveautés, même quand le compteur est à zéro.
+    if (notifState.initialise) url += "?since=" + notifState.latest;
     fetch(url, { headers: { "Accept": "application/json" } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (!data || !data.ok) return;
         setNotifBadge(data.count || 0);
-        if (data.latest_id) notifState.latest = data.latest_id;
+        notifState.latest = data.latest_id || 0;
 
         var panelVisible = notifState.ouverte;
         if (panelVisible) renderNotifList(data.items || []);
@@ -820,6 +822,7 @@
           });
         }
         notifState.premier = false;
+        notifState.initialise = true;
       })
       .catch(function () {});
   }
