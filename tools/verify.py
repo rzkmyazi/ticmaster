@@ -804,6 +804,17 @@ def main() -> int:
     tout = p.get(BASE + "/notifications")
     ok("lien « Tout » des notifications", tout.status_code == 200 and "notif-chip" in tout.text)
 
+    # tout marquer comme lu, puis proposer le ménage des notifications lues
+    p.post(BASE + "/api/notifications/tout-lire",
+           headers={"X-CSRF-Token": csrf(p, "/notifications")})
+    page_notif = p.get(BASE + "/notifications").text
+    ok("bouton « Vider les lues » proposé après lecture", "Vider les lues" in page_notif)
+    vider = p.post(BASE + "/notifications/vider",
+                   data={"csrf_token": csrf(p, "/notifications")}, allow_redirects=False)
+    ok("suppression des notifications lues", vider.status_code == 302, str(vider.status_code))
+    ok("vidage interdit sans connexion",
+       requests.post(BASE + "/notifications/vider", allow_redirects=False).status_code in (302, 400))
+
     # ------------------------------------------------------------ fil social
     print("▸ Fil d'actualité du profil")
     token = csrf(p, "/mon-profil")

@@ -11,12 +11,22 @@
 {% block content %}
 <div class="row-between mb-2" style="flex-wrap:wrap;gap:.6rem">
   <a class="btn btn-ghost btn-sm" href="{{ url_for('user.profile') }}">{{ icon('arrow-left') }} Mon profil</a>
-  {% if non_lues %}
-  <form method="post" action="{{ url_for('notifications.mark_all_and_back') }}" class="inline-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button class="btn btn-outline btn-sm" type="submit">{{ icon('check-circle', 16) }} Tout marquer comme lu</button>
-  </form>
-  {% endif %}
+  <div class="row" style="gap:.45rem;flex-wrap:wrap">
+    {% if non_lues %}
+    <form method="post" action="{{ url_for('notifications.mark_all_and_back') }}" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-outline btn-sm" type="submit">{{ icon('check-circle', 16) }} Tout marquer comme lu</button>
+    </form>
+    {% endif %}
+    {% if total > non_lues %}
+    <form method="post" action="{{ url_for('notifications.purge') }}" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-ghost btn-sm" type="submit" title="Supprimer les notifications déjà lues">
+        {{ icon('trash', 16) }} Vider les lues
+      </button>
+    </form>
+    {% endif %}
+  </div>
 </div>
 
 {% if tout_lu %}

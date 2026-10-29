@@ -33,7 +33,7 @@ battles de connaissances et messagerie interne, avec une administration complèt
 | **Conservation** | Durée paramétrable dans *Paramètres* : **illimitée par défaut** (`0`), aucune suppression automatique |
 | **Messages transférés** | Sous chaque message, « Transférer » l'envoie vers le salon général, une classe (professeur) ou une conversation privée ; l'**auteur d'origine** reste affiché. États d'un message privé : **Envoyé → Reçu → Lu**. |
 | **Messagerie** | Salon général, **messages de classe** (toute la classe, un niveau ou un groupe d'un coup, avec **accusés de lecture**) et conversations privées ; l'élève lit les messages de classe et répond en privé au professeur ; supervision intégrale par le **super administrateur** dans l'onglet « Messages des Utilisateurs » (icône rose à contour) |
-| **Notifications** | Cloche en temps réel, panneau déroulant, bannière discrète, historique **filtrable par type** (messages, battles, annonces, notes, compte, système) |
+| **Notifications** | Cloche en temps réel, panneau déroulant, bannière discrète, historique **filtrable par type** (messages, battles, annonces, notes, compte, système), bouton **Vider les lues** |
 | **Présence** | Utilisateurs en ligne (contour vert) / inactifs (contour rouge) dans l'onglet dédié |
 | **Expérience** | Design premium bleu nuit / bleu électrique / cyan, mode sombre **et** clair, animations légères, responsive Android / iPhone / tablette / desktop, PWA installable, accessibilité (focus visibles, `prefers-reduced-motion`) |
 

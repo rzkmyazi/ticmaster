@@ -160,6 +160,18 @@ def mark_read(user, notification_id: int | None = None) -> int:
     return touched
 
 
+def purge_read(user) -> int:
+    """Supprime les notifications déjà lues de cet utilisateur."""
+    if user is None:
+        return 0
+    supprimees = Notification.query.filter(
+        Notification.user_id == user.id, Notification.read_at.isnot(None)
+    ).delete(synchronize_session=False)
+    if supprimees:
+        db.session.commit()
+    return int(supprimees or 0)
+
+
 def safe_url(candidate: str) -> str:
     """N'accepte qu'un chemin interne (« /messages ») pour éviter toute redirection ouverte."""
     candidate = (candidate or "").strip()

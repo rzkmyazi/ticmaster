@@ -1958,3 +1958,23 @@ def test_notifications_filtrees_par_type(app):
     lignes = re.findall(r'class="notif-row[^"]*"[^>]*>(.*?)</a>', battles, re.S)
     assert len(lignes) == 2
     assert all("Battle" in ligne for ligne in lignes)   # aucun message dans le filtre
+
+
+def test_vider_les_notifications_lues(app):
+    user = _make_user(app, "eleve", role=ROLE_USER)
+    from app.models import Notification
+    from app.notifications import mark_read, notify
+    with app.app_context():
+        notify(user, "battle", "Ancienne battle lue")
+    client = app.test_client()
+    _login(client, "eleve", "MotDePasse2026!")
+    client.post("/api/notifications/tout-lire", headers={"X-CSRF-Token": _csrf(client)})
+    with app.app_context():
+        notify(user, "message", "Message non lu")
+
+    response = client.post("/notifications/vider", data={"csrf_token": _csrf(client)},
+                           follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        restants = [n.title for n in Notification.query.filter_by(user_id=user).all()]
+    assert restants == ["Message non lu"]          # la non lue est conservée

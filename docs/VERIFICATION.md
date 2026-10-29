@@ -686,6 +686,8 @@ PythonAnywhere**, pas seulement en local.
 | Bouton « Lancer la battle » réactivé dès l'acceptation | ✔ |
 | Battle solo jouée de bout en bout dans le navigateur (Android simulé) | ✔ |
 | Battle jouée en production (Render) : création, acceptation, lancement, 5 questions, corrections | ✔ |
+| Bouton de lancement actif dès l'acceptation (production) | ✔ |
+| Message transféré et accusés « Reçu » / « Lu » (production) | ✔ |
 | Erreurs dans la console sur la page de changement de mot de passe obligatoire | 0 (après correctif) |
 
 ### Battle : déroulement complet
@@ -720,9 +722,11 @@ PythonAnywhere**, pas seulement en local.
 | `?type=message` ne montre que les messages | ✔ |
 | Notification « Votre battle est acceptée » / « a été refusée » | ✔ |
 | Remise d'un message privé enregistrée au passage de la cloche | ✔ |
+| Bouton « Vider les lues » : les notifications lues partent, les non lues restent | ✔ |
+| Vidage refusé sans connexion / sans jeton | ✔ |
 
-- `pytest -q` → **82 tests réussis** (5 nouveaux).
-- `tools/verify.py` → **230** contrôles en local, **232** sur PythonAnywhere et sur Render (0 échec).
+- `pytest -q` → **83 tests réussis** (6 nouveaux).
+- `tools/verify.py` → **233** contrôles en local, **235** sur PythonAnywhere et sur Render (0 échec).
 
 ---
 

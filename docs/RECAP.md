@@ -573,6 +573,8 @@ mettent à jour en direct quand le professeur accepte.
 * **Acceptation / refus d'une battle** notifiés à l'élève concerné.
 * **Remise des messages privés** déclenchée au passage de la cloche : le professeur voit
   « Reçu » avant même que l'élève ouvre la conversation.
+* **Vider les lues** : un bouton retire de la liste les notifications déjà lues ; les non lues
+  sont toujours conservées.
 
 ### 17.5 Preuves
 
@@ -595,10 +597,10 @@ Captures : `apercus/android/battle-solo-fini.png`, `battle-groupe-fini.png`,
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **82 tests réussis** |
-| `tools/verify.py` (local) | **230 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **232 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **232 contrôles conformes, 0 échec** |
+| `pytest -q` | **83 tests réussis** |
+| `tools/verify.py` (local) | **233 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | **235 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **235 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.

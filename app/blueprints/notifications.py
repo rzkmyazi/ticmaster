@@ -130,6 +130,17 @@ def mark_all_and_back():
     return redirect(url_for("notifications.index"))
 
 
+@bp.route("/notifications/vider", methods=["POST"])
+@login_required
+def purge():
+    """Retire de la liste les notifications déjà lues."""
+    from flask import flash
+    nombre = service.purge_read(g.user)
+    flash(f"{nombre} notification(s) lue(s) supprimée(s)." if nombre
+          else "Aucune notification lue à supprimer.", "success" if nombre else "info")
+    return redirect(url_for("notifications.index"))
+
+
 @bp.route("/api/notifications/ping")
 @login_required
 def api_ping():
