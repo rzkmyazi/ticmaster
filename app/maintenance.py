@@ -31,6 +31,8 @@ DEFAULT_MESSAGE = (
 )
 
 #: Chemins toujours accessibles, même pendant la maintenance.
+#: L'accueil (`/`) est exempté : c'est désormais là que se trouve le
+#: formulaire de connexion, indispensable pour entrer même en maintenance.
 EXEMPT_PREFIXES = (
     "/static/",
     "/sante",
@@ -106,6 +108,8 @@ def blocks(path: str, user) -> bool:
         return False
     if user is not None and getattr(user, "is_admin", False):
         return False
+    if path == "/":
+        return False  # accueil = page de connexion intégrée
     if any(path.startswith(prefix) for prefix in EXEMPT_PREFIXES):
         return False
     if path.startswith("/examens") and _active_exam_running(user):

@@ -1185,3 +1185,124 @@ def test_connexion_confortable_sur_android(app):
     assert "env(safe-area-inset-bottom)" in css      # encoche et barre gestuelle
     assert "font-size: 16px" in css                  # pas de zoom automatique des champs
     assert "display: none !important" in css         # l'attribut hidden gagne toujours
+
+
+# ---------------------------------------------------------------------------
+# Vague 7 : connexion intégrée à l'accueil, accueil simplifié, page « Découvrir »
+# ---------------------------------------------------------------------------
+def test_accueil_integre_le_formulaire_de_connexion(app):
+    html = app.test_client().get("/").get_data(as_text=True)
+
+    # champs réels, branchés sur le backend
+    assert 'name="identifier"' in html and 'name="password"' in html
+    assert 'name="csrf_token"' in html
+    assert 'name="remember"' in html
+    assert 'data-pw-toggle="password"' in html           # afficher / masquer
+    assert 'autocomplete="current-password"' in html
+
+    # textes demandés
+    assert "Bienvenue sur" in html
+    assert "TIC MASTER_" in html and "#by_Myazirzk" in html
+    assert "Connectez-vous pour poursuivre votre apprentissage." in html
+    assert "Se connecter" in html
+    assert "Se souvenir de moi" in html
+
+    # indicateur de chargement
+    assert 'data-loading="Connexion en cours' in html
+    assert "is-loading" in app.test_client().get("/static/js/app.js").get_data(as_text=True)
+
+    # le formulaire poste bien vers une seule route d'authentification
+    assert 'method="post"' in html
+    assert 'action="/"' in html or "action=\"/\"" in html
+
+
+def test_connexion_depuis_laccueil_puis_erreur_inline(app):
+    _make_user(app, "apprenant")
+    client = app.test_client()
+
+    # échec : on reste sur l'accueil, avec un message clair et sans indice
+    token = _csrf(client)
+    ko = client.post("/", data={"csrf_token": token, "identifier": "apprenant", "password": "faux"})
+    body = ko.get_data(as_text=True)
+    assert ko.status_code == 200
+    assert "Identifiant ou mot de passe incorrect" in body
+    assert 'name="identifier"' in body                      # le formulaire reste affiché
+
+    # succès : session serveur créée, redirection vers l'espace de l'élève
+    token = _csrf(client)
+    ok = client.post("/", data={"csrf_token": token, "identifier": "apprenant",
+                                "password": "MotDePasse2026!"})
+    assert ok.status_code == 302
+    assert ok.headers["Location"].endswith("/espace")
+    assert client.get("/espace").status_code == 200
+
+
+def test_souvenir_de_moi_allonge_la_session_sans_affaiblir_la_securite(app):
+    _make_user(app, "apprenant")
+    client = app.test_client()
+
+    token = _csrf(client)
+    court = client.post("/", data={"csrf_token": token, "identifier": "apprenant",
+                                   "password": "MotDePasse2026!"})
+    cookie_court = court.headers.get("Set-Cookie", "")
+    assert "tic_auth=" in cookie_court
+    assert "Max-Age" not in cookie_court          # cookie de session : fermé avec le navigateur
+    assert "HttpOnly" in cookie_court             # jamais lisible en JavaScript
+
+    client2 = app.test_client()
+    token = _csrf(client2)
+    long = client2.post("/", data={"csrf_token": token, "identifier": "apprenant",
+                                   "password": "MotDePasse2026!", "remember": "1"})
+    cookie_long = long.headers.get("Set-Cookie", "")
+    assert "Max-Age=2592000" in cookie_long       # 30 jours, session serveur révocable
+    assert "HttpOnly" in cookie_long
+
+    with app.app_context():
+        from app.models import AuthSession
+        row = AuthSession.query.order_by(AuthSession.id.desc()).first()
+        assert row is not None and row.token_hash and len(row.token_hash) == 64
+        # le jeton n'est jamais stocké en clair
+        assert "tic_auth" not in (row.token_hash or "")
+
+
+def test_accueil_simplifie(app):
+    html = app.test_client().get("/").get_data(as_text=True)
+
+    # présentation courte demandée
+    assert "Apprenez les TIC autrement." in html
+    assert ("Des cours pratiques, des exercices interactifs et des évaluations "
+            "pour développer vos compétences numériques.") in html
+    for titre, sous in (("Cours interactifs", "Apprenez à votre rythme."),
+                        ("Exercices pratiques", "Testez vos connaissances."),
+                        ("Évaluations", "Mesurez vos progrès.")):
+        assert titre in html and sous in html
+    assert "Découvrir la plateforme" in html
+
+    # l'ancien programme détaillé a disparu de l'accueil
+    assert "module-card" not in html
+    assert "Parcours complet, module par module" not in html
+    assert "leçons" not in html.lower()
+    assert "#programme" not in html
+    assert ">Programme<" not in html
+
+
+def test_page_decouvrir_consacree_aux_cours(app):
+    client = app.test_client()
+    page = client.get("/decouvrir")
+    assert page.status_code == 200
+    html = page.get_data(as_text=True)
+    assert "Apprenez les TIC autrement." in html
+    assert "Comment obtenir un accès" in html
+    assert "btn--outline btn--lg" not in html      # le bouton secondaire est sur l'accueil
+    # aucun programme détaillé en clair
+    assert "module-card" not in html
+    # le lien du bouton de l'accueil pointe bien ici
+    assert 'href="/decouvrir"' in client.get("/").get_data(as_text=True)
+
+
+def test_aucun_programme_dans_le_menu_public(app):
+    client = app.test_client()
+    for path in ("/", "/decouvrir", "/a-propos", "/auth/connexion"):
+        html = client.get(path).get_data(as_text=True)
+        assert ">Programme<" not in html, path
+        assert "#programme" not in html, path

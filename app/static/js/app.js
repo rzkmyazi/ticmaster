@@ -176,6 +176,12 @@
     $$("form .btn.is-loading, form button[type=submit][disabled]").forEach(function (btn) {
       btn.disabled = false;
       btn.classList.remove("is-loading");
+      btn.removeAttribute("aria-busy");
+      var label = btn.querySelector(".btn-label");
+      if (label && btn.dataset.labelInitial) {
+        label.textContent = btn.dataset.labelInitial;
+        delete btn.dataset.labelInitial;
+      }
     });
   }
 
@@ -192,7 +198,22 @@
           if (btn && !form.querySelector(".quiz-option")) {
             btn.classList.add("is-loading");
             btn.disabled = true;
-            window.setTimeout(function () { btn.disabled = false; btn.classList.remove("is-loading"); }, 9000);
+            btn.setAttribute("aria-busy", "true");
+            // Indicateur de chargement : le libellé laisse place à « Connexion en cours… »
+            var label = btn.querySelector(".btn-label");
+            if (label && btn.dataset.loading && !btn.dataset.labelInitial) {
+              btn.dataset.labelInitial = label.textContent;
+              label.textContent = btn.dataset.loading;
+            }
+            window.setTimeout(function () {
+              btn.disabled = false;
+              btn.classList.remove("is-loading");
+              btn.removeAttribute("aria-busy");
+              if (label && btn.dataset.labelInitial) {
+                label.textContent = btn.dataset.labelInitial;
+                delete btn.dataset.labelInitial;
+              }
+            }, 9000);
           }
         }
       });

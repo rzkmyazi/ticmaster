@@ -193,7 +193,8 @@ def main() -> int:
     ok("/sante", r.status_code == 200 and r.json().get("status") == "ok", r.text[:60])
 
     print("▸ Pages publiques et absence d'inscription")
-    for path, expected in (("/", 200), ("/a-propos", 200), ("/auth/connexion", 200),
+    for path, expected in (("/", 200), ("/a-propos", 200), ("/decouvrir", 200),
+                           ("/auth/connexion", 200),
                            ("/auth/mot-de-passe-oublie", 200),
                            ("/inscription", 404), ("/register", 404),
                            ("/auth/inscription", 404)):
@@ -203,12 +204,74 @@ def main() -> int:
     ok("aucune inscription publique sur l'accueil",
        "s'inscrire" not in home and "créer un compte" not in home)
 
+    print("▸ Accueil : connexion intégrée et présentation courte")
+    accueil = requests.get(BASE + "/", timeout=20).text
+    ok("formulaire de connexion présent sur l'accueil",
+       'name="identifier"' in accueil and 'name="password"' in accueil
+       and 'name="csrf_token"' in accueil and 'name="remember"' in accueil)
+    ok("titre de bienvenue « Bienvenue sur TIC MASTER_#by_Myazirzk »",
+       "Bienvenue sur" in accueil and "TIC MASTER_" in accueil)
+    ok("sous-titre « Connectez-vous pour poursuivre votre apprentissage. »",
+       "Connectez-vous pour poursuivre votre apprentissage." in accueil)
+    ok("case « Se souvenir de moi » et lien mot de passe oublié",
+       "Se souvenir de moi" in accueil and "/auth/mot-de-passe-oublie" in accueil)
+    ok("affichage / masquage du mot de passe (data-pw-toggle)",
+       'data-pw-toggle="password"' in accueil)
+    ok("bouton avec indicateur de chargement",
+       'data-loading="Connexion en cours' in accueil)
+    ok("présentation courte « Apprenez les TIC autrement. »",
+       "Apprenez les TIC autrement." in accueil
+       and "Des cours pratiques, des exercices interactifs et des évaluations" in accueil)
+    ok("trois éléments synthétiques (cours, exercices, évaluations)",
+       all(t in accueil for t in ("Cours interactifs", "Exercices pratiques", "Évaluations"))
+       and all(t in accueil for t in ("Apprenez à votre rythme.", "Testez vos connaissances.",
+                                      "Mesurez vos progrès.")))
+    ok("bouton secondaire « Découvrir la plateforme » vers /decouvrir",
+       "Découvrir la plateforme" in accueil and 'href="/decouvrir"' in accueil)
+    ok("programme détaillé retiré de l'accueil",
+       "module-card" not in accueil and "#programme" not in accueil
+       and ">Programme<" not in accueil and "Parcours complet, module par module" not in accueil)
+    decouvrir = requests.get(BASE + "/decouvrir", timeout=20).text
+    ok("page « Découvrir la plateforme » (aucun programme détaillé)",
+       "Comment obtenir un accès" in decouvrir and "module-card" not in decouvrir
+       and ">Programme<" not in decouvrir)
+
     # ------------------------------------------------------------- connexions
     print("▸ Connexion des trois rôles")
     sa = login(*SUPER)
     ensure_accounts(sa)
     u = login(*USER)
     a = login(*ADMIN)
+
+    # ------------------------------------------------- connexion par l'accueil
+    print("▸ Connexion réelle depuis le formulaire de l'accueil")
+    essai = requests.Session()
+    jeton = csrf(essai, "/")
+    refus = essai.post(BASE + "/", data={"csrf_token": jeton, "identifier": USER[0],
+                                         "password": "mauvais-mot-de-passe"},
+                       allow_redirects=False)
+    ok("identifiants incorrects : message clair, on reste sur l'accueil",
+       refus.status_code == 200 and "Identifiant ou mot de passe incorrect" in refus.text
+       and 'name="identifier"' in refus.text, str(refus.status_code))
+    jeton = csrf(essai, "/")
+    succes = essai.post(BASE + "/", data={"csrf_token": jeton, "identifier": USER[0],
+                                          "password": USER[1]}, allow_redirects=False)
+    ok("identifiants valides : session ouverte et redirection",
+       succes.status_code == 302, str(succes.status_code))
+    ok("la session de l'accueil donne accès à l'espace",
+       essai.get(BASE + "/espace", allow_redirects=False).status_code == 200)
+    souvenir = requests.Session()
+    jeton = csrf(souvenir, "/")
+    r = souvenir.post(BASE + "/", data={"csrf_token": jeton, "identifier": USER[0],
+                                        "password": USER[1], "remember": "1"},
+                      allow_redirects=False)
+    cookie = r.headers.get("Set-Cookie", "")
+    ok("« Se souvenir de moi » : cookie persistant 30 jours, HttpOnly",
+       "Max-Age=2592000" in cookie and "HttpOnly" in cookie, cookie[:70])
+    essai.post(BASE + "/auth/deconnexion", data={"csrf_token": csrf(essai, "/espace")},
+               allow_redirects=False)
+    souvenir.post(BASE + "/auth/deconnexion", data={"csrf_token": csrf(souvenir, "/espace")},
+                  allow_redirects=False)
 
     # ---------------------------------------------------------- pages privées
     print("▸ Espace apprenant (15 pages)")
@@ -352,7 +415,7 @@ def main() -> int:
     page = requests.get(BASE + "/auth/connexion", timeout=20).text
     ok("connexion : plus de panneau « détail du programme »",
        "auth-aside" not in page and "auth-wrap--center" in page)
-    ok("connexion : lien « Programme » masqué", "Programme" not in page)
+    ok("connexion : aucun onglet « Programme »", "Programme" not in page)
 
     r = sa.get(BASE + "/admin/bulletins", timeout=20)
     ok("/admin/bulletins accessible au super administrateur", r.status_code == 200,

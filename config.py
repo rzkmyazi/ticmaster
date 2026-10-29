@@ -50,6 +50,8 @@ class Config:
     SESSION_COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "0") == "1"
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
     AUTH_SESSION_HOURS = int(os.environ.get("AUTH_SESSION_HOURS", "8"))
+    # « Se souvenir de moi » : 30 jours, session serveur révocable
+    AUTH_REMEMBER_HOURS = int(os.environ.get("AUTH_REMEMBER_HOURS", str(24 * 30)))
 
     # --- Anti brute-force -------------------------------------------------
     LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "5"))

@@ -70,7 +70,7 @@ requête HTTP
 | Blueprint | Préfixe | Contenu |
 |---|---|---|
 | `auth` | `/auth` | connexion, déconnexion, mot de passe oublié/reset, changement |
-| `public` | `/` | accueil, **à propos (#by_Myazirzk)**, `/sante`, manifest, service worker |
+| `public` | `/` | **accueil avec connexion intégrée**, `/decouvrir`, **à propos (#by_Myazirzk)**, `/sante`, manifest, service worker |
 | `user` | `/espace`… | tableau de bord apprenant, profil, historique, présence |
 | `learning` | `/cours` `/exercices` | catalogue, leçons, progression, exercices, résultats, ressources |
 | `exam` | `/examens` | examens trimestriels, heartbeat, violations, correction |
@@ -80,7 +80,8 @@ requête HTTP
 ## 4. Flux d'authentification
 
 ```
-POST /auth/connexion
+POST /            (formulaire de l'accueil)   ou   POST /auth/connexion
+  └─ même fonction serveur `attempt_login()` (app/blueprints/auth.py)
   1. limitation par IP (compteur mémoire)  ──► 429 si dépassement
   2. recherche par identifiant OU e-mail
   3. si compte inconnu : vérification d'un hash factice (temps constant)
@@ -90,7 +91,8 @@ POST /auth/connexion
   6. succès ⇒ création d'une ligne auth_sessions :
        - jeton aléatoire 256 bits envoyé au client (cookie HttpOnly)
        - SHA-256 du jeton stocké en base (jamais le jeton en clair)
-       - expires_at = now + AUTH_SESSION_HOURS
+       - expires_at = now + AUTH_SESSION_HOURS (8 h)
+         ou + AUTH_REMEMBER_HOURS (30 j) si « Se souvenir de moi » est coché
   7. régénération du jeton CSRF (anti-fixation de session)
   8. redirection : /admin (admin) ou /espace (utilisateur)
 ```

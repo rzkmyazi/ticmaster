@@ -1,0 +1,92 @@
+{# ------------------------------------------------------------------
+   Carte de connexion — partagée par l'accueil (/) et par /auth/connexion.
+   Variables attendues : action, error, identifier, remember, notice.
+   Aucune donnée secrète ici : le formulaire poste vers le backend Flask,
+   la vérification du mot de passe (Argon2id) et l'ouverture de session
+   se font entièrement côté serveur.
+   ------------------------------------------------------------------ #}
+<div class="login-card" id="connexion">
+  <div class="login-card-glow" aria-hidden="true"></div>
+
+  <div class="auth-brand auth-brand--welcome">
+    <span class="brand-mark">
+      <svg viewBox="0 0 48 48" class="brand-logo" role="img" aria-label="Logo TIC MASTER">
+        <circle class="logo-ring" cx="24" cy="24" r="20.5"/>
+        <circle class="logo-orbit" cx="24" cy="24" r="20.5" stroke-dasharray="7 9"/>
+        <rect class="logo-chip" x="13.5" y="13.5" width="21" height="21" rx="6"/>
+        <path class="logo-node" d="M24 9v4.5M24 34.5V39M9 24h4.5M34.5 24H39"/>
+        <circle class="logo-pulse" cx="24" cy="24" r="3.4"/>
+      </svg>
+    </span>
+    <h1 class="login-welcome">Bienvenue sur <span class="login-brand">TIC MASTER_<a class="brand-by login-by" href="{{ url_for('public.about') }}#super-admin" title="À propos de l'auteur — #by_Myazirzk">#by_Myazirzk</a></span></h1>
+    <p class="login-sub">Connectez-vous pour poursuivre votre apprentissage.</p>
+  </div>
+
+  {% if error %}
+  <div class="auth-error" role="alert" aria-live="assertive">
+    {{ icon('alert') }}
+    <span>{{ error }}</span>
+  </div>
+  {% endif %}
+
+  {% if notice %}
+  <div class="flash flash-success login-flash" role="status">
+    {{ icon('check-circle') }}<span>{{ notice }}</span>
+  </div>
+  {% endif %}
+
+  <form method="post" action="{{ action or url_for('public.index') }}" class="login-form" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if request.args.get('next') %}<input type="hidden" name="next" value="{{ request.args.get('next') }}">{% endif %}
+
+    <div class="field">
+      <label for="identifier">Identifiant</label>
+      <div class="input-wrap">
+        <span class="input-ic" aria-hidden="true">{{ icon('user', 17) }}</span>
+        <input type="text" id="identifier" name="identifier" value="{{ identifier or '' }}"
+               autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"
+               enterkeyhint="next" placeholder="Votre identifiant" required
+               aria-required="true"{% if autofocus %} data-autofocus{% endif %}>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="password">Mot de passe</label>
+      <div class="input-wrap">
+        <span class="input-ic" aria-hidden="true">{{ icon('lock', 17) }}</span>
+        <input type="password" id="password" name="password" autocomplete="current-password"
+               enterkeyhint="go" placeholder="••••••••" required aria-required="true">
+        <button type="button" class="pw-toggle" data-pw-toggle="password"
+                aria-label="Afficher le mot de passe" aria-pressed="false" title="Afficher ou masquer le mot de passe">
+          <span class="pw-off">{{ icon('eye') }}</span>
+          <span class="pw-on" hidden>{{ icon('eye-off') }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="login-options">
+      <label class="remember">
+        <input type="checkbox" name="remember" value="1"{% if remember %} checked{% endif %}>
+        <span class="remember-box" aria-hidden="true">{{ icon('check', 13) }}</span>
+        <span class="remember-text">Se souvenir de moi</span>
+      </label>
+      <a class="login-help" href="{{ url_for('auth.forgot_password') }}">Mot de passe oublié ?</a>
+    </div>
+
+    <button class="btn btn--primary btn--block login-submit" type="submit"
+            data-loading="Connexion en cours…">
+      <span class="btn-label">Se connecter</span>
+      <span class="login-submit-ic" aria-hidden="true">{{ icon('arrow-right', 18) }}</span>
+    </button>
+    <p class="login-remember-hint">{{ icon('shield', 13) }} Sans cette case, la session se ferme avec le navigateur. Avec, elle reste ouverte 30 jours sur cet appareil et peut être révoquée à tout moment.</p>
+  </form>
+
+  <noscript>
+    <p class="auth-note">{{ icon('info') }} JavaScript est désactivé : la connexion fonctionne normalement.</p>
+  </noscript>
+
+  <p class="login-note">
+    {{ icon('info', 15) }}
+    <span>Pas de compte ? Les comptes sont créés <strong>exclusivement par l'administration</strong>. Aucune inscription publique n'est disponible.</span>
+  </p>
+</div>

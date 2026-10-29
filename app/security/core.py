@@ -119,9 +119,17 @@ def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def create_auth_session(user: User) -> str:
+def create_auth_session(user: User, remember: bool = False) -> str:
+    """Crée une session serveur révocable pour `user`.
+
+    `remember=True` prolonge la session (30 jours par défaut) : le jeton reste
+    aléatoire, haché en base, et peut être révoqué à tout moment.
+    """
     token = secrets.token_urlsafe(32)
-    hours = current_app.config.get("AUTH_SESSION_HOURS", 8)
+    if remember:
+        hours = current_app.config.get("AUTH_REMEMBER_HOURS", 720)
+    else:
+        hours = current_app.config.get("AUTH_SESSION_HOURS", 8)
     row = AuthSession(
         user_id=user.id,
         token_hash=_hash_token(token),

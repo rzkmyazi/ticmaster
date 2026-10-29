@@ -2,31 +2,66 @@
 """Pages publiques : accueil, à propos (#by_Myazirzk), santé, PWA."""
 from __future__ import annotations
 
-from flask import Blueprint, current_app, g, jsonify, redirect, render_template, url_for, Response, send_from_directory
+from flask import (
+    Blueprint, current_app, g, jsonify, redirect, render_template, request, url_for, Response,
+    send_from_directory,
+)
 
 from ..extensions import db
-from ..models import Module, Lesson, Exercise, User, Question, ROLE_SUPER_ADMIN, ROLE_ADMIN, STATUS_ACTIVE
+from ..models import User, ROLE_SUPER_ADMIN, ROLE_ADMIN, STATUS_ACTIVE
 
 bp = Blueprint("public", __name__)
 
 
-@bp.route("/")
+@bp.route("/", methods=["GET", "POST"])
 def index():
-    if g.get("user"):
-        return redirect(url_for("user.dashboard"))
+    """Accueil public : formulaire de connexion intégré en haut de page.
 
-    modules = (
-        Module.query.filter_by(status="published")
-        .order_by(Module.order_index)
-        .all()
+    Le traitement du POST est le même que sur /auth/connexion (fonction
+    `attempt_login`), ce qui garantit une politique de sécurité identique :
+    limitation par IP, verrouillage du compte, messages d'erreur génériques,
+    cookie httpOnly et session serveur révocable.
+    """
+    if g.get("user"):
+        return redirect(url_for("admin.dashboard") if g.user.is_admin else url_for("user.dashboard"))
+
+    # import local : évite tout cycle d'import entre les blueprints
+    from .auth import attempt_login, sign_in_response
+
+    error = None
+    identifier = ""
+    remember = False
+
+    if request.method == "POST":
+        identifier = (request.form.get("identifier") or "").strip()
+        remember = (request.form.get("remember") or "").lower() in ("1", "on", "true", "yes", "oui")
+        result = attempt_login(identifier, request.form.get("password") or "", remember)
+
+        if result["status"] == "ok":
+            return sign_in_response(
+                result, remember, request.args.get("next") or request.form.get("next")
+            )
+        if result["status"] == "limited":
+            return render_template("errors/429.html", message=result["message"]), 429
+        error = result.get("error")
+
+    return render_template(
+        "public/index.html",
+        error=error,
+        identifier=identifier,
+        remember=remember,
+        notice=request.args.get("notice"),
     )
-    stats = {
-        "modules": len(modules),
-        "lessons": Lesson.query.filter_by(published=True).count(),
-        "questions": Question.query.count(),
-        "learners": User.query.filter(User.status == STATUS_ACTIVE, User.role == "user").count(),
-    }
-    return render_template("public/index.html", modules=modules, stats=stats)
+
+
+@bp.route("/decouvrir")
+def discover():
+    """Page dédiée à la découverte de la plateforme.
+
+    Volontairement synthétique : aucune liste détaillée des modules (elle reste
+    réservée à l'espace de l'apprenant connecté).
+    """
+    return render_template("public/decouvrir.html")
 
 
 @bp.route("/a-propos")
@@ -87,7 +122,7 @@ def manifest():
 def service_worker():
     """Service worker minimal : coquille applicative hors-ligne, sans mise en cache des pages privées."""
     js = """
-const CACHE = 'ticmaster-v2';
+const CACHE = 'ticmaster-v3';
 const ASSETS = [
   '/static/css/app.css',
   '/static/js/app.js',

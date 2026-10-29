@@ -189,14 +189,80 @@ Détails techniques :
 
 ---
 
+## 12. Vague 7 — Connexion sur l'accueil, page « Découvrir », accueil simplifié — ✔
+
+### 12.1 La connexion se trouve désormais sur la page d'accueil
+
+On n'a plus besoin de quitter l'accueil : le formulaire est dans la **zone supérieure**,
+immédiatement visible.
+
+| Élément | Mise en œuvre |
+|---|---|
+| **Logo** | Logo animé (anneau, orbite, pastille) à côté du titre, 46 px, rendu identique en clair et en sombre. |
+| **Titre accueillant** | « **Bienvenue sur TIC MASTER_#by_Myazirzk** » — le lien #by_Myazirzk reste cliquable vers l'onglet À propos. |
+| **Sous-titre** | « Connectez-vous pour poursuivre votre apprentissage. » |
+| **Identifiant** | Champ avec icône, autocomplétion `username`, majuscules désactivées, « suivant » sur le clavier mobile. |
+| **Mot de passe** | Bouton **œil** pour afficher / masquer, `autocomplete="current-password"`, touche « go » qui valide. |
+| **Se souvenir de moi** | Compatible avec la politique de sécurité : le cookie reste `HttpOnly` + `SameSite=Lax` (+ `Secure` en production), le jeton est aléatoire et **haché en base**, la session est **révocable**. Coché → 30 jours ; décoché → cookie de session (fermé avec le navigateur). |
+| **Bouton principal** | « Se connecter », dégradé animé (filet lumineux), flèche qui glisse au survol. |
+| **Indicateur de chargement** | Au clic : bouton désactivé, spinner, libellé « Connexion en cours… », `aria-busy="true"` ; réactivation automatique au retour (Android / bfcache). |
+| **Erreurs claires** | « Identifiant ou mot de passe incorrect. » dans un encadré rouge, sans jamais révéler si le compte existe ; l'identifiant saisi est conservé, le mot de passe est effacé. |
+| **Accessibilité / mobile** | Libellés associés (`for`/`id`), messages en `aria-live`, case personnalisée encore focusable au clavier, cibles ≥ 44 px, champs à 16 px (aucun zoom Android), carte pleine largeur dès 390 px. |
+
+**Un seul backend d'authentification.** Le formulaire de l'accueil et celui de
+`/auth/connexion` appellent la même fonction serveur `attempt_login()` : limitation
+par IP, verrouillage du compte après échecs, messages génériques, journal d'audit,
+cookie `HttpOnly` et session serveur révocable. `attempt_login()` ne renvoie jamais
+le mot de passe et ne le stocke jamais : la vérification se fait par Argon2id.
+
+### 12.2 Onglet « Programme » supprimé
+
+- Le lien « Programme » a disparu du menu public (accueil, découvrir, à propos,
+  connexion) et l'ancre `#programme` n'existe plus.
+- Le menu public devient : **Accueil · Découvrir · À propos** (+ thème et
+  « Se connecter » / « Mon espace »).
+- Le programme détaillé (modules, leçons, durées, exercices) reste **exclusivement**
+  dans l'espace de l'apprenant, selon les autorisations existantes.
+
+### 12.3 Accueil radicalement simplifié
+
+L'ancienne page (douze cartes de modules, description de chaque leçon, six
+argumentaires, étapes, etc.) est remplacée par **deux blocs** :
+
+1. **Bienvenue + connexion** (zone supérieure).
+2. **« Apprenez les TIC autrement. »** — « Des cours pratiques, des exercices
+   interactifs et des évaluations pour développer vos compétences numériques. »,
+   puis **trois** éléments avec icône :
+   - **Cours interactifs** — Apprenez à votre rythme.
+   - **Exercices pratiques** — Testez vos connaissances.
+   - **Évaluations** — Mesurez vos progrès.
+   Et **un seul bouton secondaire** : « **Découvrir la plateforme** ».
+
+### 12.4 Page « Découvrir la plateforme » (`/decouvrir`)
+
+Page dédiée aux cours, volontairement synthétique : les trois piliers, « Comment
+obtenir un accès » en trois étapes, le cadre de sécurité et un bouton de connexion.
+**Aucune liste de modules** n'y figure : le programme complet n'apparaît qu'après
+connexion, dans l'espace de l'apprenant.
+
+### 12.5 Garanties conservées
+
+- Aucune inscription publique, aucun bouton « Créer un compte ».
+- Aucun compte ni mot de passe codé en dur dans le frontend ; aucun secret exposé au navigateur.
+- Les comptes sont créés uniquement par l'administrateur autorisé.
+- Sessions, mots de passe et autorisations restent gérés côté serveur.
+- L'accueil est exempté du mode « mise à jour du site » : on peut toujours se connecter.
+
+---
+
 ## Vérifications automatiques
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **50 tests réussis** |
-| `tools/verify.py` (local) | **169 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **170 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **170 contrôles conformes, 0 échec** |
+| `pytest -q` | **56 tests réussis** |
+| `tools/verify.py` (local) | **185 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | *(mesuré après déploiement)* |
+| `tools/verify.py` sur PythonAnywhere | *(idem)* |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.

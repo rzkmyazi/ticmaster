@@ -1,0 +1,63 @@
+{% extends "base_public.html" %}
+{% block title %}Découvrir la plateforme{% endblock %}
+{% block description %}Découvrez TIC MASTER : cours interactifs, exercices pratiques et évaluations. Le programme détaillé est accessible dans l'espace de l'apprenant, avec son compte.{% endblock %}
+
+{% block content %}
+<section class="section discover-hero">
+  <div class="section-inner">
+    <a class="back-link" href="{{ url_for('public.index') }}">{{ icon('arrow-left', 16) }} Retour à l'accueil</a>
+    <div class="section-head reveal">
+      <div class="eyebrow">Découvrir la plateforme</div>
+      <h1 class="discover-title">Apprenez les TIC autrement.</h1>
+      <p>Des cours pratiques, des exercices interactifs et des évaluations pour développer vos compétences numériques.</p>
+    </div>
+
+    <ul class="pillar-grid pillar-grid--wide">
+      <li class="pillar reveal">
+        <span class="pillar-icon">{{ icon('book', 24) }}</span>
+        <h3>Cours interactifs</h3>
+        <p>Apprenez à votre rythme. Le programme complet est organisé en modules, chacun avec ses leçons, ses ressources et son avancement.</p>
+      </li>
+      <li class="pillar reveal reveal-2">
+        <span class="pillar-icon">{{ icon('clipboard', 24) }}</span>
+        <h3>Exercices pratiques</h3>
+        <p>Testez vos connaissances. Chaque exercice est corrigé immédiatement, avec le score et l'explication de chaque réponse.</p>
+      </li>
+      <li class="pillar reveal reveal-3">
+        <span class="pillar-icon">{{ icon('award', 24) }}</span>
+        <h3>Évaluations</h3>
+        <p>Mesurez vos progrès. Les évaluations trimestrielles et les battles donnent des résultats fiables, visibles dans votre espace.</p>
+      </li>
+    </ul>
+
+    <div class="discover-grid">
+      <article class="card reveal">
+        <h3 class="card-title">{{ icon('key', 18) }} Comment obtenir un accès</h3>
+        <ol class="steps-list">
+          <li><span class="steps-num">1</span><span>L'administration de l'établissement crée votre compte et vous remet un identifiant.</span></li>
+          <li><span class="steps-num">2</span><span>À la première connexion, vous choisissez votre mot de passe personnel.</span></li>
+          <li><span class="steps-num">3</span><span>Vous retrouvez alors vos cours, vos exercices et vos résultats dans votre espace.</span></li>
+        </ol>
+        <p class="muted text-sm" style="margin:.9rem 0 0">
+          Le programme officiel détaillé — modules, leçons, durées et exercices — n'est visible
+          qu'après la connexion, dans l'espace de l'apprenant.
+        </p>
+      </article>
+
+      <article class="card card--glow reveal reveal-2">
+        <h3 class="card-title">{{ icon('shield', 18) }} Un cadre sécurisé</h3>
+        <ul class="list-clean">
+          <li>{{ icon('lock', 16) }} <span>Mots de passe hachés avec Argon2id, jamais stockés en clair.</span></li>
+          <li>{{ icon('shield', 16) }} <span>Sessions révocables, protection CSRF, limitation des tentatives de connexion.</span></li>
+          <li>{{ icon('eye', 16) }} <span>Contrôle des accès côté serveur et journal d'audit des connexions.</span></li>
+          <li>{{ icon('user', 16) }} <span>Chaque apprenant ne voit que ses propres données.</span></li>
+          <li>{{ icon('ban', 16) }} <span>Aucune inscription publique, aucun compte anonyme.</span></li>
+        </ul>
+        <a class="btn btn--primary btn--block" href="{{ url_for('public.index') }}#connexion" style="margin-top:1rem">
+          {{ icon('arrow-right', 17) }} Se connecter
+        </a>
+      </article>
+    </div>
+  </div>
+</section>
+{% endblock %}

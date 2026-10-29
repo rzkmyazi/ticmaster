@@ -464,4 +464,60 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 
 ---
 
+## 16. Mise à jour du 29/10/2026 — Connexion sur l'accueil (vague 7)
+
+**Instances :** Render, PythonAnywhere, local.
+
+### 16.1 Formulaire intégré à l'accueil
+
+| Contrôle | Résultat |
+|---|---|
+| Champs `identifier`, `password`, `csrf_token`, `remember` présents sur `/` | ✔ |
+| Affichage / masquage du mot de passe (`data-pw-toggle`) | ✔ |
+| Indicateur de chargement (`data-loading` + `.is-loading` + `aria-busy`) | ✔ |
+| Titre « Bienvenue sur TIC MASTER_#by_Myazirzk » et sous-titre demandés | ✔ |
+| Erreur inline « Identifiant ou mot de passe incorrect. » sans quitter l'accueil | ✔ |
+| Identifiants valides → session serveur + redirection vers l'espace | ✔ |
+| Cookie `HttpOnly` ; « Se souvenir de moi » = `Max-Age` 30 jours | ✔ |
+| Sans la case : cookie de session (aucun `Max-Age`) | ✔ |
+| Jeton de session aléatoire, stocké **haché** en base (64 caractères) | ✔ |
+| Aucun identifiant ni secret dans le code de la page | ✔ |
+
+### 16.2 Accueil simplifié et onglet Programme
+
+| Contrôle | Résultat |
+|---|---|
+| « Apprenez les TIC autrement. » + description demandée | ✔ |
+| Trois éléments : Cours interactifs / Exercices pratiques / Évaluations | ✔ |
+| Un seul bouton secondaire « Découvrir la plateforme » → `/decouvrir` | ✔ |
+| Anciennes cartes de modules supprimées (`module-card` absent de `/`) | ✔ |
+| Lien « Programme » et ancre `#programme` absents des pages publiques | ✔ |
+| `/decouvrir` répond 200 et ne contient aucun programme détaillé | ✔ |
+| Programme complet toujours accessible dans l'espace de l'apprenant | ✔ |
+
+### 16.3 Mesures navigateur (Chromium)
+
+| Page | 360 × 800 | 390 × 844 | 1280 × 900 | 1440 × 900 |
+|---|---|---|---|---|
+| `/` (accueil + connexion) | 0 px | 0 px | 0 px | 0 px |
+| `/decouvrir` | 0 px | 0 px | 0 px | 0 px |
+| `/auth/connexion` | 0 px | 0 px | 0 px | 0 px |
+
+*(débordement horizontal mesuré en pixels)*
+
+### Résultats des tests
+
+- `pytest -q` → **56 tests réussis** (6 nouveaux pour cette vague).
+- `tools/verify.py` → **185 contrôles conformes** en local, et autant en production (0 échec).
+
+### Déploiement
+
+| Cible | État |
+|---|---|
+| GitHub `rzkmyazi/ticmaster` | commit de la vague poussé sur `main` |
+| Render (principale) | déploiement automatique |
+| PythonAnywhere | fichiers synchronisés + rechargement |
+
+---
+
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*
