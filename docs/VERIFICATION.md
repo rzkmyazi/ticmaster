@@ -359,6 +359,50 @@ sert l'application ; il est idempotent grâce au marqueur `~/.tic_bootstrap_done
 | GitHub `rzkmyazi/ticmaster` | commit `a8d78ec` poussé sur `main` |
 | Render (principale) | déploiement `live` sur `a8d78ec` — **151 contrôles conformes** |
 | PythonAnywhere | **18 fichiers** synchronisés + rechargement (`200 OK`) — **151 contrôles conformes** |
+---
+
+## 14. Mise à jour du 29/10/2026 — Questions des battles & groupes libres (vague 5)
+
+**Commit déployé :** `31fe36b` · **instances :** Render, PythonAnywhere, local.
+
+### 14.1 Questions des battles par l'administration
+
+| Contrôle | Résultat |
+|---|---|
+| Lien « Questions » présent sur chaque battle en attente pour l'administration | ✔ |
+| Écran `/admin/battles/<id>/questions` accessible (admin et super admin) | ✔ |
+| Formulaire « Créer une question » présent | ✔ |
+| Banque de questions proposée (toutes les questions à 2 propositions et plus) | ✔ |
+| Sélection de questions enregistrée et conservée au rechargement | ✔ |
+| Question créée depuis l'écran **ajoutée immédiatement** à la battle | ✔ |
+| Question enregistrée dans la banque « Banque de questions Battle » (brouillon, invisible des élèves) | ✔ |
+| Composition interdite à un élève (**403**) | ✔ |
+| Composition bloquée après le démarrage de la battle | ✔ |
+| Les questions composées sont bien celles posées pendant la battle (vérifié en mode **groupe**) | ✔ |
+| Nettoyage : la question de contrôle est supprimée après la vérification | ✔ |
+
+### 14.2 Groupes libres (1 → 99)
+
+| Contrôle | Résultat |
+|---|---|
+| Groupe **9** accepté par le super administrateur et affiché (« Groupe 9 ») | ✔ |
+| Groupes **0**, **100** et texte refusés, groupe précédent conservé | ✔ |
+| Champ de saisie numérique (`max="99"`, suggestions 1-2-3 + groupes existants) | ✔ |
+| Liste de classe, filtres et export CSV suivent le groupe personnalisé | ✔ |
+| Un **administrateur** ne peut toujours pas changer le groupe (lecture seule + contrôle serveur) | ✔ |
+
+### Résultats des tests
+
+- `pytest -q` → **48 tests réussis** (2 nouveaux : groupes libres, composition des questions).
+- `tools/verify.py` → **159 contrôles conformes** en local, **160** sur Render et **160** sur PythonAnywhere (0 échec).
+
+### Déploiement
+
+| Cible | État |
+|---|---|
+| GitHub `rzkmyazi/ticmaster` | commit `31fe36b` poussé sur `main` |
+| Render (principale) | déploiement `live` sur `31fe36b` — **160 contrôles conformes** |
+| PythonAnywhere | **9 fichiers** synchronisés + rechargement (`200 OK`) — **160 contrôles conformes** |
 
 ---
 

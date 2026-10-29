@@ -335,7 +335,8 @@ def main() -> int:
     ok("liste de classe accessible au super administrateur", page.status_code == 200,
        str(page.status_code))
     ok("liste de classe : groupes et impression",
-       "Groupe 1" in page.text and "Imprimer" in page.text)
+       "Groupe 9" in page.text and "Imprimer" in page.text,
+       "groupe personnalisé affiché dans la liste imprimable")
     ok("liste de classe : élève présent avec son numéro",
        "Andriamana Soa" in page.text and "SoaDuTIC" in page.text)
 

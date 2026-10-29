@@ -169,8 +169,8 @@ Détails techniques :
 |---|---|
 | `pytest -q` | **48 tests réussis** |
 | `tools/verify.py` (local) | **159 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | *(mesuré après déploiement — voir `docs/VERIFICATION.md`)* |
-| `tools/verify.py` sur PythonAnywhere | *(idem)* |
+| `tools/verify.py` sur Render | **160 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **160 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.
