@@ -508,15 +508,15 @@ Même mesure sur 360 × 800 (petit téléphone) et 768 × 1024 (tablette) : **0 
 ### Résultats des tests
 
 - `pytest -q` → **56 tests réussis** (6 nouveaux pour cette vague).
-- `tools/verify.py` → **185 contrôles conformes** en local, et autant en production (0 échec).
+- `tools/verify.py` → **185 contrôles conformes** en local, **186** sur Render, **186** sur PythonAnywhere (0 échec).
 
 ### Déploiement
 
 | Cible | État |
 |---|---|
-| GitHub `rzkmyazi/ticmaster` | commit de la vague poussé sur `main` |
-| Render (principale) | déploiement automatique |
-| PythonAnywhere | fichiers synchronisés + rechargement |
+| GitHub `rzkmyazi/ticmaster` | commit `5287926` poussé sur `main` |
+| Render (principale) | déploiement `live` — **186 contrôles conformes** |
+| PythonAnywhere | **17 fichiers** synchronisés + rechargement (`200 OK`) — **186 contrôles conformes** |
 
 ---
 

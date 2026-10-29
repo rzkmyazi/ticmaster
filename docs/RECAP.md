@@ -261,8 +261,8 @@ connexion, dans l'espace de l'apprenant.
 |---|---|
 | `pytest -q` | **56 tests réussis** |
 | `tools/verify.py` (local) | **185 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | *(mesuré après déploiement)* |
-| `tools/verify.py` sur PythonAnywhere | *(idem)* |
+| `tools/verify.py` sur Render | **186 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **186 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.
