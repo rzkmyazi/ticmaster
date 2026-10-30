@@ -36,6 +36,10 @@ TABLE_COLUMNS = {
         "delivered_at": "DATETIME",
         "forwarded_from_id": "INTEGER",
     },
+    # V2.2 : déduplication des notifications (une annonce = une notification).
+    "notifications": {
+        "dedupe_key": "VARCHAR(120)",
+    },
 }
 
 
@@ -99,6 +103,7 @@ EXTRA_INDEXES = (
     ("auth_sessions", "expires_at"),
     ("auth_sessions", "revoked_at"),
     ("audit_logs", "created_at"),
+    ("notifications", "dedupe_key"),
 )
 
 

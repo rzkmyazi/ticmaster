@@ -524,6 +524,9 @@ class Notification(db.Model):
     body = db.Column(db.String(400), default="")
     url = db.Column(db.String(255), default="")
     icon = db.Column(db.String(30), default="bell")
+    #: Empreinte de déduplication : une même annonce, un même événement ne
+    #: produit jamais deux notifications pour la même personne.
+    dedupe_key = db.Column(db.String(120), default="", index=True)
     actor_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
     read_at = db.Column(db.DateTime, index=True)
@@ -534,6 +537,26 @@ class Notification(db.Model):
     @property
     def is_read(self) -> bool:
         return self.read_at is not None
+
+    # -- Affichage : jamais de balisage, même pour les anciennes lignes ------
+    @property
+    def title_clean(self) -> str:
+        from .text_safety import clean_title
+        return clean_title(self.title or "", limit=120) or "Notification"
+
+    @property
+    def body_clean(self) -> str:
+        from .text_safety import clean_text, looks_like_markup
+        corps = clean_text(self.body or "", limit=280)
+        if not corps and looks_like_markup(self.body or ""):
+            from .notifications import CONTENU_RETIRE
+            return CONTENU_RETIRE
+        return corps
+
+    @property
+    def when_label(self) -> str:
+        from .notifications import date_label, time_label
+        return f"{date_label(self.created_at)} · {time_label(self.created_at)}".strip(" ·")
 
 
 class Setting(db.Model):

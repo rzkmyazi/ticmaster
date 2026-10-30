@@ -518,6 +518,7 @@ def user_reset_password(user_id: int):
         "L'administration vous a communiqué un mot de passe temporaire. "
         "Vous devrez le changer à votre prochaine connexion.",
         url_for("auth.change_password"), actor=g.user, icon="key",
+        dedupe_hours=0,
     )
 
     attempts = Attempt.query.filter_by(user_id=user.id).order_by(Attempt.started_at.desc()).limit(10).all()
@@ -981,14 +982,29 @@ def question_delete(question_id: int):
 # ---------------------------------------------------------------------------
 # Annonces
 # ---------------------------------------------------------------------------
+def _texte_annonce(valeur: str, limite: int) -> str:
+    """Un contenu saisi par l'administration reste du **texte**, jamais du code.
+
+    Le texte normal passe tel quel ; si du balisage est détecté, il est retiré
+    avant l'enregistrement (aucune annonce ne peut afficher `<script>`).
+    """
+    from ..text_safety import clean_text, looks_like_markup
+
+    valeur = (valeur or "").strip()
+    if looks_like_markup(valeur):
+        return clean_text(valeur, limit=limite)
+    return valeur[:limite]
+
+
 @bp.route("/annonces", methods=["GET", "POST"])
 @admin_required
 def announcements():
     if request.method == "POST":
-        title = (request.form.get("title") or "").strip()[:190]
-        body = (request.form.get("body") or "").strip()
+        title = _texte_annonce(request.form.get("title"), 190)
+        body = _texte_annonce(request.form.get("body"), 4000)
         if len(title) < 3 or len(body) < 3:
-            flash("Titre et contenu obligatoires.", "danger")
+            flash("Titre et contenu obligatoires — texte brut attendu "
+                  "(le code HTML n'est ni accepté ni affiché).", "danger")
         else:
             announcement = Announcement(
                 title=title, body=body, published=request.form.get("published") == "1",
@@ -1006,7 +1022,10 @@ def announcements():
                 ]
                 envoyees = notify_many(
                     destinataires, "annonce", f"Nouvelle annonce : {title}",
-                    body[:160], url_for("user.announcements"), actor=g.user, icon="megaphone",
+                    body[:160], url_for("user.announcements"), actor=g.user,
+                    icon="megaphone",
+                    # Une annonce = une notification par personne, jamais deux.
+                    dedupe_key=f"annonce:{announcement.id}",
                 )
                 flash(f"Annonce publiée · {envoyees} personne(s) notifiée(s).", "success")
             else:
@@ -1021,8 +1040,8 @@ def announcements():
 @admin_required
 def announcement_edit(announcement_id: int):
     item = db.session.get(Announcement, announcement_id) or abort(404)
-    item.title = (request.form.get("title") or item.title).strip()[:190]
-    item.body = (request.form.get("body") or item.body).strip()
+    item.title = _texte_annonce(request.form.get("title") or item.title, 190)
+    item.body = _texte_annonce(request.form.get("body") or item.body, 4000)
     item.published = request.form.get("published") == "1"
     db.session.commit()
     log_audit("announcement.updated", target=str(item.id))
@@ -1035,8 +1054,16 @@ def announcement_edit(announcement_id: int):
 def announcement_delete(announcement_id: int):
     item = db.session.get(Announcement, announcement_id) or abort(404)
     db.session.delete(item)
+    # Les notifications de cette annonce n'ont plus d'objet : on les retire
+    # pour que personne ne reçoive un lien vers une annonce supprimée.
+    from ..models import Notification
+
+    supprimees = Notification.query.filter(
+        Notification.dedupe_key == f"annonce:{announcement_id}"
+    ).delete(synchronize_session=False)
     db.session.commit()
-    log_audit("announcement.deleted", target=str(announcement_id))
+    log_audit("announcement.deleted", target=str(announcement_id),
+              details=f"notifications_retirees={supprimees}")
     flash("Annonce supprimée.", "success")
     return redirect(url_for("admin.announcements"))
 
@@ -1444,6 +1471,7 @@ def battle_accept(battle_id: int):
         room.owner_id, "battle", "Votre battle est acceptée",
         f"« {room.name} » · code {room.code} — vous pouvez lancer la partie.",
         url_for("social.battle_room", code=room.code), actor=g.user, icon="zap",
+        dedupe_key=f"battle-acceptee:{room.id}",
     )
     flash(f"Battle « {room.name} » acceptée : les joueurs peuvent démarrer.", "success")
     return redirect(url_for("admin.battles"))
@@ -1465,6 +1493,7 @@ def battle_refuse(battle_id: int):
         room.owner_id, "battle", "Votre battle a été refusée",
         f"« {room.name} » · code {room.code} — parlez-en à votre professeur.",
         url_for("social.battle_room", code=room.code), actor=g.user, icon="zap",
+        dedupe_key=f"battle-refusee:{room.id}",
     )
     flash(f"Battle « {room.name} » refusée.", "info")
     return redirect(url_for("admin.battles"))
@@ -1686,9 +1715,31 @@ def settings():
     values["session_hours_label"] = session_hours_label()
     values["session_retention_days"] = session_retention_days()
     values["session_retention_label"] = session_retention_label()
+    from ..notifications import stats as notif_stats
+
     return render_template(
-        "admin/settings.html", values=values, onglet=request.args.get("onglet", "general")
+        "admin/settings.html", values=values, onglet=request.args.get("onglet", "general"),
+        notifs=notif_stats(),
     )
+
+
+@bp.route("/notifications/dedoublier", methods=["POST"])
+@super_admin_required
+def notifications_dedupe():
+    """Fusionne les notifications en double (action explicite, tracée)."""
+    from ..notifications import dedupe_notifications
+
+    kind = (request.form.get("kind") or "annonce").strip()
+    if kind not in ("tous", "annonce", "message", "battle", "note", "compte", "system"):
+        kind = "annonce"
+    supprimees = dedupe_notifications(None if kind == "tous" else kind)
+    log_audit("notifications.dedupe", details=f"type={kind} supprimees={supprimees}")
+    if supprimees:
+        flash(f"{supprimees} notification(s) en double fusionnée(s) — "
+              "une seule copie conservée par personne.", "success")
+    else:
+        flash("Aucun doublon à fusionner : la liste est déjà propre.", "info")
+    return redirect(url_for("admin.settings", onglet="maintenance"))
 
 
 @bp.route("/maintenance/basculer", methods=["POST"])

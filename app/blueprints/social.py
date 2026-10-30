@@ -430,6 +430,9 @@ def api_send_message():
             body[:140],
             url_for("social.messages") + "?room=" + room,
             actor=g.user,
+            # Chaque message a son identifiant : deux « Salut » restent deux
+            # notifications distinctes, un même message n'en crée qu'une.
+            dedupe_key=f"message:{msg.id}",
         )
     elif classe:
         from ..notifications import notify_many
@@ -438,7 +441,7 @@ def api_send_message():
             f"Message de classe — {_class_room_label(room)}",
             body[:140],
             url_for("social.messages", room=room),
-            actor=g.user, icon="megaphone",
+            actor=g.user, icon="megaphone", dedupe_key=f"message:{msg.id}",
         )
 
     return jsonify({"ok": True, "message": _message_payload(msg, g.user)}), 201
@@ -499,12 +502,13 @@ def api_forward_message():
     auteur = g.user.full_name or g.user.username
     if recipient_id:
         notify(recipient_id, "message", f"{auteur} vous a transféré un message",
-               origine.body[:140], url_for("social.messages") + "?room=" + target, actor=g.user)
+               origine.body[:140], url_for("social.messages") + "?room=" + target,
+               actor=g.user, dedupe_key=f"message:{msg.id}")
     elif classe:
         notify_many([u.id for u in classe], "message",
                     f"Message transféré — {_class_room_label(target)}",
                     origine.body[:140], url_for("social.messages", room=target),
-                    actor=g.user, icon="megaphone")
+                    actor=g.user, icon="megaphone", dedupe_key=f"message:{msg.id}")
 
     return jsonify({"ok": True, "message": _message_payload(msg, g.user), "room": target}), 201
 
@@ -742,6 +746,7 @@ def api_create_battle():
             "battle", "Battle à valider",
             f"{g.user.full_name or g.user.username} demande une battle ({mode}, code {room.code}).",
             url_for("admin.battles"), actor=g.user,
+            dedupe_key=f"battle-a-valider:{room.id}",
         )
     return jsonify({"ok": True, "code": room.code, "status": room.status,
                     "pending": room.status == "pending"}), 201
@@ -777,6 +782,7 @@ def api_join_battle():
             f"{g.user.full_name or g.user.username} a rejoint votre battle",
             f"Groupe « {room.name} » · code {room.code}",
             url_for("social.battle_room", code=room.code), actor=g.user,
+            dedupe_key=f"battle-join:{room.id}:{g.user.id}",
         )
     return jsonify({"ok": True, "code": room.code})
 
@@ -837,6 +843,8 @@ def api_start_battle():
         f"La battle « {room.name} » démarre",
         f"{room.question_count} questions · 20 secondes par question. À vous de jouer !",
         url_for("social.battle_room", code=room.code), actor=g.user, icon="zap",
+        # Un redémarrage volontaire mérite une nouvelle notification.
+        dedupe_hours=0,
     )
     return jsonify({"ok": True})
 

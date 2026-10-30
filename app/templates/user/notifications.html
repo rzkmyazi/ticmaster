@@ -61,16 +61,34 @@
     </div>
     <div class="card-body notif-history">
       {% for n in lignes %}
-      <a class="notif-row{{ ' is-read' if n.is_read }}" href="{{ n.url or url_for('notifications.index') }}"
-         data-notif-row="{{ n.id }}">
-        <span class="notif-ic notif-ic--{{ n.kind }}">{{ icon(n.icon or 'bell', 18) }}</span>
-        <span class="notif-txt">
-          <strong>{{ n.title }}</strong>
-          {% if n.body %}<span class="notif-body">{{ n.body }}</span>{% endif %}
-          <time>{{ fmt_dt(n.created_at) }}{% if n.actor %} · par {{ n.actor.full_name or n.actor.username }}{% endif %}</time>
-        </span>
-        {% if not n.is_read %}<span class="notif-dot" aria-label="Non lue"></span>{% endif %}
-      </a>
+      <div class="notif-line{{ ' is-unread' if not n.is_read }}">
+        <a class="notif-row{{ ' is-read' if n.is_read }}" href="{{ n.url or url_for('notifications.index') }}"
+           data-notif-row="{{ n.id }}">
+          <span class="notif-ic notif-ic--{{ n.kind }}">{{ icon(n.icon or 'bell', 18) }}</span>
+          <span class="notif-txt">
+            <span class="notif-top">
+              <strong class="notif-title">{{ n.title_clean }}</strong>
+              {% if not n.is_read %}<span class="notif-dot" aria-label="Non lue"></span>{% endif %}
+            </span>
+            {% if n.body_clean %}<span class="notif-body">{{ n.body_clean }}</span>{% endif %}
+            <span class="notif-meta">
+              <span class="notif-kind">{{ (n.kind or 'system')|capitalize }}</span>
+              <span class="notif-sep" aria-hidden="true">·</span>
+              <time datetime="{{ n.created_at.isoformat() if n.created_at else '' }}">{{ fmt_dt(n.created_at) }}</time>
+              {% if n.actor %}<span class="notif-sep" aria-hidden="true">·</span>
+              <span>par {{ n.actor.full_name or n.actor.username }}</span>{% endif %}
+            </span>
+          </span>
+        </a>
+        <form method="post" action="{{ url_for('notifications.delete_one', notification_id=n.id) }}"
+              class="notif-del-form notif-del-form--row">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="notif-del" title="Supprimer cette notification"
+                  aria-label="Supprimer la notification « {{ n.title_clean }} »">
+            {{ icon('trash', 15) }}
+          </button>
+        </form>
+      </div>
       {% endfor %}
     </div>
   </section>

@@ -273,6 +273,48 @@
           </div>
         </section>
 
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">{{ icon('bell') }} Notifications</h2>
+            <span class="pill-status {{ 'pill-status--on' if not notifs.en_trop else 'pill-status--off' }}">
+              <i></i>{{ 'Propres' if not notifs.en_trop else notifs.en_trop ~ ' doublon(s)' }}
+            </span>
+          </div>
+          <div class="card-body text-sm">
+            <p class="text-muted" style="margin-top:0">
+              {{ notifs.total }} notification(s) en base, {{ notifs.non_lues }} non lue(s).
+              Le texte est nettoyé automatiquement : aucune balise HTML ni script n'est
+              affiché. Une même annonce ne crée qu'une seule notification par personne.
+            </p>
+            {% if notifs.en_trop %}
+            <p class="text-muted">
+              {{ notifs.en_trop }} copie(s) identique(s) datent d'avant la correction
+              (même personne, même type, même titre, même texte). La fusion conserve
+              la plus récente de chaque groupe.
+            </p>
+            <form method="post" action="{{ url_for('admin.notifications_dedupe') }}"
+                  data-confirm="Fusionner les notifications identiques ? Une seule copie sera conservée par personne.">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div class="field">
+                <label for="dedupe-kind">Type concerné</label>
+                <select id="dedupe-kind" name="kind">
+                  <option value="annonce" selected>Annonces uniquement (recommandé)</option>
+                  <option value="message">Messages</option>
+                  <option value="battle">Battles</option>
+                  <option value="note">Notes</option>
+                  <option value="compte">Compte</option>
+                  <option value="system">Système</option>
+                  <option value="tous">Tous les types</option>
+                </select>
+              </div>
+              <button class="btn btn-outline" type="submit">{{ icon('layers', 16) }} Fusionner les doublons</button>
+            </form>
+            {% else %}
+            <p class="text-muted">{{ icon('check-circle', 15) }} Aucun doublon : rien à fusionner.</p>
+            {% endif %}
+          </div>
+        </section>
+
         <aside class="stack">
           <section class="card">
             <div class="card-head"><h2 class="card-title">{{ icon('info') }} Ce qui se passe</h2></div>

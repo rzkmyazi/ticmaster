@@ -310,6 +310,7 @@ def submit(attempt_id: int):
         f"{attempt.exercise.title if attempt.exercise else 'Examen'} : "
         f"{attempt.score}/{attempt.max_score} ({note}/20).",
         url_for("exam.exam_result", attempt_id=attempt.id), icon="award",
+        dedupe_key=f"note:attempt:{attempt.id}",
     )
     return redirect(url_for("exam.exam_result", attempt_id=attempt.id))
 

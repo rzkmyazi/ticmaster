@@ -59,6 +59,18 @@ def create_app(config_object: str | None = None) -> Flask:
                 if applied:
                     app.logger.info("Colonnes ajoutées à la base : %s", ", ".join(applied))
                 ensure_indexes()
+
+                # V2.2 : les notifications enregistrées avant le nettoyage du
+                # texte (balises, scripts) sont assainies une fois pour toutes.
+                # Aucune ligne n'est supprimée, seul le texte est corrigé.
+                try:
+                    from .notifications import sanitize_rows
+
+                    corrigees = sanitize_rows()
+                    if corrigees:
+                        app.logger.info("Notifications nettoyées : %s", corrigees)
+                except Exception:  # pragma: no cover
+                    app.logger.exception("Nettoyage des anciennes notifications ignoré")
         except Exception:  # pragma: no cover - une base injoignable ne doit pas bloquer le boot
             app.logger.exception("Mise à niveau du schéma ignorée (base indisponible ?)")
 

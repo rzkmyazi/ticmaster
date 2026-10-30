@@ -675,112 +675,226 @@
 
   /* ---------- Démarrage ---------- */
 
-  /* ---------- Notifications en temps réel ----------
-     Le serveur rend la cloche et son panneau ; ici on rafraîchit le compteur
-     toutes les 25 s (pause automatique quand l'onglet est en arrière-plan) et
-     on affiche une bannière discrète à chaque nouveauté. */
+  /* ---------- Notifications ----------
+     Le panneau est rendu par le serveur (texte déjà nettoyé) ; ici on le
+     rafraîchit sans recharger la page : toutes les 25 s, à l'ouverture du
+     panneau et au retour sur l'onglet. Chaque action (lire, tout lire,
+     supprimer) reprend le compteur renvoyé par le serveur : le badge, le
+     sous-titre du panneau et le compteur du menu restent synchronisés. */
   var notifState = { latest: 0, timer: null, ouverte: false, premier: true,
-                     initialise: false, items: null };
+                     initialise: false, items: null, unread: 0, total: 0 };
 
+  function notifRoot() { return $("#notif-root"); }
   function notifPanel() { return $("#notif-panel"); }
 
+  function notifCountLabel(count) {
+    if (!count) return "À jour";
+    return count + " non lue" + (count > 1 ? "s" : "");
+  }
+
   function setNotifBadge(count) {
+    count = parseInt(count, 10) || 0;
+    notifState.unread = count;
     var badge = $("#notif-badge");
     var toggle = $("#notif-toggle");
-    if (!badge) return;
-    if (count > 0) {
-      badge.textContent = count > 99 ? "99+" : String(count);
-      badge.removeAttribute("hidden");
-      if (toggle) toggle.setAttribute("aria-label", "Notifications (" + count + " non lues)");
-    } else {
-      badge.setAttribute("hidden", "");
-      if (toggle) toggle.setAttribute("aria-label", "Notifications");
+    var sousTitre = $("#notif-head-count");
+    var tout = $("#notif-read-all");
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? "99+" : String(count);
+        badge.removeAttribute("hidden");
+      } else {
+        badge.setAttribute("hidden", "");
+      }
+    }
+    if (toggle) {
+      toggle.setAttribute("aria-label", count > 0
+        ? "Notifications (" + count + " non lues)" : "Notifications");
+      if (count > 0) toggle.classList.add("has-news");
+      else toggle.classList.remove("has-news");
+    }
+    if (sousTitre) sousTitre.textContent = notifCountLabel(count);
+    if (tout) {
+      if (count > 0) tout.removeAttribute("hidden");
+      else tout.setAttribute("hidden", "");
     }
     document.querySelectorAll(".nav-count").forEach(function (el) {
-      if (count > 0) { el.textContent = count > 99 ? "99+" : String(count); el.removeAttribute("hidden"); }
-      else el.setAttribute("hidden", "");
+      if (count > 0) {
+        el.textContent = count > 99 ? "99+" : String(count);
+        el.removeAttribute("hidden");
+      } else {
+        el.setAttribute("hidden", "");
+      }
     });
   }
 
-  function notifIcon(name) {
-    var safe = String(name || "bell").toLowerCase().replace(/[^a-z0-9-]/g, "") || "bell";
+  function notifIcon(name, size) {
+    var propre = String(name || "bell").toLowerCase().replace(/[^a-z0-9-]/g, "") || "bell";
     var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("class", "ic");
-    svg.setAttribute("width", "17");
-    svg.setAttribute("height", "17");
+    svg.setAttribute("width", size || 17);
+    svg.setAttribute("height", size || 17);
     svg.setAttribute("aria-hidden", "true");
     var use = document.createElementNS("http://www.w3.org/2000/svg", "use");
-    use.setAttribute("href", "#i-" + safe);
+    use.setAttribute("href", "#i-" + propre);
     svg.appendChild(use);
     return svg;
   }
 
+  function notifSpan(className, texte) {
+    var el = document.createElement("span");
+    el.className = className;
+    if (texte !== undefined && texte !== null) el.textContent = texte;
+    return el;
+  }
+
+  function notifDeleteForm(item) {
+    var form = document.createElement("form");
+    form.className = "notif-del-form";
+    form.method = "post";
+    form.action = "/notifications/" + item.id + "/supprimer";
+    form.setAttribute("data-notif-delete", String(item.id));
+    var jeton = document.createElement("input");
+    jeton.type = "hidden";
+    jeton.name = "csrf_token";
+    jeton.value = csrf();
+    form.appendChild(jeton);
+    var bouton = document.createElement("button");
+    bouton.type = "submit";
+    bouton.className = "notif-del";
+    bouton.title = "Supprimer cette notification";
+    bouton.setAttribute("aria-label", "Supprimer la notification « " + (item.title || "") + " »");
+    bouton.appendChild(notifIcon("trash", 14));
+    form.appendChild(bouton);
+    return form;
+  }
+
+  function renderNotifEmpty(list) {
+    var vide = document.createElement("li");
+    vide.className = "notif-empty";
+    var pastille = notifSpan("notif-empty-ic");
+    pastille.appendChild(notifIcon("bell", 20));
+    vide.appendChild(pastille);
+    var titre = document.createElement("strong");
+    titre.textContent = "Tout est à jour";
+    vide.appendChild(titre);
+    vide.appendChild(notifSpan("", "Les annonces, messages et battles apparaîtront ici."));
+    list.appendChild(vide);
+  }
+
+  /* Construit une ligne du panneau — uniquement avec textContent : aucun
+     contenu venu du serveur n'est interprété comme du HTML. */
   function renderNotifList(items) {
     var list = $("#notif-list");
     if (!list) return;
     list.textContent = "";
-    if (!items.length) {
-      var vide = document.createElement("li");
-      vide.className = "notif-empty";
-      vide.appendChild(notifIcon("bell"));
-      var txt = document.createElement("span");
-      txt.textContent = "Aucune notification pour le moment.";
-      vide.appendChild(txt);
-      list.appendChild(vide);
-      return;
-    }
+    if (!items || !items.length) { renderNotifEmpty(list); return; }
+
     items.forEach(function (item) {
       var li = document.createElement("li");
-      li.className = "notif-item" + (item.read ? " is-read" : "");
-      li.dataset.id = item.id;
+      li.className = "notif-item" + (item.read ? "" : " is-unread");
+      li.dataset.id = String(item.id);
 
       var a = document.createElement("a");
+      a.className = "notif-link";
       a.setAttribute("href", item.url || "/notifications");
       a.setAttribute("data-notif-open", "");
+      if (!item.read) a.setAttribute("aria-label", (item.title || "") + " (non lue)");
 
-      var ic = document.createElement("span");
-      ic.className = "notif-ic notif-ic--" + (item.kind || "system");
-      ic.appendChild(notifIcon(item.icon));
+      var ic = notifSpan("notif-ic notif-ic--" + (item.kind || "system"));
+      ic.appendChild(notifIcon(item.icon, 17));
 
-      var boite = document.createElement("span");
-      boite.className = "notif-txt";
+      var boite = notifSpan("notif-txt");
+      var haut = notifSpan("notif-top");
       var titre = document.createElement("strong");
-      titre.textContent = item.title;
-      boite.appendChild(titre);
-      if (item.body) {
-        var corps = document.createElement("span");
-        corps.className = "notif-body";
-        corps.textContent = item.body;
-        boite.appendChild(corps);
+      titre.className = "notif-title";
+      titre.textContent = item.title || "Notification";
+      haut.appendChild(titre);
+      if (!item.read) {
+        var point = notifSpan("notif-dot");
+        point.setAttribute("aria-label", "Non lue");
+        haut.appendChild(point);
       }
-      var heure = document.createElement("time");
-      heure.textContent = item.at || "";
-      boite.appendChild(heure);
+      boite.appendChild(haut);
+
+      if (item.body) boite.appendChild(notifSpan("notif-body", item.body));
+
+      var meta = notifSpan("notif-meta");
+      meta.appendChild(notifSpan("notif-kind", item.label || "Notification"));
+      meta.appendChild(notifSpan("notif-sep", "·"));
+      var quand = document.createElement("time");
+      quand.textContent = item.at || "";
+      if (item.iso) quand.setAttribute("datetime", item.iso);
+      meta.appendChild(quand);
+      boite.appendChild(meta);
 
       a.appendChild(ic);
       a.appendChild(boite);
       li.appendChild(a);
+      li.appendChild(notifDeleteForm(item));
       list.appendChild(li);
     });
   }
 
+  function notifFetch(url, options) {
+    return fetch(url, options).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (data) {
+        return { status: r.status, ok: r.ok, data: data };
+      });
+    });
+  }
+
   function markAllRead() {
-    fetch("/api/notifications/tout-lire", {
+    notifFetch("/api/notifications/tout-lire", {
       method: "POST",
       headers: { "X-CSRF-Token": csrf(), "Content-Type": "application/json" },
       body: "{}"
-    }).then(function (r) { return r.json(); })
-      .then(function (data) { if (data && data.ok) setNotifBadge(0); })
-      .catch(function () {});
+    }).then(function (res) {
+      if (!res.data || !res.data.ok) return;
+      setNotifBadge(res.data.count || 0);
+      if (notifState.items) {
+        notifState.items.forEach(function (item) { item.read = true; });
+        renderNotifList(notifState.items);
+      }
+      toast("Toutes les notifications sont marquées comme lues.", "success", 2600);
+    }).catch(function () {});
   }
 
   function markOneRead(id) {
     if (!id) return;
-    fetch("/api/notifications/" + id + "/lue", {
+    fetch("/api/notifications/" + encodeURIComponent(id) + "/lue", {
       method: "POST",
       headers: { "X-CSRF-Token": csrf(), "Content-Type": "application/json" },
-      body: "{}"
+      body: "{}",
+      keepalive: true                     // la navigation ne coupe pas la requête
     }).catch(function () {});
+  }
+
+  function deleteNotification(form) {
+    var id = form.getAttribute("data-notif-delete");
+    if (!id) return;
+    var bouton = form.querySelector("button");
+    if (bouton) bouton.disabled = true;
+    notifFetch("/api/notifications/" + encodeURIComponent(id), {
+      method: "DELETE",
+      headers: { "X-CSRF-Token": csrf(), "Accept": "application/json" }
+    }).then(function (res) {
+      if (!res.data || !res.data.ok) {
+        if (bouton) bouton.disabled = false;
+        toast((res.data && res.data.error) || "Suppression impossible.", "error");
+        return;
+      }
+      var li = form.closest(".notif-item");
+      if (li) li.remove();
+      notifState.items = (notifState.items || []).filter(function (item) {
+        return String(item.id) !== String(id);
+      });
+      if (!notifState.items.length) renderNotifList([]);
+      setNotifBadge(res.data.count || 0);
+      toast("Notification supprimée.", "success", 2200);
+    }).catch(function () {
+      if (bouton) bouton.disabled = false;
+    });
   }
 
   function openNotifPanel(open) {
@@ -792,18 +906,8 @@
       panel.removeAttribute("hidden");
       toggle.setAttribute("aria-expanded", "true");
       window.setTimeout(function () { panel.classList.add("is-open"); }, 10);
-      // On affiche tout de suite les dernières données connues, puis on
-      // interroge le serveur : le panneau n'est jamais en retard d'un cycle.
       if (notifState.items) renderNotifList(notifState.items);
-      pollNotifications();
-      // Ce qui est affiché est considéré comme vu : le compteur retombe.
-      window.setTimeout(function () {
-        if (!notifState.ouverte) return;
-        markAllRead();
-        panel.querySelectorAll(".notif-item").forEach(function (el) {
-          el.classList.add("is-read");
-        });
-      }, 900);
+      pollNotifications();       // données fraîches : le panneau n'est jamais en retard
     } else {
       panel.classList.remove("is-open");
       toggle.setAttribute("aria-expanded", "false");
@@ -825,16 +929,17 @@
         if (!data || !data.ok) return;
         setNotifBadge(data.count || 0);
         notifState.latest = data.latest_id || 0;
+        notifState.total = data.total || 0;
         notifState.items = data.items || notifState.items;
 
-        var panelVisible = notifState.ouverte;
-        if (panelVisible) renderNotifList(data.items || []);
+        // Le panneau ouvert suit les données du serveur (jamais de doublon :
+        // c'est la même liste qui est réaffichée, pas ajoutée).
+        if (notifState.ouverte) renderNotifList(data.items || []);
 
         // Bannière discrète pour les nouveautés (jamais au premier chargement)
         if (!notifState.premier && data.new && data.new.length) {
           data.new.slice(0, 3).forEach(function (item) {
-            var deja = item.actor && item.title.indexOf(item.actor) !== -1;
-            toast(deja || !item.actor ? item.title : item.actor + " — " + item.title, "info", 6000);
+            toast(item.title || "Nouvelle notification", "info", 6000);
           });
         }
         notifState.premier = false;
@@ -844,7 +949,7 @@
   }
 
   function initNotifications() {
-    var root = $("#notif-root");
+    var root = notifRoot();
     if (!root) return;
     // Page « changement de mot de passe obligatoire » : l'API est fermée,
     // inutile d'interroger la cloche (cela produirait une erreur 428).
@@ -860,7 +965,6 @@
     on(tout, "click", function (e) {
       e.stopPropagation();
       markAllRead();
-      root.querySelectorAll(".notif-item").forEach(function (el) { el.classList.add("is-read"); });
     });
 
     // Un clic sur une notification la marque comme lue puis suit son lien.
@@ -868,7 +972,17 @@
       var lien = e.target.closest("[data-notif-open]");
       if (!lien) return;
       var item = lien.closest(".notif-item");
-      markOneRead(item ? item.dataset.id : null);
+      if (item && item.classList.contains("is-unread")) markOneRead(item.dataset.id);
+    });
+
+    // Suppression : sans JavaScript le formulaire POST fonctionne, ici on
+    // reste sur la page et le compteur se met à jour tout de suite.
+    root.addEventListener("submit", function (e) {
+      var form = e.target.closest("[data-notif-delete]");
+      if (!form) return;
+      e.preventDefault();
+      e.stopPropagation();
+      deleteNotification(form);
     });
 
     on(document, "click", function (e) {

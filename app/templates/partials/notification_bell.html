@@ -1,7 +1,8 @@
 {# ------------------------------------------------------------------
    Cloche de notifications — barre du haut (toutes les pages privées).
-   Le contenu est rendu côté serveur ; app.js le rafraîchit toutes les
-   25 secondes via /api/notifications.
+   Rendu côté serveur (Jinja échappe tout) puis rafraîchi par app.js via
+   /api/notifications, sans rechargement de page. Le texte affiché est déjà
+   nettoyé côté serveur : jamais de balise, jamais de script visible.
    ------------------------------------------------------------------ #}
 <div class="notif" id="notif-root">
   <button type="button" class="icon-btn notif-btn" id="notif-toggle"
@@ -13,28 +14,57 @@
     </span>
   </button>
 
-  <div class="notif-panel" id="notif-panel" role="dialog" aria-label="Notifications" hidden>
+  <div class="notif-panel" id="notif-panel" role="dialog" aria-modal="false"
+       aria-label="Panneau des notifications" hidden>
     <div class="notif-head">
-      <strong>Notifications</strong>
-      <button type="button" class="notif-read-all" id="notif-read-all">Tout marquer comme lu</button>
+      <span class="notif-head-txt">
+        <strong>Notifications</strong>
+        <span class="notif-head-sub">
+          {%- set total = notifications_non_lues or 0 -%}
+          <span id="notif-head-count">{% if total %}{{ total }} non lue{{ 's' if total > 1 else '' }}{% else %}À jour{% endif %}</span>
+          <span class="notif-sep" aria-hidden="true">·</span>
+          <a id="notif-head-link" href="{{ url_for('notifications.index') }}">historique</a>
+        </span>
+      </span>
+      <button type="button" class="notif-read-all" id="notif-read-all"
+              {% if not notifications_non_lues %}hidden{% endif %}>
+        {{ icon('check', 13) }}<span>Tout marquer comme lu</span>
+      </button>
     </div>
 
     <ul class="notif-list" id="notif-list">
       {% for n in notifications_recentes %}
-      <li class="notif-item{{ ' is-read' if n.is_read }}" data-id="{{ n.id }}">
-        <a href="{{ n.url or url_for('notifications.index') }}" data-notif-open>
+      <li class="notif-item{{ '' if n.is_read else ' is-unread' }}" data-id="{{ n.id }}">
+        <a class="notif-link" href="{{ n.url or url_for('notifications.index') }}" data-notif-open
+           data-notif-kind="{{ n.kind }}" aria-label="{{ n.title_clean }}{% if not n.is_read %} (non lue){% endif %}">
           <span class="notif-ic notif-ic--{{ n.kind }}">{{ icon(n.icon or 'bell', 17) }}</span>
           <span class="notif-txt">
-            <strong>{{ n.title }}</strong>
-            {% if n.body %}<span class="notif-body">{{ n.body }}</span>{% endif %}
-            <time>{{ time_ago(n.created_at) }}</time>
+            <span class="notif-top">
+              <strong class="notif-title">{{ n.title_clean }}</strong>
+              {% if not n.is_read %}<span class="notif-dot" aria-label="Non lue"></span>{% endif %}
+            </span>
+            {% if n.body_clean %}<span class="notif-body">{{ n.body_clean }}</span>{% endif %}
+            <span class="notif-meta">
+              <span class="notif-kind">{{ (n.kind or 'system')|capitalize }}</span>
+              <span class="notif-sep" aria-hidden="true">·</span>
+              <time datetime="{{ n.created_at.isoformat() if n.created_at else '' }}">{{ n.when_label }}</time>
+            </span>
           </span>
         </a>
+        <form class="notif-del-form" method="post" action="{{ url_for('notifications.delete_one', notification_id=n.id) }}"
+              data-notif-delete="{{ n.id }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="notif-del" title="Supprimer cette notification"
+                  aria-label="Supprimer la notification « {{ n.title_clean }} »">
+            {{ icon('trash', 14) }}
+          </button>
+        </form>
       </li>
       {% else %}
       <li class="notif-empty">
-        {{ icon('bell', 22) }}
-        <span>Aucune notification pour le moment.</span>
+        <span class="notif-empty-ic">{{ icon('bell', 20) }}</span>
+        <strong>Tout est à jour</strong>
+        <span>Les annonces, messages et battles apparaîtront ici.</span>
       </li>
       {% endfor %}
     </ul>

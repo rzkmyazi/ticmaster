@@ -983,8 +983,44 @@ def main() -> int:
     r = sa.post(BASE + "/admin/annonces",
                 data={"csrf_token": token, "title": "Test XSS auto", "body": payload,
                       "published": "1"})
-    ok("XSS échappé dans les annonces",
-       "&lt;script&gt;" in r.text and payload not in r.text)
+    ok("annonce faite uniquement de code : refusée, rien n'est enregistré",
+       payload not in r.text and "&lt;script&gt;" not in r.text
+       and "Test XSS auto" not in r.text and "code HTML" in r.text)
+
+    # Texte utile + script : le texte reste, le code disparaît
+    token = csrf(sa, "/admin/annonces")
+    melange = "Description : <script>alert('xss')</script> pour la classe"
+    r2 = sa.post(BASE + "/admin/annonces",
+                 data={"csrf_token": token, "title": "Test XSS melange",
+                       "body": melange, "published": "1"})
+    ok("annonce mixte : le texte est conservé, le script retiré",
+       "Description : pour la classe" in r2.text
+       and payload not in r2.text and "alert('xss')" not in r2.text
+       and "&lt;script&gt;" not in r2.text)
+
+    # La notification reçue par un élève ne contient aucune balise
+    notifs = p.get(BASE + "/api/notifications", timeout=20)
+    try:
+        data_notifs = notifs.json()
+    except ValueError:
+        data_notifs = {}
+    items = data_notifs.get("items", []) if isinstance(data_notifs, dict) else []
+    annonces = [it for it in items if it.get("kind") == "annonce"]
+    ok("notification d'annonce reçue par l'élève",
+       any("Test XSS" in it.get("title", "") for it in annonces),
+       f"{len(annonces)} annonce(s)")
+    ok("aucune balise dans les notifications reçues",
+       all("<" not in (it.get("title", "") + it.get("body", "")) for it in items))
+
+    # Suppression des annonces de test (les notifications suivent)
+    for bloc in r2.text.split('<section class="card">'):
+        if "Test XSS melange" in bloc:
+            ident = re.search(r'/admin/annonces/(\d+)/supprimer', bloc)
+            jeton = re.search(r'name="csrf_token" value="([^"]+)"', bloc)
+            if ident and jeton:
+                sa.post(BASE + f"/admin/annonces/{ident.group(1)}/supprimer",
+                        data={"csrf_token": jeton.group(1)}, allow_redirects=False)
+            break
 
     # l'annonce de test est retirée immédiatement (aucune trace laissée)
     for block in r.text.split('<section class="card">'):

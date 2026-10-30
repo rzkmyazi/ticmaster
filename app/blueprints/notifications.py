@@ -37,6 +37,8 @@ def api_list():
         .scalar()
     )
     latest = int(dernier or 0)
+    non_lues = service.unread_count(user)
+    total = Notification.query.filter_by(user_id=user.id).count()
 
     nouveautes = []
     if since is not None:
@@ -48,11 +50,15 @@ def api_list():
             .limit(6)
             .all()
         )
-        nouveautes = [service.as_dict(row) for row in rows]
+        # Une notification déjà lue (marquée depuis un autre appareil) ne doit
+        # pas réapparaître en bannière : c'est le rôle de `read`.
+        nouveautes = [service.as_dict(row) for row in rows if not row.is_read]
 
     return jsonify({
         "ok": True,
-        "count": service.unread_count(user),
+        "count": non_lues,
+        "unread": non_lues,
+        "total": total,
         "latest_id": latest,
         "items": [service.as_dict(row) for row in items],
         "new": nouveautes,
@@ -62,6 +68,9 @@ def api_list():
 @bp.route("/api/notifications/<int:notification_id>/lue", methods=["POST"])
 @login_required
 def api_mark_read(notification_id: int):
+    """Marque **sa propre** notification comme lue. Celle d'un autre : 404."""
+    if service.get_owned(g.user, notification_id) is None:
+        return jsonify({"ok": False, "error": "Notification introuvable."}), 404
     touched = service.mark_read(g.user, notification_id)
     return jsonify({"ok": True, "touched": touched, "count": service.unread_count(g.user)})
 
@@ -71,6 +80,36 @@ def api_mark_read(notification_id: int):
 def api_mark_all_read():
     touched = service.mark_read(g.user)
     return jsonify({"ok": True, "touched": touched, "count": 0})
+
+
+@bp.route("/api/notifications/<int:notification_id>", methods=["DELETE", "POST"])
+@login_required
+def api_delete(notification_id: int):
+    """Suppression individuelle : uniquement ses propres notifications."""
+    if request.method == "POST" and not request.is_json:
+        # Appel de formulaire (page historique) : on revient sur la page.
+        from flask import flash
+        ok = service.delete(g.user, notification_id)
+        flash("Notification supprimée." if ok else "Notification introuvable.", 
+              "success" if ok else "danger")
+        return redirect(request.referrer or url_for("notifications.index"))
+
+    ok = service.delete(g.user, notification_id)
+    if not ok:
+        return jsonify({"ok": False, "error": "Notification introuvable."}), 404
+    return jsonify({"ok": True, "deleted": notification_id,
+                    "count": service.unread_count(g.user)})
+
+
+@bp.route("/notifications/<int:notification_id>/supprimer", methods=["POST"])
+@login_required
+def delete_one(notification_id: int):
+    """Variante sans JavaScript (bouton de la page d'historique)."""
+    from flask import flash
+    ok = service.delete(g.user, notification_id)
+    flash("Notification supprimée." if ok else "Notification introuvable.",
+          "success" if ok else "danger")
+    return redirect(request.referrer or url_for("notifications.index"))
 
 
 @bp.route("/notifications")
