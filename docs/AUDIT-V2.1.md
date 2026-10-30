@@ -311,20 +311,33 @@ TEST G — les statistiques correspondent aux sessions réelles
 === Bilan : 31/31 test(s) conformes ===
 ```
 
-### 8.2 Tests unitaires — `pytest -q` : **112 réussis** (+18)
+### 8.2 Tests unitaires — `pytest -q` : **114 réussis** (+20)
 
 Couvrent : détection d'appareil (5 profils), navigateur inconnu ≠ robot,
 4 signatures de robots, les 4 états de session, cohérence des compteurs
 (2 comptes / 3 appareils), filtres, révocation isolée, purge sélective, durée
 réglable, pages d'administration, interdiction aux élèves (403).
 
-### 8.3 Contrôles de bout en bout — `tools/verify.py` : **275 conformes, 0 échec**
+### 8.3 Contrôles de bout en bout — `tools/verify.py` : **275 (local), 277 (Render), 277 (PythonAnywhere)** — 0 échec
 
-17 nouveaux contrôles : états distingués, filtres, onglets, compteurs détaillés,
+17 nouveaux contrôles (les deux contrôles supplémentaires en ligne portent sur la veille 24 h/24) : états distingués, filtres, onglets, compteurs détaillés,
 actions groupées, filtre « en ligne » cohérent, filtre « scripts », détection
 d'appareil, historique des connexions, simulation de nettoyage, réglages,
 règle « navigateur inconnu ≠ robot », cohérence du tableau de bord, et
 **fermeture des sessions du script à la fin** (la production ne se remplit plus).
+
+### 8.3 bis Vérifications sur les deux sites en production (30/10/2026)
+
+```
+BASE=https://ticmaster.onrender.com     python tools/verify.py          → tout est conforme ✔ (277)
+BASE=https://myazirzk1.pythonanywhere.com python tools/verify.py        → tout est conforme ✔ (277)
+BASE=https://ticmaster.onrender.com     python tools/test_sessions.py   → 31/31 conformes
+BASE=https://myazirzk1.pythonanywhere.com python tools/test_sessions.py → 31/31 conformes
+```
+
+Après déploiement, la production a été nettoyée depuis l'interface :
+**1 session automatisée fermée**, aucune session humaine touchée ; les 82
+sessions expirées restent consultables jusqu'à la fin de la rétention (30 j).
 
 ### 8.4 Test de charge — `tools/load_test.py` (gunicorn, 2 workers, 4 fils)
 

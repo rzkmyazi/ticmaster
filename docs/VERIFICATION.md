@@ -797,8 +797,9 @@ PythonAnywhere**, pas seulement en local.
 | `tools/load_test.py` — 200 sessions | **200/200**, médiane 3,5 s |
 | `tools/load_test.py` — 400 sessions | **400/400**, 19,8 sessions/s |
 
-- `pytest -q` → **112 tests réussis** (+18).
-- `tools/verify.py` → **275** contrôles (17 nouveaux), 0 échec.
+- `pytest -q` → **114 tests réussis** (+20).
+- `tools/verify.py` → **275** contrôles en local, **277** sur Render et sur PythonAnywhere (0 échec).
+- `tools/test_sessions.py` → **31/31** en local, sur Render et sur PythonAnywhere.
 
 ---
 

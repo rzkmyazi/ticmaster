@@ -746,7 +746,7 @@ aucune purge, heuristique « robot » trop large.
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **112 réussis** |
+| `pytest -q` | **114 réussis** |
 | `tools/verify.py` (local) | **275 conformes, 0 échec** |
 | `tools/test_sessions.py` (A → G) | **31/31 conformes** |
 | `tools/load_test.py` — 200 sessions | **200/200**, médiane 3,5 s |
@@ -764,12 +764,13 @@ Captures : `apercus/android/v15-sessions.png`, `v15-en-ligne.png`,
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **112 tests réussis** |
+| `pytest -q` | **114 tests réussis** |
 | `tools/verify.py` (local) | **275 contrôles conformes, 0 échec** |
 | `tools/test_sessions.py` (scénarios A → G) | **31/31 conformes** |
 | `tools/load_test.py` (200 puis 400 sessions) | **200/200** et **400/400** |
-| `tools/verify.py` sur Render | **275 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **275 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | **277 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **277 contrôles conformes, 0 échec** |
+| `tools/test_sessions.py` sur Render et PythonAnywhere | **31/31 conformes** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.
