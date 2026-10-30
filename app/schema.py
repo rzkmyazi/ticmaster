@@ -87,3 +87,36 @@ def ensure_schema(app=None) -> list[str]:
             except Exception:
                 db.session.rollback()
     return applied
+
+
+# ---------------------------------------------------------------------------
+# Index de performance (vague 15) — sessions nombreuses, requêtes rapides
+# ---------------------------------------------------------------------------
+#: Index ajoutés après coup : (table, colonne). `IF NOT EXISTS` est accepté par
+#: SQLite et PostgreSQL, l'opération est donc sans risque et rejouable.
+EXTRA_INDEXES = (
+    ("auth_sessions", "last_seen_at"),
+    ("auth_sessions", "expires_at"),
+    ("auth_sessions", "revoked_at"),
+    ("audit_logs", "created_at"),
+)
+
+
+def ensure_indexes() -> list[str]:
+    """Crée les index manquants sur les tables les plus sollicitées."""
+    applied: list[str] = []
+    moteur = db.engine.dialect.name
+    for table, colonne in EXTRA_INDEXES:
+        nom = f"ix_{table}_{colonne}"
+        try:
+            if moteur == "postgresql":
+                db.session.execute(text(
+                    f'CREATE INDEX IF NOT EXISTS "{nom}" ON {table} ({colonne})'))
+            else:
+                db.session.execute(text(
+                    f'CREATE INDEX IF NOT EXISTS "{nom}" ON {table} ({colonne})'))
+            db.session.commit()
+            applied.append(nom)
+        except Exception:            # index déjà présent / droits limités
+            db.session.rollback()
+    return applied

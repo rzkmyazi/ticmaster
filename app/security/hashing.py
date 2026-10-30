@@ -11,10 +11,17 @@ try:
     from argon2 import PasswordHasher
     from argon2.exceptions import VerifyMismatchError, InvalidHashError, VerificationError
 
+    # Paramètres OWASP 2024 pour un serveur à mémoire limitée (offre gratuite
+    # Render : 512 Mo *pour tout le processus*). Avec 8 connexions traitées en
+    # parallèle, 64 Mio par hachage suffisaient à saturer la mémoire ; 19 Mio
+    # (2e recommandation OWASP) divise l'empreinte par 3,4 tout en restant
+    # largement au-dessus d'un hachage rapide cassable. Les empreintes déjà
+    # enregistrées restent valides : Argon2 les vérifie avec leurs propres
+    # paramètres, puis `check_needs_rehash` les met à jour à la connexion.
     _ph = PasswordHasher(
-        time_cost=3,        # itérations
-        memory_cost=65536,  # 64 MiB
-        parallelism=4,
+        time_cost=2,        # itérations
+        memory_cost=19456,  # 19 MiB
+        parallelism=2,
         hash_len=32,
         salt_len=16,
     )

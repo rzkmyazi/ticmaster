@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Historique des connexions{% endblock %}
+{% block page_title %}Historique des connexions{% endblock %}
+{% block page_subtitle %}
+<p class="page-sub">Connexions, déconnexions, refus et fermetures de sessions — {{ total }} événement(s) enregistré(s).</p>
+{% endblock %}
+
+{% block content %}
+<div class="stats-grid mb-2">
+  {% for cle, libelle in actions.items() if cle in ('auth.login', 'auth.logout', 'auth.failed', 'session.revoked') %}
+  <div class="stat{{ ' stat--green' if cle == 'auth.login' else (' stat--red' if cle == 'auth.failed' else '') }}">
+    <span class="stat-label">{{ libelle }}</span>
+    <div class="stat-value">{{ counts_by_action.get(cle, 0) }}</div>
+    <div class="stat-foot">aujourd'hui</div>
+    {{ icon('activity' if cle == 'auth.login' else ('ban' if cle == 'auth.failed' else 'logout'), 'stat-icon') }}
+  </div>
+  {% endfor %}
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2 class="card-title">{{ icon('clock') }} Événements de connexion</h2>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.sessions') }}">{{ icon('shield', 15) }} Sessions en cours</a>
+  </div>
+  <div class="card-body">
+    <form method="get" class="filter-bar mb-2">
+      <div class="quick-search" style="flex:1;min-width:190px">
+        {{ icon('search', 18) }}
+        <label class="sr-only" for="q">Rechercher</label>
+        <input id="q" type="search" name="q" value="{{ q }}" placeholder="Personne concernée…">
+      </div>
+      <label class="sr-only" for="action">Événement</label>
+      <select id="action" name="action" data-auto-submit>
+        <option value="">Tous les événements</option>
+        {% for cle, libelle in actions.items() %}
+        <option value="{{ cle }}" {{ 'selected' if action == cle }}>{{ libelle }}</option>
+        {% endfor %}
+      </select>
+      <label class="sr-only" for="depuis">Depuis le</label>
+      <input id="depuis" type="date" name="depuis" value="{{ depuis }}">
+      <button class="btn btn-outline btn-sm" type="submit">{{ icon('filter', 15) }} Filtrer</button>
+    </form>
+
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>Date et heure</th><th>Événement</th><th>Personne</th><th>Détail</th><th>Adresse IP</th></tr>
+        </thead>
+        <tbody>
+          {% for row in items %}
+          <tr>
+            <td class="text-xs mono">{{ row.created_at.strftime('%d/%m/%Y %H:%M') if row.created_at else '—' }}</td>
+            <td>
+              <span class="badge badge--{{ 'success' if row.action == 'auth.login' else ('danger' if row.action in ('auth.failed', 'auth.locked', 'auth.rate_limited') else 'neutral') }}">
+                {{ row.history_label }}
+              </span>
+            </td>
+            <td class="text-sm">{{ row.actor_label or row.target or '—' }}</td>
+            <td class="text-xs text-muted">{{ (row.details or '')[:60] }}</td>
+            <td class="text-xs mono">{{ row.ip or '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5"><div class="empty"><h3>Aucun événement</h3><p>Rien à afficher pour ces filtres.</p></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if pages > 1 %}
+    <nav class="pagination">
+      {% if page > 1 %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.connections', page=page-1, q=q, action=action, depuis=depuis) }}">← Précédent</a>
+      {% endif %}
+      <span class="text-sm text-muted">Page {{ page }} / {{ pages }}</span>
+      {% if page < pages %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.connections', page=page+1, q=q, action=action, depuis=depuis) }}">Suivant →</a>
+      {% endif %}
+    </nav>
+    {% endif %}
+
+    <p class="text-xs text-muted mt-2">
+      {{ icon('info', 14) }} L'historique provient du journal d'audit : chaque événement est horodaté,
+      attribué et conservé. Aucun mot de passe ni jeton n'y figure.
+    </p>
+  </div>
+</section>
+{% endblock %}

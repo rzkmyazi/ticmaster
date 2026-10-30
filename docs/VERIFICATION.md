@@ -773,6 +773,33 @@ PythonAnywhere**, pas seulement en local.
 - `pytest -q` → **94 tests réussis** (5 nouveaux).
 - `tools/verify.py` → **258** contrôles en local, **260** sur PythonAnywhere et sur Render (0 échec).
 
+
+---
+
+## 24. Mise à jour du 30/10/2026 — Audit du système de sessions (V2.1)
+
+| Contrôle | Résultat |
+|---|---|
+| 10 rechargements de page → aucune session créée | ✔ |
+| Détection d'appareil : Android 13, iPhone, Windows 10, Linux (Ubuntu), macOS | ✔ |
+| Navigateur inconnu **jamais** classé robot | ✔ |
+| Robots réels identifiés (python-requests, Googlebot, curl, Go) | ✔ |
+| Cinq états : en ligne / inactive / expirée / révoquée / courante | ✔ |
+| Filtres personne, appareil, état, activité, date, tri, pagination | ✔ |
+| Fermeture individuelle : un seul appareil tombe | ✔ |
+| Fermeture de toutes les sessions d'un compte (compte conservé) | ✔ |
+| Fermeture des sessions automatisées (session courante protégée, humains épargnés) | ✔ |
+| Nettoyage : simulation, puis suppression des seules sessions mortes | ✔ |
+| Historique des connexions filtrable | ✔ |
+| Durée de connexion et rétention réglables | ✔ |
+| Aucun jeton dans l'API de présence (ni dans le HTML) | ✔ |
+| `tools/test_sessions.py` — scénarios A à G | **31/31** |
+| `tools/load_test.py` — 200 sessions | **200/200**, médiane 3,5 s |
+| `tools/load_test.py` — 400 sessions | **400/400**, 19,8 sessions/s |
+
+- `pytest -q` → **112 tests réussis** (+18).
+- `tools/verify.py` → **275** contrôles (17 nouveaux), 0 échec.
+
 ---
 
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*

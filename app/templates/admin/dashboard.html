@@ -9,7 +9,7 @@
 <div class="stats-grid mb-2">
   <div class="stat"><span class="stat-label">Utilisateurs</span><div class="stat-value">{{ stats.users }}</div>
     <div class="stat-foot">dont {{ stats.admins }} administrateur(s)</div>{{ icon('users', 'stat-icon') }}</div>
-  <a class="stat stat--link" href="{{ url_for('admin.sessions') }}">
+  <a class="stat stat--link stat--green" href="{{ url_for('admin.sessions') }}">
     <span class="stat-label">En ligne</span>
     <div class="stat-value" data-presence-count>{{ stats.online }}</div>
     <div class="stat-foot"><span data-presence-sessions>{{ stats.online_sessions }}</span> session(s) · voir qui</div>
@@ -50,6 +50,25 @@
       </p>
       {% endfor %}
     </div>
+    <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin-top:.8rem">
+      <a class="presence-kpi" href="{{ url_for('admin.sessions', etat='online') }}">
+        <span class="presence-kpi__value" data-presence-sessions>{{ stats.online_sessions }}</span>
+        <span class="presence-kpi__label">Sessions actives</span>
+      </a>
+      <a class="presence-kpi" href="{{ url_for('admin.sessions', etat='idle') }}">
+        <span class="presence-kpi__value">{{ stats.idle_sessions }}</span>
+        <span class="presence-kpi__label">Inactives</span>
+      </a>
+      <a class="presence-kpi" href="{{ url_for('admin.sessions') }}">
+        <span class="presence-kpi__value">{{ stats.devices }}</span>
+        <span class="presence-kpi__label">Appareils</span>
+      </a>
+      <a class="presence-kpi" href="{{ url_for('admin.connections') }}">
+        <span class="presence-kpi__value">{{ stats.connections_today }}</span>
+        <span class="presence-kpi__label">Connexions du jour</span>
+      </a>
+    </div>
+
     <p class="text-xs text-muted mt-2">
       {{ icon('info', 14) }} Actualisation automatique toutes les 20 secondes.
       Chaque personne garde sa propre session : une nouvelle connexion ne ferme jamais celle d'un autre.

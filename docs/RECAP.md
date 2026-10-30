@@ -707,14 +707,69 @@ Captures : `apercus/android/v14-sessions.png`, `v14-presence.png`, `v14-reglage-
 
 ---
 
+## 20. Mise à jour du 30/10/2026 — Audit et optimisation V2.1
+
+Rapport complet : [`docs/AUDIT-V2.1.md`](AUDIT-V2.1.md).
+
+### 20.1 Ce que l'audit de production a établi
+
+Sur 97 sessions enregistrées le 30/10/2026 : **64 scripts de vérification** du
+projet, **6 captures automatisées**, **3 scripts d'audit**, **17 sessions
+réelles**. Les « Robot / script » n'étaient donc pas des attaquants mais les
+outils du projet, qui ne se déconnectaient jamais. Aucune session n'est créée
+par un rechargement de page (10 rechargements → 0 session).
+
+Trois défauts réels : états confondus (« Fermée » = expirée **ou** révoquée),
+aucune purge, heuristique « robot » trop large.
+
+### 20.2 Corrections
+
+* **5 états** : En ligne (vert), Inactive (gris), Expirée (ambre), Révoquée
+  (rouge), session courante.
+* **Détection d'appareil** refondue : Android 13 · Chrome, iPhone · Safari,
+  Windows 10 · Edge, Linux (Ubuntu) · Firefox, macOS · Safari, modèle Android ;
+  les vrais robots portent « Script · … » ; un navigateur inconnu n'est plus un
+  robot.
+* **Nettoyage** : rétention réglable (30 j par défaut), purge horaire
+  opportuniste, action manuelle avec simulation ; les sessions ouvertes ne sont
+  jamais touchées.
+* **Durée de connexion** réglable (1 h → 30 j), **détection de changement
+  d'appareil** journalisée (vol de cookie).
+* **Filtres** (personne, appareil, état, activité, date, tri, pagination) et
+  **actions** (fermer une session, toutes celles d'une personne, sessions
+  automatisées, nettoyage).
+* **Historique des connexions** (`/admin/connexions`).
+* **Performance** : Argon2id 19 Mio (au lieu de 64), présence écrite une fois
+  par minute, index sur `auth_sessions` et `audit_logs`.
+
+### 20.3 Résultats
+
+| Contrôle | Résultat |
+|---|---|
+| `pytest -q` | **112 réussis** |
+| `tools/verify.py` (local) | **275 conformes, 0 échec** |
+| `tools/test_sessions.py` (A → G) | **31/31 conformes** |
+| `tools/load_test.py` — 200 sessions | **200/200**, médiane 3,5 s |
+| `tools/load_test.py` — 400 sessions | **400/400**, 19,8 sessions/s |
+
+Captures : `apercus/android/v15-sessions.png`, `v15-en-ligne.png`,
+`v15-historique.png`, `v15-tableau-de-bord.png`, `v15-reglages-sessions.png`,
+`apercus/v15-sessions-bureau.png`.
+
+---
+
+---
+
 ## Vérifications automatiques
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **94 tests réussis** |
-| `tools/verify.py` (local) | **258 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **260 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **260 contrôles conformes, 0 échec** |
+| `pytest -q` | **112 tests réussis** |
+| `tools/verify.py` (local) | **275 contrôles conformes, 0 échec** |
+| `tools/test_sessions.py` (scénarios A → G) | **31/31 conformes** |
+| `tools/load_test.py` (200 puis 400 sessions) | **200/200** et **400/400** |
+| `tools/verify.py` sur Render | **275 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **275 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.

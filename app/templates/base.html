@@ -80,6 +80,7 @@
       <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.exams' }}" href="{{ url_for('admin.exams') }}">{{ icon('award', 18) }} Examens</a>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.battles' }}" href="{{ url_for('admin.battles') }}">{{ icon('zap', 18) }} Battles à valider</a>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.sessions' }}" href="{{ url_for('admin.sessions') }}">{{ icon('key', 18) }} Utilisateurs connectés</a>
+      <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.connections' }}" href="{{ url_for('admin.connections') }}">{{ icon('clock', 18) }} Historique des connexions</a>
       {% if current_user.is_super_admin %}
       <a class="nav-link nav-ic-pink{{ ' is-active' if request.endpoint == 'admin.user_messages' }}" href="{{ url_for('admin.user_messages') }}">{{ icon('message', 18) }} Messages des Utilisateurs</a>
       <a class="nav-link{{ ' is-active' if request.endpoint == 'admin.roles' }}" href="{{ url_for('admin.roles') }}">{{ icon('shield', 18) }} Rôles &amp; permissions</a>

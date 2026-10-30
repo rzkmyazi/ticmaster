@@ -53,11 +53,12 @@ def create_app(config_object: str | None = None) -> Flask:
     if app.config.get("AUTO_CREATE_SCHEMA", True):
         try:
             with app.app_context():
-                from .schema import ensure_schema
+                from .schema import ensure_indexes, ensure_schema
 
                 applied = ensure_schema(app)
                 if applied:
                     app.logger.info("Colonnes ajoutées à la base : %s", ", ".join(applied))
+                ensure_indexes()
         except Exception:  # pragma: no cover - une base injoignable ne doit pas bloquer le boot
             app.logger.exception("Mise à niveau du schéma ignorée (base indisponible ?)")
 

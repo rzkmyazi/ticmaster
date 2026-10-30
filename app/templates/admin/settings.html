@@ -87,6 +87,53 @@
               </div>
               <button class="btn btn-outline btn-sm" type="submit">{{ icon('save', 15) }} Appliquer la règle</button>
             </form>
+
+            <hr class="sep" style="margin:1.2rem 0">
+
+            <div class="grid-2" style="display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+              <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="section" value="general">
+                <div class="field">
+                  <label for="session_hours">Durée d'une connexion</label>
+                  <select id="session_hours" name="session_hours">
+                    {% for heures in [1, 2, 4, 8, 12, 24, 72, 168, 720] %}
+                    <option value="{{ heures }}" {{ 'selected' if values.session_hours == heures }}>
+                      {{ heures ~ ' h' if heures < 24 else (heures // 24) ~ ' jour(s)' }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                  <span class="hint">
+                    Au-delà, la session <strong>expire</strong> d'elle-même : le cookie ne vaut plus rien
+                    et l'appareil doit se reconnecter. Actuellement : <strong>{{ values.session_hours_label }}</strong>.
+                    « Se souvenir de moi » reste plafonné à 30 jours.
+                  </span>
+                </div>
+                <button class="btn btn-outline btn-sm" type="submit">{{ icon('save', 15) }} Appliquer la durée</button>
+              </form>
+
+              <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="section" value="general">
+                <div class="field">
+                  <label for="session_retention_days">Conservation des sessions fermées</label>
+                  <select id="session_retention_days" name="session_retention_days">
+                    {% for jours in [0, 7, 14, 30, 60, 90, 180, 365] %}
+                    <option value="{{ jours }}" {{ 'selected' if values.session_retention_days == jours }}>
+                      {{ 'Illimitée' if jours == 0 else jours ~ ' jour(s)' }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                  <span class="hint">
+                    Les sessions <strong>révoquées</strong> ou <strong>expirées</strong> au-delà de cette durée
+                    sont supprimées de la base (nettoyage automatique, une fois par heure).
+                    Les sessions en cours ne sont jamais touchées. Actuellement :
+                    <strong>{{ values.session_retention_label }}</strong>.
+                  </span>
+                </div>
+                <button class="btn btn-outline btn-sm" type="submit">{{ icon('save', 15) }} Appliquer la rétention</button>
+              </form>
+            </div>
           </div>
         </section>
 

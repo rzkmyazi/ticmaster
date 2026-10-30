@@ -71,7 +71,11 @@ def dashboard():
     voir_en_ligne = presence_counts()
     stats["online"] = voir_en_ligne["online_users"]
     stats["online_sessions"] = voir_en_ligne["online_sessions"]
+    stats["idle_sessions"] = voir_en_ligne["idle_sessions"]
     stats["open_sessions"] = voir_en_ligne["open_sessions"]
+    stats["devices"] = voir_en_ligne["devices"]
+    stats["connections_today"] = voir_en_ligne["connections_today"]
+    stats["accounts_today"] = voir_en_ligne["accounts_today"]
     stats["window"] = voir_en_ligne["window"]
 
     connectes = []
@@ -531,7 +535,9 @@ def user_revoke_sessions(user_id: int):
     user = db.session.get(User, user_id) or abort(404)
     if not can_manage_user(g.user, user):
         abort(403)
-    count = revoke_all_sessions(user)
+    # Si l'administrateur agit sur son propre compte, sa session courante est
+    # préservée : il ne se déconnecte pas lui-même par mégarde.
+    count = revoke_all_sessions(user, except_current=(user.id == g.user.id))
     log_audit("user.sessions_revoked", target=user.username, details=f"{count} session(s)")
     flash(f"{count} session(s) révoquée(s).", "success")
     return redirect(url_for("admin.user_detail", user_id=user.id))
@@ -1147,13 +1153,17 @@ def audit():
     )
 
 
-def _can_revoke_session(actor: User, row: AuthSession) -> bool:
-    """Un administrateur ne ferme jamais la session d'un super administrateur.
+def _can_revoke_session(actor: User, row: AuthSession, current_id: int | None = None) -> bool:
+    """Quelles sessions l'administrateur peut-il fermer ?
 
-    Personne ne peut non plus fermer sa propre session depuis cette page
-    (la déconnexion normale existe pour cela).
+    * **jamais la session courante** (on ne se déconnecte pas soi-même d'un clic
+      dans une liste : la page « Se déconnecter » existe pour cela) ;
+    * jamais la session d'un super administrateur quand on est administrateur ;
+    * en revanche, un super administrateur **peut** fermer ses autres sessions
+      (son téléphone oublié, un script resté ouvert…) : c'est le cas d'usage
+      le plus fréquent.
     """
-    if row.user_id == actor.id:
+    if current_id and row.id == current_id:
         return False
     if row.user and row.user.is_super_admin and not actor.is_super_admin:
         return False
@@ -1163,42 +1173,50 @@ def _can_revoke_session(actor: User, row: AuthSession) -> bool:
 @bp.route("/sessions")
 @admin_required
 def sessions():
-    """Qui est connecté, depuis quel appareil, et depuis quand."""
-    from ..presence import counts, device_kind, device_label, online_threshold
+    """Qui est connecté, depuis quel appareil, dans quel état — et actions."""
+    from ..presence import counts, online_seconds
+    from ..sessions_service import (
+        ACTIVITY_FILTERS, DEVICE_FILTERS, STATE_FILTERS, count_stale_sessions,
+        list_sessions, maybe_purge,
+    )
 
-    filtre = (request.args.get("filtre") or "").strip()
+    nettoyees = maybe_purge()          # au plus une fois par heure
+    if nettoyees:
+        log_audit("session.purged", details=f"{nettoyees} ligne(s)")
+
     q = (request.args.get("q") or "").strip()
-    seuil = online_threshold()
+    appareil = (request.args.get("appareil") or "").strip()
+    etat = (request.args.get("etat") or "").strip()
+    depuis = (request.args.get("depuis") or "").strip()
+    activite = (request.args.get("activite") or "").strip()
+    tri = (request.args.get("tri") or "recent").strip()
+    try:
+        page = int(request.args.get("page") or 1)
+    except ValueError:
+        page = 1
 
-    query = AuthSession.query.order_by(AuthSession.last_seen_at.desc())
-    if filtre == "ouvertes":
-        query = query.filter(AuthSession.revoked_at.is_(None))
-    if q:
-        like = f"%{q.lower()}%"
-        query = query.join(User, User.id == AuthSession.user_id).filter(
-            db.or_(func.lower(User.username).like(like),
-                   func.lower(User.full_name).like(like))
-        )
-    rows = query.limit(300).all()
+    courant = getattr(g.get("auth_session"), "id", None)
+    resultat = list_sessions(q=q, device=appareil, state=etat, since=depuis,
+                             activity=activite, sort=tri, page=page,
+                             per_page=40, current_id=courant)
 
-    for row in rows:
-        row.device = device_label(row.user_agent)
-        row.device_kind = device_kind(row.user_agent)
-        row.is_online = bool(row.is_valid and row.last_seen_at and row.last_seen_at >= seuil)
-        row.can_revoke = _can_revoke_session(g.user, row) and row.is_valid
+    for fiche in resultat["items"]:
+        fiche["can_revoke"] = (_can_revoke_session(g.user, fiche["row"], courant)
+                               and fiche["state"] in ("online", "idle"))
 
-    en_ligne = [row for row in rows if row.is_online]
-    ouvertes = [row for row in rows if row.is_valid]
-
+    from ..settings_service import session_retention_days, session_retention_label
     return render_template(
         "admin/sessions.html",
-        sessions=rows,
-        online=len({row.user_id for row in en_ligne}),
-        online_sessions=len(en_ligne),
-        active_count=len(ouvertes),
-        counts=counts(),
-        filtre=filtre,
-        q=q,
+        sessions=resultat["items"],
+        total=resultat["total"], page=resultat["page"], pages=resultat["pages"],
+        scanned=resultat["scanned"], truncated=resultat["truncated"],
+        counts=counts(), window=online_seconds(),
+        q=q, appareil=appareil, etat=etat, depuis=depuis, activite=activite, tri=tri,
+        device_filters=DEVICE_FILTERS, state_filters=STATE_FILTERS,
+        activity_filters=ACTIVITY_FILTERS,
+        retention_days=session_retention_days(),
+        retention_label=session_retention_label(),
+        a_nettoyer=count_stale_sessions(),
     )
 
 
@@ -1206,13 +1224,108 @@ def sessions():
 @admin_required
 def session_revoke(session_id: int):
     row = db.session.get(AuthSession, session_id) or abort(404)
-    if not _can_revoke_session(g.user, row):
+    courant = getattr(g.get("auth_session"), "id", None)
+    if not _can_revoke_session(g.user, row, courant):
         abort(403)
     revoke_session(row)
     db.session.commit()
-    log_audit("session.revoked", target=str(session_id), details=row.user.username if row.user else "")
-    flash("Session fermée : cet appareil devra se reconnecter.", "success")
+    log_audit("session.revoked", target=str(session_id),
+              details=f"{row.user.username if row.user else ''} {row.user_agent or ''}"[:190])
+    flash("Session fermée : cet appareil devra se reconnecter. "
+          "Les autres sessions ne sont pas touchées.", "success")
+    return redirect(request.referrer or url_for("admin.sessions"))
+
+
+@bp.route("/sessions/<int:session_id>/revoquer-utilisateur", methods=["POST"])
+@admin_required
+def session_revoke_user(session_id: int):
+    """Ferme **toutes** les sessions de la personne concernée (sauf la vôtre)."""
+    row = db.session.get(AuthSession, session_id) or abort(404)
+    if not row.user or (row.user.is_super_admin and not g.user.is_super_admin):
+        abort(403)
+    nombre = revoke_all_sessions(row.user, except_current=(row.user_id == g.user.id))
+    db.session.commit()
+    log_audit("user.signed_out_everywhere", target=row.user.username, details=str(nombre))
+    flash(f"{nombre} session(s) fermée(s) pour {row.user.full_name or row.user.username}. "
+          f"Le compte reste actif.", "success")
+    return redirect(request.referrer or url_for("admin.sessions"))
+
+
+@bp.route("/sessions/suspectes/revoquer", methods=["POST"])
+@admin_required
+def sessions_revoke_suspicious():
+    """Ferme les sessions ouvertes depuis un script ou un appareil inhabituel."""
+    from ..sessions_service import list_sessions
+    courant = getattr(g.get("auth_session"), "id", None)
+    fiches = list_sessions(state="online", per_page=1500, current_id=courant)["items"]
+    fiches += list_sessions(state="idle", per_page=1500, current_id=courant)["items"]
+    fermees = 0
+    a_fermer = 0
+    for fiche in fiches:
+        row = fiche["row"]
+        # Seuls les **scripts automatisés** sont fermés d'office. Un « appareil
+        # inhabituel » reste un avertissement : la personne peut légitimement
+        # changer de téléphone, on ne la déconnecte pas sans décision humaine.
+        if fiche.get("reason") != "script automatisé":
+            continue
+        if not _can_revoke_session(g.user, row, courant):
+            a_fermer += 1
+            continue
+        revoke_session(row)
+        fermees += 1
+    db.session.commit()
+    log_audit("session.suspicious_revoked", details=str(fermees))
+    if fermees:
+        flash(f"{fermees} session(s) automatisée(s) fermée(s). Les connexions humaines "
+              f"ne sont pas touchées ; un « appareil inhabituel » reste un simple "
+              f"avertissement, à fermer à la main si nécessaire.", "success")
+    elif a_fermer:
+        flash("Les seules sessions suspectes restantes sont protégées "
+              "(session courante ou compte hors de votre périmètre).", "info")
+    else:
+        flash("Aucune session suspecte ouverte à fermer.", "info")
+    return redirect(url_for("admin.sessions", etat="online"))
+
+
+@bp.route("/sessions/nettoyer", methods=["POST"])
+@admin_required
+def session_purge():
+    """Supprime les sessions mortes au-delà de la durée de rétention."""
+    from ..sessions_service import count_stale_sessions, purge_stale_sessions
+    from ..settings_service import session_retention_days
+
+    essai = request.form.get("essai") == "1"
+    if essai:
+        nombre = count_stale_sessions()
+        log_audit("session.purge_preview", details=str(nombre))
+        flash(f"{nombre} session(s) fermée(s) seraient supprimées "
+              f"(rétention : {session_retention_days()} jour(s)). Le test est terminé.", "info")
+        return redirect(url_for("admin.sessions"))
+
+    nombre = purge_stale_sessions()
+    log_audit("session.purged", details=str(nombre))
+    flash(f"{nombre} session(s) fermée(s) supprimée(s) de la base. "
+          f"Les sessions en cours ne sont pas touchées.", "success")
     return redirect(url_for("admin.sessions"))
+
+
+@bp.route("/connexions")
+@admin_required
+def connections():
+    """Historique des connexions et des événements de session."""
+    from ..presence import counts
+    from ..sessions_service import connection_history
+
+    q = (request.args.get("q") or "").strip()
+    action = (request.args.get("action") or "").strip()
+    depuis = (request.args.get("depuis") or "").strip()
+    try:
+        page = int(request.args.get("page") or 1)
+    except ValueError:
+        page = 1
+    resultat = connection_history(q=q, action=action, since=depuis, page=page, per_page=50)
+    return render_template("admin/connections.html", **resultat,
+                           q=q, action=action, depuis=depuis, counts=counts())
 
 
 @bp.route("/utilisateurs/<int:user_id>/deconnecter", methods=["POST"])
@@ -1234,7 +1347,8 @@ def user_sign_out_everywhere(user_id: int):
 def api_presence():
     """Photo en direct des connexions (rafraîchie par le tableau de bord)."""
     from ..presence import snapshot
-    data = snapshot()
+    courant = getattr(g.get("auth_session"), "id", None)
+    data = snapshot(current_id=courant, limit=200)
     data["ok"] = True
     return jsonify(data)
 
@@ -1513,6 +1627,19 @@ def settings():
                 flash("Message de mise à jour enregistré (maintenance inactive).", "info")
             return redirect(url_for("admin.settings", onglet="maintenance"))
 
+        # Durée de validité d'une session et rétention de l'historique
+        from ..settings_service import set_session_hours, set_session_retention_days
+        if "session_hours" in request.form:
+            brut = (request.form.get("session_hours") or "").strip()
+            if brut.isdigit():
+                set_session_hours(int(brut))
+                log_audit("settings.session_hours", details=brut)
+        if "session_retention_days" in request.form:
+            brut = (request.form.get("session_retention_days") or "").strip()
+            if brut.isdigit():
+                set_session_retention_days(int(brut))
+                log_audit("settings.session_retention", details=brut)
+
         # Nombre d'appareils simultanés autorisés par compte
         if "max_devices" in request.form:
             from ..settings_service import set_max_devices
@@ -1549,9 +1676,16 @@ def settings():
         "maintenance_return_at": Setting.get("maintenance_return_at", ""),
         "maintenance_since": maintenance.state()["since"],
     }
-    from ..settings_service import max_devices, max_devices_label
+    from ..settings_service import (
+        max_devices, max_devices_label, session_hours, session_hours_label,
+        session_retention_days, session_retention_label,
+    )
     values["max_devices"] = max_devices()
     values["max_devices_label"] = max_devices_label()
+    values["session_hours"] = session_hours()
+    values["session_hours_label"] = session_hours_label()
+    values["session_retention_days"] = session_retention_days()
+    values["session_retention_label"] = session_retention_label()
     return render_template(
         "admin/settings.html", values=values, onglet=request.args.get("onglet", "general")
     )

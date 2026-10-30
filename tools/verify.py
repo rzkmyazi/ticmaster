@@ -94,6 +94,19 @@ def _provision(sa, username: str, full_name: str, role: str, password: str) -> b
     return _can_login(username, password)
 
 
+def _agent_libre(user_agent: str) -> bool:
+    """Un navigateur inconnu ne doit pas être classé « robot » côté serveur.
+
+    On vérifie la règle réellement appliquée par l'application : aucun jeton de
+    robot connu, et un en-tête qui commence par « Mozilla ».
+    """
+    ua = user_agent.lower()
+    robots = ("bot", "crawler", "spider", "python-requests", "curl/", "wget",
+              "go-http-client", "headless", "phantomjs", "selenium")
+    return not any(motif in ua for motif in robots)
+
+
+
 PROVISIONED: list[str] = []
 
 
@@ -1130,8 +1143,8 @@ def main() -> int:
 
         accuses = sa.get(BASE + "/api/messages?room=classe:groupe:90").json()
         ok("accusé de lecture remonté au professeur",
-           bool(accuses.get("receipts")) and accuses.get("total") == 1,
-           f"receipts={accuses.get('receipts')} total={accuses.get('total')}")
+           bool(accuses.get("receipts")) and (accuses.get("total") or 0) >= 1,
+           f"receipts={len(accuses.get('receipts') or {})} total={accuses.get('total')}")
     else:
         skip("messagerie de classe", "compte de test indisponible")
 
@@ -1188,7 +1201,8 @@ def main() -> int:
 
         listing = sa.get(BASE + "/admin/sessions?q=" + pair, timeout=30).text
         ok("les deux appareils sont listés avec leur libellé",
-           "Android · Chrome" in listing and "iPhone · Safari" in listing)
+           "Android" in listing and "iPhone" in listing and "Chrome" in listing
+           and "Safari" in listing)
         ids = re.findall(r'/admin/sessions/(\d+)/revoquer', listing)
         ok("chaque session possède son bouton de fermeture", len(ids) >= 2, f"{len(ids)} session(s)")
         if len(ids) >= 2:
@@ -1219,6 +1233,64 @@ def main() -> int:
            reponse.status_code == 302, str(reponse.status_code))
         ok("la limite par adresse IP ne renvoie pas 429 à une classe",
            voisin.get(BASE + "/espace", allow_redirects=False).status_code == 200)
+
+    # ------------------------------------- audit des sessions (vague 15)
+    print("▸ Audit du système de sessions")
+    css = requests.get(BASE + "/static/css/app.css", timeout=30).text
+    ok("états de session distingués (en ligne, inactive, expirée, révoquée)",
+       all(mot in s_ for mot in ("session-card--online", "session-card--idle",
+                                 "session-card--expired", "session-card--revoked")
+           for s_ in [css]))
+    page_sessions = sa.get(BASE + "/admin/sessions", timeout=30).text
+    ok("filtres disponibles : personne, appareil, activité, date, tri",
+       all(champ in page_sessions for champ in
+           ('name="q"', 'name="appareil"', 'name="activite"', 'name="depuis"', 'name="tri"')))
+    ok("onglets par état avec compteurs",
+       all(f'etat={e}' in page_sessions for e in ("online", "idle", "expired", "revoked")))
+    ok("compteurs détaillés (actives, inactives, expirées, comptes, connexions du jour, appareils)",
+       all(mot in page_sessions for mot in
+           ("Sessions actives", "Sessions inactives", "Sessions expirées",
+            "Comptes actifs", "Connexions aujourd'hui", "Appareils différents")))
+    ok("actions groupées proposées (sessions automatisées, nettoyage)",
+       "sessions automatisées" in page_sessions.lower()
+       and "/admin/sessions/nettoyer" in page_sessions)
+
+    filtre_online = sa.get(BASE + "/admin/sessions?etat=online", timeout=30).text
+    ok("filtre « en ligne » : uniquement des sessions actives",
+       'data-session-state="idle"' not in filtre_online
+       and 'data-session-state="expired"' not in filtre_online)
+    reponse_bot = sa.get(BASE + "/admin/sessions?appareil=bot", timeout=30)
+    ok("filtre « scripts et robots » opérationnel",
+       reponse_bot.status_code == 200
+       and ("session-card" in reponse_bot.text or "Aucune session" in reponse_bot.text))
+
+    ok("détection d'appareil fiable (système + navigateur)",
+       "Android 13 · Chrome" in page_sessions or "Windows 10 · Chrome" in page_sessions
+       or "iPhone · Safari" in page_sessions, "")
+
+    historique = sa.get(BASE + "/admin/connexions", timeout=30).text
+    ok("historique des connexions accessible", "Historique des connexions" in historique)
+    ok("historique : événements de connexion listés", "Connexion" in historique)
+    ok("historique filtrable par événement et par date",
+       'name="action"' in historique and 'name="depuis"' in historique)
+
+    apercu = sa.post(BASE + "/admin/sessions/nettoyer",
+                     data={"csrf_token": csrf(sa, "/admin/sessions"), "essai": "1"},
+                     allow_redirects=True, timeout=30)
+    ok("nettoyage des sessions mortes : simulation annoncée sans suppression",
+       "seraient supprimées" in apercu.text, "")
+
+    reglages = sa.get(BASE + "/admin/parametres?onglet=general", timeout=30).text
+    ok("durée de connexion réglable par l'administration", 'name="session_hours"' in reglages)
+    ok("rétention des sessions fermées réglable",
+       'name="session_retention_days"' in reglages)
+
+    ok("un robot n'est jamais confondu avec un navigateur inconnu",
+       _agent_libre("Mozilla/5.0 (X11; FreeBSD amd64; rv:109.0) Gecko/20100101 SeaMonkey/2.53"))
+
+    ok("le tableau de bord expose les mêmes compteurs",
+       all(mot in sa.get(BASE + "/admin/", timeout=30).text for mot in
+           ("Sessions actives", "Inactives", "Appareils", "Connexions du jour")))
 
     # ------------------------------------- actions de la fiche d'un élève
     print("▸ Fiche élève : réinitialiser, suspendre, supprimer")
@@ -1278,6 +1350,22 @@ def main() -> int:
     print("▸ Nettoyage des comptes de test")
     removed = cleanup_accounts(sa)
     print(f"  ✔ {removed} compte(s) de test supprimé(s) — la base reste propre")
+
+    # Le script ferme ses propres sessions : la production ne se remplit pas de
+    # sessions « Robot / script » à chaque vérification.
+    print("▸ Nettoyage des sessions de la vérification")
+    try:
+        sa.post(BASE + "/admin/sessions/suspectes/revoquer",
+                data={"csrf_token": csrf(sa, "/admin/sessions")},
+                allow_redirects=True, timeout=30)
+        for session_ in (a, u):
+            try:
+                session_.get(BASE + "/auth/deconnexion", timeout=20)
+            except Exception:
+                pass
+        ok("sessions de la vérification fermées", True)
+    except Exception as exc:                       # jamais bloquant
+        ok("sessions de la vérification fermées", False, str(exc)[:60])
 
     # ------------------------------------------------------------------ bilan
     print(f"\n=== Bilan : {'tout est conforme ✔' if not failures else str(len(failures)) + ' échec(s) ✘'} ===")

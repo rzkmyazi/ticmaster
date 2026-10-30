@@ -1,34 +1,39 @@
 {% extends "base.html" %}
 
-
-{% block title %}Sessions{% endblock %}
+{% block title %}Utilisateurs connectés{% endblock %}
 {% block page_title %}Utilisateurs connectés{% endblock %}
 {% block page_subtitle %}
 <p class="page-sub">
   <span data-presence-count>{{ counts.online_users }}</span> personne(s) en ligne ·
   <span data-presence-sessions>{{ counts.online_sessions }}</span> session(s) active(s) ·
-  {{ counts.open_sessions }} session(s) ouverte(s) au total
+  {{ counts.idle_sessions }} inactive(s)
 </p>
 {% endblock %}
 
 {% block content %}
 <div class="stats-grid mb-2">
-  <div class="stat">
+  <div class="stat stat--green">
     <span class="stat-label">En ligne maintenant</span>
     <div class="stat-value" data-presence-count>{{ counts.online_users }}</div>
-    <div class="stat-foot">actif dans les {{ (counts.window // 60) or 1 }} dernière(s) minute(s)</div>
+    <div class="stat-foot">actif dans les {{ (window // 60) or 1 }} dernière(s) minute(s)</div>
     {{ icon('activity', 'stat-icon') }}
   </div>
   <div class="stat">
     <span class="stat-label">Sessions actives</span>
     <div class="stat-value" data-presence-sessions>{{ counts.online_sessions }}</div>
-    <div class="stat-foot">chaque appareil = une session</div>
+    <div class="stat-foot">une par appareil connecté</div>
     {{ icon('key', 'stat-icon') }}
   </div>
+  <div class="stat stat--grey">
+    <span class="stat-label">Sessions inactives</span>
+    <div class="stat-value">{{ counts.idle_sessions }}</div>
+    <div class="stat-foot">ouvertes, sans activité récente</div>
+    {{ icon('clock', 'stat-icon') }}
+  </div>
   <div class="stat">
-    <span class="stat-label">Sessions ouvertes</span>
-    <div class="stat-value">{{ counts.open_sessions }}</div>
-    <div class="stat-foot">valides, y compris inactives</div>
+    <span class="stat-label">Sessions expirées</span>
+    <div class="stat-value">{{ counts.expired_sessions }}</div>
+    <div class="stat-foot">{{ retention_label|lower }}</div>
     {{ icon('shield', 'stat-icon') }}
   </div>
   <div class="stat">
@@ -37,115 +42,197 @@
     <div class="stat-foot">peuvent se connecter</div>
     {{ icon('users', 'stat-icon') }}
   </div>
+  <div class="stat">
+    <span class="stat-label">Connexions aujourd'hui</span>
+    <div class="stat-value">{{ counts.connections_today }}</div>
+    <div class="stat-foot">par {{ counts.accounts_today }} compte(s)</div>
+    {{ icon('logout', 'stat-icon') }}
+  </div>
+  <div class="stat">
+    <span class="stat-label">Appareils différents</span>
+    <div class="stat-value">{{ counts.devices }}</div>
+    <div class="stat-foot">parmi les sessions ouvertes</div>
+    {{ icon('cpu', 'stat-icon') }}
+  </div>
+  <div class="stat">
+    <span class="stat-label">Sessions fermées</span>
+    <div class="stat-value">{{ counts.revoked_sessions }}</div>
+    <div class="stat-foot">révoquées, conservées pour l'audit</div>
+    {{ icon('ban', 'stat-icon') }}
+  </div>
 </div>
 
 <section class="card">
   <div class="card-head">
     <h2 class="card-title">{{ icon('shield') }} Sessions</h2>
-    <span class="text-xs text-muted">
-      Mise à jour automatique · les jetons ne sont jamais stockés en clair (SHA-256)
-    </span>
+    <div class="row" style="gap:.5rem;flex-wrap:wrap">
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.connections') }}">
+        {{ icon('clock', 15) }} Historique des connexions
+      </a>
+    </div>
   </div>
 
   <div class="card-body">
-    <form method="get" class="filter-bar mb-2">
-      <div class="quick-search" style="flex:1;min-width:200px">
+    <div class="tabs" role="tablist" style="margin-bottom:.9rem">
+      <a class="tab{{ ' is-active' if not etat }}" href="{{ url_for('admin.sessions', q=q, appareil=appareil) }}">
+        Toutes <span class="tab-count">{{ counts.open_sessions + counts.expired_sessions + counts.revoked_sessions }}</span>
+      </a>
+      <a class="tab{{ ' is-active' if etat == 'online' }}" href="{{ url_for('admin.sessions', etat='online', q=q, appareil=appareil) }}">
+        En ligne <span class="tab-count tab-count--green">{{ counts.online_sessions }}</span>
+      </a>
+      <a class="tab{{ ' is-active' if etat == 'idle' }}" href="{{ url_for('admin.sessions', etat='idle', q=q, appareil=appareil) }}">
+        Inactives <span class="tab-count">{{ counts.idle_sessions }}</span>
+      </a>
+      <a class="tab{{ ' is-active' if etat == 'expired' }}" href="{{ url_for('admin.sessions', etat='expired', q=q, appareil=appareil) }}">
+        Expirées <span class="tab-count">{{ counts.expired_sessions }}</span>
+      </a>
+      <a class="tab{{ ' is-active' if etat == 'revoked' }}" href="{{ url_for('admin.sessions', etat='revoked', q=q, appareil=appareil) }}">
+        Révoquées <span class="tab-count">{{ counts.revoked_sessions }}</span>
+      </a>
+    </div>
+
+    <form method="get" class="filter-bar filter-bar--wrap mb-2">
+      <input type="hidden" name="etat" value="{{ etat }}">
+      <div class="quick-search" style="flex:1;min-width:190px">
         {{ icon('search', 18) }}
         <label class="sr-only" for="q">Rechercher une personne</label>
-        <input id="q" type="search" name="q" value="{{ q }}" placeholder="Nom ou identifiant…">
+        <input id="q" type="search" name="q" value="{{ q }}" placeholder="Nom, identifiant, pseudo…">
       </div>
-      <label class="sr-only" for="filtre">Filtre</label>
-      <select id="filtre" name="filtre" data-auto-submit>
-        <option value="" {{ 'selected' if not filtre }}>Toutes les sessions</option>
-        <option value="ouvertes" {{ 'selected' if filtre == 'ouvertes' }}>Sessions ouvertes seulement</option>
+      <label class="sr-only" for="appareil">Appareil</label>
+      <select id="appareil" name="appareil" data-auto-submit>
+        <option value="">Tous les appareils</option>
+        {% for cle, libelle in device_filters.items() %}
+        <option value="{{ cle }}" {{ 'selected' if appareil == cle }}>{{ libelle }}</option>
+        {% endfor %}
+      </select>
+      <label class="sr-only" for="activite">Dernière activité</label>
+      <select id="activite" name="activite" data-auto-submit>
+        <option value="">Toute activité</option>
+        {% for cle, libelle in activity_filters.items() %}
+        <option value="{{ cle }}" {{ 'selected' if activite == cle }}>{{ libelle }}</option>
+        {% endfor %}
+      </select>
+      <label class="sr-only" for="depuis">Connexion depuis le</label>
+      <input id="depuis" type="date" name="depuis" value="{{ depuis }}" title="Connexion depuis le">
+      <label class="sr-only" for="tri">Tri</label>
+      <select id="tri" name="tri" data-auto-submit>
+        <option value="recent" {{ 'selected' if tri == 'recent' }}>Plus récentes</option>
+        <option value="oldest" {{ 'selected' if tri == 'oldest' }}>Plus anciennes</option>
+        <option value="activity" {{ 'selected' if tri == 'activity' }}>Dernière activité</option>
+        <option value="user" {{ 'selected' if tri == 'user' }}>Par personne</option>
       </select>
       <button class="btn btn-outline btn-sm" type="submit">{{ icon('filter', 15) }} Filtrer</button>
+      {% if q or appareil or etat or depuis or activite or tri != 'recent' %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.sessions') }}">Réinitialiser</a>
+      {% endif %}
     </form>
 
-    <div class="table-wrap">
-      <table class="data data--cards">
-        <thead>
-          <tr>
-            <th>Utilisateur</th>
-            <th>Appareil</th>
-            <th class="col-opt">Connexion</th>
-            <th>Dernière activité</th>
-            <th class="col-opt">Expire</th>
-            <th class="col-opt">Adresse IP</th>
-            <th>État</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for session in sessions %}
-          <tr data-session-row="{{ session.id }}"
-              data-session-online="{{ 'true' if session.is_online else 'false' }}"{% if not session.is_valid %} class="is-muted"{% endif %}>
-            <td data-label="Utilisateur">
-              <div class="cell-user">
-                {% if session.user %}{{ avatar(session.user, 'sm', session.is_online) }}{% endif %}
-                <div>
-                  <strong>{{ session.user.full_name or session.user.username if session.user else 'Compte supprimé' }}</strong>
-                  <small>@{{ session.user.username if session.user else '—' }}
-                    {% if session.user_id == current_user.id %} · vous{% endif %}</small>
-                </div>
-              </div>
-            </td>
-            <td class="text-xs" data-label="Appareil">
-              <span class="device-chip device-chip--{{ session.device_kind }}">
+    <div class="row row--between mb-2" style="gap:.6rem;flex-wrap:wrap">
+      <span class="text-xs text-muted">
+        {{ total }} session(s) affichée(s){% if scanned %} · {{ scanned }} examinée(s){% endif %}
+        {% if truncated %} · <strong>affichage limité</strong>, affinez les filtres{% endif %}
+      </span>
+      <div class="row" style="gap:.5rem;flex-wrap:wrap">
+        <form method="post" action="{{ url_for('admin.sessions_revoke_suspicious') }}"
+              data-confirm="Fermer toutes les sessions ouvertes par un script automatisé ? Les personnes ne sont pas concernées : seules les connexions de robots ou d'outils sont fermées.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-warning btn-sm" type="submit">{{ icon('ban', 15) }} Fermer les sessions automatisées</button>
+        </form>
+        <form method="post" action="{{ url_for('admin.session_purge') }}"
+              data-confirm="Supprimer définitivement les sessions fermées depuis plus de {{ retention_days }} jour(s) ? Les sessions ouvertes sont conservées.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if a_nettoyer %}<input type="hidden" name="essai" value="0">{% endif %}
+          <button class="btn btn-ghost btn-sm" type="submit" {{ 'disabled' if not a_nettoyer }}>
+            {{ icon('trash', 15) }} Nettoyer {{ a_nettoyer }} session(s) morte(s)
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="data-cards">
+      {% for session in sessions %}
+      <article class="session-card session-card--{{ session.state }}" data-session-row="{{ session.id }}"
+               data-session-state="{{ session.state }}">
+        <header class="session-card__head">
+          <div class="cell-user">
+            {% if session.row.user %}{{ avatar(session.row.user, 'sm', session.online) }}{% endif %}
+            <div>
+              <strong>{{ session.name }}</strong>
+              <small>@{{ session.username }}{% if session.current %} · vous{% endif %}</small>
+            </div>
+          </div>
+          <span class="badge badge--{{ 'success' if session.online else ('neutral' if session.state == 'idle' else ('warning' if session.state == 'expired' else 'danger')) }}">
+            <span class="state-dot state-dot--{{ session.state }}"></span> {{ session.state_label }}
+          </span>
+        </header>
+
+        <dl class="session-card__grid">
+          <div><dt>Appareil</dt>
+            <dd>
+              <span class="device-chip device-chip--{{ session.kind }}">
                 {{ icon('cpu', 14) }} {{ session.device }}
               </span>
-            </td>
-            <td class="text-xs col-opt" data-label="Connexion">{{ fmt_dt(session.created_at) }}</td>
-            <td class="text-xs" data-label="Dernière activité">
-              <span class="presence-dot{{ ' is-online' if session.is_online }}"></span>
-              {{ time_ago(session.last_seen_at) }}
-            </td>
-            <td class="text-xs col-opt" data-label="Expire">{{ fmt_dt(session.expires_at) }}</td>
-            <td class="text-xs mono col-opt" data-label="Adresse IP">{{ session.ip or '—' }}</td>
-            <td data-label="État">
-              {% if session.is_valid %}
-                {% if session.is_online %}
-                <span class="badge badge-success">En ligne</span>
-                {% else %}
-                <span class="badge badge-neutral">Ouverte</span>
-                {% endif %}
-              {% else %}
-              <span class="badge badge-neutral">Fermée</span>
-              {% endif %}
-            </td>
-            <td class="row-actions" data-label="Action">
-              {% if session.can_revoke %}
-              <form method="post" action="{{ url_for('admin.session_revoke', session_id=session.id) }}"
-                    data-confirm="Fermer cette session ? Cet appareil devra se reconnecter.">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="btn btn-sm btn-ghost" type="submit">{{ icon('logout', 15) }} Fermer</button>
-              </form>
-              {% elif session.user_id == current_user.id %}
-              <span class="text-xs text-muted">session courante</span>
-              {% else %}
-              <span class="text-xs text-muted">protégée</span>
-              {% endif %}
-            </td>
-          </tr>
+              {% if session.model %}<small class="text-muted"> {{ session.model }}</small>{% endif %}
+            </dd>
+          </div>
+          <div><dt>Adresse IP</dt><dd class="mono">{{ session.ip }}</dd></div>
+          <div><dt>Connexion</dt><dd>{{ session.created_at[:16]|replace('T', ' ') }}</dd></div>
+          <div><dt>Dernière activité</dt><dd>{{ session.last_seen_at[:16]|replace('T', ' ') }}</dd></div>
+          <div><dt>Expire</dt><dd>{{ session.expires_at[:16]|replace('T', ' ') }}</dd></div>
+          {% if session.suspicious %}
+          <div><dt>Vigilance</dt><dd><span class="badge badge-warning">{{ session.reason }}</span></dd></div>
+          {% endif %}
+        </dl>
+
+        <footer class="session-card__actions">
+          {% if session.can_revoke %}
+          <form method="post" action="{{ url_for('admin.session_revoke', session_id=session.id) }}"
+                data-confirm="Fermer cette session ? Cet appareil devra se reconnecter. Les autres sessions ne sont pas affectées.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-ghost" type="submit">{{ icon('logout', 15) }} Fermer cet appareil</button>
+          </form>
+          <form method="post" action="{{ url_for('admin.session_revoke_user', session_id=session.id) }}"
+                data-confirm="Fermer TOUTES les sessions de {{ session.name }} ? La personne devra se reconnecter partout.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-ghost" type="submit">{{ icon('users', 15) }} Toutes ses sessions</button>
+          </form>
+          {% elif session.current %}
+          <span class="text-xs text-muted">session courante (utilisez « Se déconnecter »)</span>
+          {% elif session.state in ('expired', 'revoked') %}
+          <span class="text-xs text-muted">session déjà terminée — aucune action possible</span>
           {% else %}
-          <tr>
-            <td colspan="8">
-              <div class="empty">
-                <div class="empty-icon">{{ icon('shield') }}</div>
-                <h3>Aucune session</h3>
-                <p>Personne n'est connecté pour le moment.</p>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          <span class="text-xs text-muted">protégée</span>
+          {% endif %}
+        </footer>
+      </article>
+      {% else %}
+      <div class="empty">
+        <div class="empty-icon">{{ icon('shield') }}</div>
+        <h3>Aucune session</h3>
+        <p>{% if q or appareil or etat or depuis or activite %}Aucun résultat avec ces filtres.{% else %}Personne n'est connecté pour le moment.{% endif %}</p>
+      </div>
+      {% endfor %}
     </div>
+
+    {% if pages > 1 %}
+    <nav class="pagination" aria-label="Pagination des sessions">
+      {% if page > 1 %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.sessions', page=page-1, q=q, appareil=appareil, etat=etat, depuis=depuis, activite=activite, tri=tri) }}">← Précédent</a>
+      {% endif %}
+      <span class="text-sm text-muted">Page {{ page }} / {{ pages }}</span>
+      {% if page < pages %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.sessions', page=page+1, q=q, appareil=appareil, etat=etat, depuis=depuis, activite=activite, tri=tri) }}">Suivant →</a>
+      {% endif %}
+    </nav>
+    {% endif %}
 
     <p class="text-xs text-muted mt-2">
       {{ icon('info', 14) }}
+      <strong>En ligne</strong> = activité dans les {{ (window // 60) or 1 }} dernières minutes.
+      <strong>Inactive</strong> = session ouverte mais sans activité récente.
+      <strong>Expirée</strong> = durée de vie dépassée (le cookie ne vaut plus rien).
+      <strong>Révoquée</strong> = fermée par une déconnexion ou par l'administration.
       Fermer une session ne supprime aucun travail : cours, résultats et messages restent enregistrés.
-      La personne devra simplement se reconnecter sur cet appareil.
     </p>
   </div>
 </section>

@@ -168,6 +168,7 @@ def attempt_login(identifier: str, password: str, remember: bool = False) -> dic
         "auth.login",
         target=user.username,
         details=f"rôle={user.role}" + (" · session longue" if remember else ""),
+        actor=user,          # le compte qui vient d'ouvrir la session
     )
     limiter.reset(ip_key)
     return {"status": "ok", "user": user, "token": token}

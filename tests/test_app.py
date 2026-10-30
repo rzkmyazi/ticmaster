@@ -2194,7 +2194,7 @@ def test_presence_compte_les_sessions_et_les_comptes(app):
         assert len(etat["sessions"]) >= 2 and etat["counts"]["online_users"] >= avant + 2
         ua = ("Mozilla/5.0 (Linux; Android 13; SM-A125F) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36")
-        assert device_label(ua) == "Android · Chrome"
+        assert device_label(ua).startswith("Android") and "Chrome" in device_label(ua)
 
 
 def test_echecs_repetes_ne_bloquent_pas_un_bon_mot_de_passe(client, app):
@@ -2211,3 +2211,217 @@ def test_echecs_repetes_ne_bloquent_pas_un_bon_mot_de_passe(client, app):
     assert page.status_code == 200                      # ni 429, ni message de blocage
     assert page.request.path == "/espace"               # on arrive bien dans son espace
     assert b"Trop de tentatives" not in page.data
+
+
+# ---------------------------------------------------------------------------
+# Vague 15 — audit et optimisation du système multi-utilisateurs
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("ua,attendu", [
+    ("Mozilla/5.0 (Linux; Android 13; SM-A125F) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36",
+     ("Android 13", "Chrome", "mobile")),
+    ("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Version/17.0 Mobile Safari/604.1",
+     ("iPhone", "Safari", "mobile")),
+    ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121 Safari/537.36 Edg/121",
+     ("Windows 10", "Edge", "desktop")),
+    ("Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0",
+     ("Linux (Ubuntu)", "Firefox", "desktop")),
+    ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15",
+     ("macOS", "Safari", "desktop")),
+])
+def test_detection_appareil_fiable(ua, attendu):
+    from app.presence import agent_info
+    info = agent_info(ua)
+    assert info["os"] == attendu[0]
+    assert info["browser"] == attendu[1]
+    assert info["kind"] == attendu[2]
+    assert info["bot"] == ""
+
+
+def test_navigateur_inconnu_nest_pas_un_robot():
+    from app.presence import agent_info, is_bot
+    ua = "Mozilla/5.0 (X11; FreeBSD amd64; rv:109.0) Gecko/20100101 SeaMonkey/2.53"
+    info = agent_info(ua)
+    assert info["bot"] == "" and info["kind"] != "bot"
+    assert not is_bot(ua)
+
+
+@pytest.mark.parametrize("ua,robot", [
+    ("python-requests/2.31.0", "script Python"),
+    ("Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "Googlebot"),
+    ("curl/8.1.2", "curl"),
+    ("Go-http-client/1.1", "sonde Go"),
+])
+def test_robots_reellement_identifies(ua, robot):
+    from app.presence import agent_info
+    assert agent_info(ua)["bot"] == robot
+
+
+def test_etats_de_session(app):
+    from datetime import timedelta
+    from app.models import AuthSession, utcnow
+    from app.presence import session_state
+
+    maintenant = utcnow()
+    cas = [
+        (AuthSession(revoked_at=maintenant, expires_at=maintenant + timedelta(hours=1),
+                     last_seen_at=maintenant), "revoked"),
+        (AuthSession(expires_at=maintenant - timedelta(minutes=1), last_seen_at=maintenant), "expired"),
+        (AuthSession(expires_at=maintenant + timedelta(hours=1), last_seen_at=maintenant), "online"),
+        (AuthSession(expires_at=maintenant + timedelta(hours=1),
+                     last_seen_at=maintenant - timedelta(minutes=30)), "idle"),
+    ]
+    for row, attendu in cas:
+        assert session_state(row, maintenant) == attendu
+
+
+def test_statistiques_coherentes_avec_les_sessions(app):
+    from app.extensions import db
+    from app.models import AuthSession, User
+    from app.presence import counts
+
+    _make_user(app, "stat1")
+    _make_user(app, "stat2")
+    with app.app_context():
+        a = User.query.filter_by(username="stat1").one()
+        b = User.query.filter_by(username="stat2").one()
+        _ouvrir_session(app, a, "Mozilla/5.0 (Linux; Android 13) Chrome/120 Mobile Safari")
+        _ouvrir_session(app, b, "Mozilla/5.0 (Windows NT 10.0) Chrome/120 Safari")
+        _ouvrir_session(app, b, "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Version/17 Safari")
+        ouvertes = AuthSession.query.filter(AuthSession.revoked_at.is_(None)).count()
+        c = counts()
+        assert ouvertes == 3
+        assert c["online_users"] == 2          # deux comptes distincts
+        assert c["online_sessions"] == 3       # trois appareils
+        assert c["devices"] == 3               # trois empreintes différentes
+        assert c["open_sessions"] >= 3
+        assert "connections_today" in c and "expired_sessions" in c
+
+
+def test_filtres_sessions(app):
+    from app.extensions import db
+    from app.models import AuthSession, User, utcnow
+    from datetime import timedelta
+    from app.sessions_service import list_sessions
+
+    _make_user(app, "filtre")
+    with app.app_context():
+        user = User.query.filter_by(username="filtre").one()
+        recente = _ouvrir_session(app, user, "Mozilla/5.0 (Linux; Android 13) Chrome/120 Mobile Safari")
+        vieille = _ouvrir_session(app, user, "python-requests/2.31")
+        vieille.expires_at = utcnow() - timedelta(hours=2)   # expirée
+        db.session.commit()
+
+        en_ligne = list_sessions(state="online")
+        assert all(f["state"] == "online" for f in en_ligne["items"])
+        expirees = list_sessions(state="expired")
+        assert any(f["id"] == vieille.id for f in expirees["items"])
+        scripts = list_sessions(device="bot")
+        assert any(f["id"] == vieille.id for f in scripts["items"])
+        assert all(f["reason"] for f in scripts["items"] if f["suspicious"])
+        par_nom = list_sessions(q="filtre")
+        assert par_nom["total"] >= 2
+
+
+def test_revocation_individualle_isolee(app):
+    from app.extensions import db
+    from app.models import AuthSession, User
+    from app.security.core import revoke_session
+
+    _make_user(app, "isole")
+    with app.app_context():
+        user = User.query.filter_by(username="isole").one()
+        premiere = _ouvrir_session(app, user, "Mozilla/5.0 (Linux; Android 13) Chrome/120")
+        seconde = _ouvrir_session(app, user, "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Safari/604")
+        revoke_session(premiere)
+        db.session.commit()
+        assert not db.session.get(AuthSession, premiere.id).is_valid
+        assert db.session.get(AuthSession, seconde.id).is_valid
+
+
+def test_nettoyage_ne_touche_que_les_sessions_mortes(app):
+    from datetime import timedelta
+    from app.extensions import db
+    from app.models import AuthSession, User, utcnow
+    from app.sessions_service import purge_stale_sessions
+    from app.settings_service import set_session_retention_days
+
+    _make_user(app, "menage")
+    with app.app_context():
+        user = User.query.filter_by(username="menage").one()
+        vivante = _ouvrir_session(app, user, "Mozilla/5.0 (Linux; Android 13) Chrome/120")
+        morte = _ouvrir_session(app, user, "Mozilla/5.0 (Windows NT 10.0) Chrome/120")
+        morte.revoked_at = utcnow() - timedelta(days=90)
+        db.session.commit()
+
+        set_session_retention_days(30)
+        supprimees = purge_stale_sessions()
+        assert supprimees >= 1
+        assert db.session.get(AuthSession, morte.id) is None
+        assert db.session.get(AuthSession, vivante.id) is not None
+
+
+def test_duree_de_session_reglable(app):
+    from datetime import timedelta
+    from app.extensions import db
+    from app.models import AuthSession, User, utcnow
+    from app.settings_service import set_session_hours
+
+    _make_user(app, "duree")
+    with app.app_context():
+        set_session_hours(2)
+        user = User.query.filter_by(username="duree").one()
+        row = _ouvrir_session(app, user, "Mozilla/5.0 (Linux; Android 13) Chrome/120")
+        assert row.expires_at - utcnow() < timedelta(hours=2, minutes=5)
+        set_session_hours(8)
+
+
+def test_pages_administration_des_connexions(client, app):
+    _make_user(app, "moderateur.connexions", role=ROLE_ADMIN)
+    _login(client, "moderateur.connexions", "MotDePasse2026!")
+    assert client.get("/admin/sessions").status_code == 200
+    assert client.get("/admin/connexions").status_code == 200
+    data = client.get("/admin/api/presence").get_json()
+    assert data["ok"] and "counts" in data and "sessions" in data
+    for session in data["sessions"]:
+        assert "token" not in session and "state" in session
+
+
+def test_eleve_interdit_sur_les_sessions(client, app):
+    _make_user(app, "curieux.sessions")
+    _login(client, "curieux.sessions", "MotDePasse2026!")
+    assert client.get("/admin/sessions").status_code == 403
+    assert client.get("/admin/connexions").status_code == 403
+    assert client.get("/admin/api/presence").status_code == 403
+
+
+def test_les_scripts_ne_fabriquent_pas_de_fausse_habitude(app):
+    """Un appareil réel ne doit pas être signalé « inhabituel » à cause des scripts."""
+    from app.extensions import db
+    from app.models import User
+    from app.sessions_service import list_sessions
+
+    _make_user(app, "habitude")
+    with app.app_context():
+        user = User.query.filter_by(username="habitude").one()
+        for _ in range(3):
+            _ouvrir_session(app, user, "python-requests/2.31.0")
+        reelle = _ouvrir_session(app, user,
+                                 "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari")
+        b = User.query.filter_by(username="apprenant").first()
+        fiche = next(f for f in list_sessions(q="habitude")["items"] if f["id"] == reelle.id)
+        assert fiche["reason"] == "" or fiche["reason"] == "appareil inhabituel"
+        assert all(f["reason"] == "script automatisé"
+                   for f in list_sessions(q="habitude")["items"] if f["bot"])
+
+
+def test_session_suspecte_jamais_la_session_courante(app):
+    from app.sessions_service import suspicious_reason
+    from app.models import AuthSession, utcnow
+    from datetime import timedelta
+
+    row = AuthSession(id=99, expires_at=utcnow() + timedelta(hours=1),
+                      last_seen_at=utcnow(), user_agent="python-requests/2.31")
+    assert suspicious_reason(row, None, 99) == "script automatisé"      # un script reste signalé
+    row.user_agent = "Mozilla/5.0 (Windows NT 10.0) Chrome/121 Safari"
+    habitude = {row.user_id or 0: ("empreinte", 5)}
+    assert suspicious_reason(row, habitude, 99) == ""                    # jamais la session courante

@@ -133,7 +133,12 @@ def create_auth_session(user: User, remember: bool = False) -> str:
     if remember:
         hours = current_app.config.get("AUTH_REMEMBER_HOURS", 720)
     else:
-        hours = current_app.config.get("AUTH_SESSION_HOURS", 8)
+        # durée choisie par l'administration (Paramètres → Sessions et appareils)
+        try:
+            from ..settings_service import session_hours
+            hours = session_hours()
+        except Exception:
+            hours = current_app.config.get("AUTH_SESSION_HOURS", 8)
     row = AuthSession(
         user_id=user.id,
         token_hash=_hash_token(token),
@@ -188,13 +193,54 @@ def load_current_user():
     if not user or user.status != STATUS_ACTIVE:
         return None
     now = utcnow()
-    if not row.last_seen_at or (now - row.last_seen_at).total_seconds() > 30:
+    touched = False
+    # Une écriture par minute au maximum et par session : avec plusieurs
+    # centaines de personnes connectées, la base n'est pas saturée.
+    if not row.last_seen_at or (now - row.last_seen_at).total_seconds() > 60:
         row.last_seen_at = now
-    if not user.last_seen_at or (now - user.last_seen_at).total_seconds() > 20:
+        touched = True
+    if not user.last_seen_at or (now - user.last_seen_at).total_seconds() > 60:
         user.last_seen_at = now
-    db.session.commit()
+        touched = True
+    if touched:
+        db.session.commit()
+    _watch_device_change(row)
     g.auth_session = row
     return user
+
+
+#: Sessions déjà contrôlées pour un changement d'appareil (mémoire du processus).
+_UA_CHECKED: set[int] = set()
+_UA_CHECKED_MAX = 5000
+
+
+def _watch_device_change(row: AuthSession) -> None:
+    """Signale (une fois) une session utilisée depuis un autre appareil.
+
+    Objectif : détecter un **vol de cookie**. On ne ferme pas la session
+    automatiquement — un navigateur peut légitimement se mettre à jour et
+    changer son en-tête. On journalise, l'administration décide.
+    """
+    try:
+        from ..presence import device_fingerprint
+        if row.id in _UA_CHECKED or row.user_agent is None:
+            return
+        if len(_UA_CHECKED) > _UA_CHECKED_MAX:
+            _UA_CHECKED.clear()
+        _UA_CHECKED.add(row.id)
+        actuel = (request.user_agent.string or "").strip()
+        if not actuel or not row.user_agent:
+            return
+        if device_fingerprint(actuel) != device_fingerprint(row.user_agent):
+            db.session.add(AuditLog(
+                actor_id=row.user_id, actor_label="système",
+                action="session.device_changed", target=str(row.id),
+                details=f"connexion={device_fingerprint(row.user_agent)} "
+                        f"requete={device_fingerprint(actuel)}",
+                ip=client_ip()))
+            db.session.commit()
+    except Exception:                     # jamais bloquant pour l'utilisateur
+        db.session.rollback()
 
 
 def revoke_session(row: AuthSession) -> None:

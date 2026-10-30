@@ -888,15 +888,30 @@
 
   /* Actions inline remplacées par des attributs (CSP sans « unsafe-inline ») */
   /* ---------- Présence : qui est connecté, en direct ---------- */
+  /* Rafraîchit les compteurs et l'état des sessions sans recharger la page. */
   function initPresence() {
     var compteurs = $$("[data-presence-count]");
     var sessionsEls = $$("[data-presence-sessions]");
     var badge = $("[data-presence-badge]");
     var liste = $("[data-presence-list]");
-    if (!compteurs.length && !liste.length) return;
+    var cartes = $$("[data-session-state]");
+    if (!compteurs.length && !sessionsEls.length && !liste && !cartes.length) return;
 
     var url = document.body.getAttribute("data-presence-url") || "/admin/api/presence";
     var dernier = 0;
+    var etiquettes = { online: "En ligne", idle: "Inactive", expired: "Expirée", revoked: "Révoquée" };
+    var classes = { online: "success", idle: "neutral", expired: "warning", revoked: "danger" };
+
+    function peindreEtat(carte, etat) {
+      carte.setAttribute("data-session-state", etat);
+      var pastille = carte.querySelector(".badge");
+      if (!pastille) return;
+      pastille.className = "badge badge--" + (classes[etat] || "neutral");
+      var point = pastille.querySelector(".state-dot");
+      pastille.textContent = "";
+      if (point) pastille.appendChild(point);
+      pastille.appendChild(document.createTextNode(" " + (etiquettes[etat] || etat)));
+    }
 
     function peindre(data) {
       if (!data || !data.ok) return;
@@ -909,34 +924,37 @@
         badge.classList.toggle("badge-success", !!c.online_users);
       }
 
-      // Sur la page Sessions : on marque les lignes encore actives
-      (data.sessions || []).forEach(function (row) {
-        var ligne = document.querySelector('[data-session-row="' + row.id + '"]');
-        if (ligne) ligne.setAttribute("data-session-online", row.online ? "true" : "false");
+      var parId = {};
+      (data.sessions || []).forEach(function (row) { parId[row.id] = row; });
+
+      // Page « Utilisateurs connectés » : on met à jour l'état sans toucher au reste
+      cartes.forEach(function (carte) {
+        var row = parId[carte.getAttribute("data-session-row")];
+        if (!row) return;
+        if (carte.getAttribute("data-session-state") !== row.state) peindreEtat(carte, row.state);
       });
 
       if (!liste) return;
-      var cle = JSON.stringify((data.sessions || []).map(function (row) {
-        return row.user_id + row.device + row.online;
-      }));
+      var enLigne = (data.sessions || []).filter(function (row) { return row.online; });
+      var cle = JSON.stringify(enLigne.map(function (row) { return row.user_id + row.device; }));
       if (cle === dernier) return;          // rien n'a changé : on ne touche pas au DOM
       dernier = cle;
 
-      if (!data.sessions || !data.sessions.length) {
+      if (!enLigne.length) {
         liste.innerHTML = '<p class="text-sm text-muted" style="margin:0">' +
           "Personne n'est connecté pour le moment.</p>";
         return;
       }
       var vus = {};
       liste.innerHTML = "";
-      data.sessions.forEach(function (row) {
+      enLigne.forEach(function (row) {
         if (vus[row.user_id]) return;       // une ligne par personne
         vus[row.user_id] = true;
         var item = document.createElement("div");
         item.className = "presence-item";
 
         var pastille = document.createElement("span");
-        pastille.className = "avatar avatar-sm";
+        pastille.className = "avatar avatar--sm";
         pastille.style.setProperty("--hue", (row.user_id * 47) % 360);
         var initiales = document.createElement("span");
         initiales.className = "avatar-initials";
@@ -954,7 +972,7 @@
 
         var quand = document.createElement("span");
         quand.className = "presence-when";
-        quand.textContent = row.online ? "à l'instant" : "";
+        quand.textContent = "à l'instant";
 
         item.appendChild(pastille);
         item.appendChild(corps);
