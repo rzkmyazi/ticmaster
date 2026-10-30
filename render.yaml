@@ -39,9 +39,15 @@ services:
       - key: AUTH_SESSION_HOURS
         value: "8"
       - key: LOGIN_MAX_ATTEMPTS
-        value: "5"
+        value: "8"
       - key: LOGIN_LOCK_MINUTES
         value: "15"
+      # Connexions simultanées : seules les erreurs comptent (une classe entière
+      # derrière la même adresse IP peut travailler sans être bloquée).
+      - key: LOGIN_IP_MAX_ATTEMPTS
+        value: "40"
+      - key: LOGIN_IP_WINDOW_MINUTES
+        value: "10"
       - key: PRESENCE_ONLINE_SECONDS
         value: "120"
       - key: MAX_CONTENT_MB
