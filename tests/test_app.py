@@ -40,6 +40,15 @@ def app():
         db.drop_all()
 
 
+@pytest.fixture(autouse=True)
+def _reset_limiter():
+    """Le limiteur de débit est en mémoire et partagé : on le vide entre les tests."""
+    from app.security.core import limiter
+    limiter._events.clear()
+    yield
+    limiter._events.clear()
+
+
 @pytest.fixture()
 def client(app):
     return app.test_client()
@@ -169,9 +178,11 @@ def test_admin_cannot_reach_super_admin_pages(client, app):
     _make_user(app, "moderateur", role=ROLE_ADMIN)
     _login(client, "moderateur", "MotDePasse2026!")
     assert client.get("/admin/utilisateurs").status_code == 200
-    for path in ("/admin/journal", "/admin/messages-utilisateurs",
-                 "/admin/sessions", "/admin/sauvegardes"):
+    for path in ("/admin/journal", "/admin/messages-utilisateurs", "/admin/sauvegardes"):
         assert client.get(path).status_code == 403
+    # Vague 14 : la surveillance des connexions est ouverte aux administrateurs
+    assert client.get("/admin/sessions").status_code == 200
+    assert client.get("/admin/api/presence").status_code == 200
 
 
 def test_admin_cannot_edit_super_admin(client, app):
@@ -2087,3 +2098,116 @@ def test_mot_de_passe_faible_ne_cree_pas_de_compte(app):
     assert "Le compte n&#39;a pas été créé" in page or "Le compte n'a pas été créé" in page
     with app.app_context():
         assert User.query.filter_by(username="trop.faible").first() is None
+
+
+# ---------------------------------------------------------------------------
+# Vague 14 — connexion simultanée multi-utilisateurs
+# ---------------------------------------------------------------------------
+def test_deux_comptes_connectes_en_meme_temps(app):
+    """Deux téléphones, deux personnes : chacune garde son espace."""
+    _make_user(app, "premier")
+    _make_user(app, "second")
+    telephone = app.test_client()
+    ordinateur = app.test_client()
+
+    _login(telephone, "premier", "MotDePasse2026!")
+    page = telephone.get("/espace")
+    assert page.status_code == 200 and b"premier" in page.data.lower()
+
+    _login(ordinateur, "second", "MotDePasse2026!")
+    page = ordinateur.get("/espace")
+    assert page.status_code == 200 and b"second" in page.data.lower()
+
+    # la première personne n'a pas été déconnectée
+    again = telephone.get("/espace")
+    assert again.status_code == 200 and b"premier" in again.data.lower()
+
+    with app.app_context():
+        from app.models import AuthSession
+        assert AuthSession.query.filter_by(revoked_at=None).count() == 2
+
+
+def _ouvrir_session(app, user, agent="Mozilla/5.0 (Linux; Android 13)"):
+    """Crée une session comme le ferait une vraie connexion (IP + appareil)."""
+    from app.extensions import db
+    from app.models import AuthSession
+    from app.security.core import _hash_token, create_auth_session
+
+    with app.test_request_context(headers={"User-Agent": agent},
+                                  environ_base={"REMOTE_ADDR": "127.0.0.1"}):
+        token = create_auth_session(user)
+        db.session.commit()
+        return AuthSession.query.filter_by(token_hash=_hash_token(token)).one()
+
+
+def test_une_connexion_ne_ferme_pas_les_autres_sessions(app):
+    from app.models import AuthSession, User
+
+    _make_user(app, "jumelle")
+    with app.app_context():
+        user = User.query.filter_by(username="jumelle").one()
+        un = _ouvrir_session(app, user, "Mozilla/5.0 (Linux; Android 13)")
+        deux = _ouvrir_session(app, user, "Mozilla/5.0 (Windows NT 10.0)")
+        assert un.is_valid and deux.is_valid
+        assert AuthSession.query.filter_by(user_id=user.id).count() == 2
+
+
+def test_limite_appareils_reglable(app):
+    from app.extensions import db
+    from app.models import AuthSession, User
+    from app.security.core import create_auth_session
+    from app.settings_service import max_devices, set_max_devices
+
+    _make_user(app, "mobile")
+    with app.app_context():
+        assert max_devices() == 0            # illimité par défaut
+        set_max_devices(1)
+        db.session.commit()
+        user = User.query.filter_by(username="mobile").one()
+        premier = _ouvrir_session(app, user, "appareil A")
+        second = _ouvrir_session(app, user, "appareil B")
+        ouvertes = AuthSession.query.filter_by(user_id=user.id, revoked_at=None).count()
+        assert ouvertes == 1                  # seule la plus récente reste
+        assert not db.session.get(AuthSession, premier.id).is_valid
+        assert second.is_valid
+        set_max_devices(0)
+        db.session.commit()
+
+
+def test_presence_compte_les_sessions_et_les_comptes(app):
+    from app.extensions import db
+    from app.models import User
+    from app.presence import counts, device_label, snapshot
+    from app.security.core import create_auth_session
+
+    _make_user(app, "vigie")
+    _make_user(app, "veilleur")
+    with app.app_context():
+        avant = counts()["online_users"]
+        for nom in ("vigie", "veilleur"):
+            user = User.query.filter_by(username=nom).one()
+            _ouvrir_session(app, user, "Mozilla/5.0 (Linux; Android 13)")
+        apres = counts()
+        assert apres["online_users"] >= avant + 2
+        assert apres["online_sessions"] >= 2
+        etat = snapshot()
+        assert len(etat["sessions"]) >= 2 and etat["counts"]["online_users"] >= avant + 2
+        ua = ("Mozilla/5.0 (Linux; Android 13; SM-A125F) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36")
+        assert device_label(ua) == "Android · Chrome"
+
+
+def test_echecs_repetes_ne_bloquent_pas_un_bon_mot_de_passe(client, app):
+    _make_user(app, "tolerance")
+    with app.app_context():           # le verrouillage par compte reste actif, on l'isole
+        app.config["LOGIN_MAX_ATTEMPTS"] = 999
+    for _ in range(15):
+        client.post("/auth/connexion", data={
+            "csrf_token": _csrf(client), "identifier": "tolerance",
+            "password": "FauxMotDePasse!", "remember": ""})
+    page = client.post("/auth/connexion", data={
+        "csrf_token": _csrf(client), "identifier": "tolerance",
+        "password": "MotDePasse2026!", "remember": ""}, follow_redirects=True)
+    assert page.status_code == 200                      # ni 429, ni message de blocage
+    assert page.request.path == "/espace"               # on arrive bien dans son espace
+    assert b"Trop de tentatives" not in page.data

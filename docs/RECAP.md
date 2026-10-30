@@ -641,14 +641,80 @@ Captures : `apercus/android/v13-connexion.png`, `v13-politique.png`, `v13-erreur
 
 ---
 
+## 19. Mise à jour du 30/10/2026 — Connexion simultanée multi-utilisateurs (vague 14)
+
+### 19.1 Ce qui a été vérifié avant toute modification
+
+Le socle serveur était déjà multi-utilisateurs : une table `auth_sessions`, un jeton aléatoire par
+connexion (stocké **haché en SHA-256**), un cookie `HttpOnly`, aucun écrasement de session.
+
+| Scénario mesuré | Résultat |
+|---|---|
+| Deux comptes différents en même temps | ✔ |
+| Même compte sur deux navigateurs (le premier reste connecté) | ✔ |
+| 30 connexions simultanées depuis la même adresse IP | 30 / 30 ✔ |
+| Trois erreurs de mot de passe d'affilée | ✔ aucune gêne |
+| **13 erreurs d'affilée puis le bon mot de passe** | ✘ **toute l'adresse IP bloquée** |
+
+Le défaut réel se situait donc dans **la limite anti-force brute par adresse IP** : elle comptait
+*chaque tentative*, réussie ou non. Derrière la box d'une salle de classe, un seul élève qui se trompe
+plusieurs fois privait **toute la classe** de connexion pendant dix minutes.
+
+### 19.2 Corrections apportées
+
+* **La limite par IP ne compte plus que les échecs** (`limiter.blocked` en amont, `limiter.hit`
+  uniquement sur mot de passe faux ou compte inconnu) et le seuil passe de 12 à **40 échecs / 10 min** :
+  une classe entière peut travailler normalement, y compris après des fautes de frappe.
+* **Le verrouillage par compte** (8 erreurs → 15 minutes) est conservé : il protège le compte visé,
+  **jamais** ceux des autres. Un bouton **« Déverrouiller le compte »** apparaît sur la fiche de
+  l'élève concerné pour que le professeur le libère sur-le-champ, sans changer son mot de passe.
+* **Règle d'appareils par compte, réglable par l'administrateur** (`/admin/parametres`) :
+  *illimité* (défaut), 1, 2, 3, 5 ou 10 appareils simultanés. Au-delà, seules les sessions les plus
+  anciennes **du compte concerné** sont fermées — les autres personnes ne sont jamais touchées.
+* **Page « Utilisateurs connectés »** (`/admin/sessions`), ouverte aux administrateurs comme au
+  super administrateur : personne, **appareil** (« Android · Chrome », « iPhone · Safari », « Windows ·
+  Chrome », « Robot / script »), heure de connexion, dernière activité, expiration, adresse IP, état
+  (En ligne / Ouverte / Fermée), recherche par nom, filtre « sessions ouvertes seulement » et
+  **fermeture individuelle** d'une session. La session courante et celles des super administrateurs
+  sont protégées.
+* **Carte « Qui est connecté maintenant »** sur le tableau de bord : nom, appareil, nombre d'appareils,
+  dernière activité, lien vers la page complète. **Rafraîchissement automatique toutes les 20 secondes**
+  via `GET /admin/api/presence` (aucun rechargement de page, aucune gêne pour les connectés).
+* **Déconnexion globale d'un compte** (`POST /admin/utilisateurs/<id>/deconnecter`) : ferme toutes ses
+  sessions sans suspendre le compte.
+* **Aucun secret dans le navigateur** : le jeton de session reste dans un cookie `HttpOnly` ; l'API de
+  présence ne renvoie que nom, appareil, adresse IP et horodatages.
+
+### 19.3 Preuves (serveur local, 30/10/2026)
+
+| Contrôle | Résultat |
+|---|---|
+| Deux comptes différents connectés simultanément | ✔ |
+| Le premier reste connecté après la connexion du second | ✔ |
+| Même compte sur deux appareils, les deux vivants | ✔ |
+| 30 connexions simultanées depuis la même IP | **30 / 30** ✔ |
+| 13 erreurs sur un compte → les autres comptes se connectent toujours | ✔ |
+| 13 erreurs sur un compte → ce compte est verrouillé, puis déverrouillé par l'administrateur | ✔ |
+| Règle « 1 appareil » : seul l'ancien appareil du compte visé est fermé | ✔ |
+| Retour à « illimité » : la règle disparaît sans redémarrage | ✔ |
+| Révocation d'une session : un appareil tombe, l'autre continue | ✔ |
+| Page de présence interdite à un élève (403) | ✔ |
+| Tableau de bord : compteur vivant (4 en ligne → 3 après révocation) | ✔ |
+
+Captures : `apercus/android/v14-sessions.png`, `v14-presence.png`, `v14-reglage-appareils.png`.
+
+---
+
+---
+
 ## Vérifications automatiques
 
 | Contrôle | Résultat |
 |---|---|
-| `pytest -q` | **89 tests réussis** |
-| `tools/verify.py` (local) | **246 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur Render | **248 contrôles conformes, 0 échec** |
-| `tools/verify.py` sur PythonAnywhere | **248 contrôles conformes, 0 échec** |
+| `pytest -q` | **94 tests réussis** |
+| `tools/verify.py` (local) | **258 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur Render | **260 contrôles conformes, 0 échec** |
+| `tools/verify.py` sur PythonAnywhere | **260 contrôles conformes, 0 échec** |
 
 Les dossiers de démonstration (`instance/`) ne sont **jamais** déployés : la production ne contient
 que le compte `Myazirzk` et les comptes réellement créés par l'administration.

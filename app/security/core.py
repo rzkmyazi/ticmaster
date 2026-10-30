@@ -99,6 +99,10 @@ class RateLimiter:
                         self._events.pop(k, None)
             return len(bucket) > limit
 
+    def blocked(self, key: str, limit: int, window_seconds: int) -> bool:
+        """La clé a-t-elle dépassé sa limite ? (n'enregistre rien)"""
+        return self.count(key, window_seconds) >= limit
+
     def count(self, key: str, window_seconds: int) -> int:
         now = datetime.now(timezone.utc).timestamp()
         with self._lock:
@@ -143,6 +147,27 @@ def create_auth_session(user: User, remember: bool = False) -> str:
     user.failed_attempts = 0
     user.locked_until = None
     db.session.commit()
+
+    # Règle de l'administrateur : nombre d'appareils simultanés par compte.
+    # Elle ne touche JAMAIS les sessions des autres personnes.
+    try:
+        from ..settings_service import max_devices
+        limite = max_devices()
+        if limite:
+            autres = [
+                autre for autre in AuthSession.query.filter_by(user_id=user.id)
+                .filter(AuthSession.revoked_at.is_(None))
+                .order_by(AuthSession.created_at.desc())
+                .all()
+                if autre.id != row.id and autre.is_valid
+            ]
+            # on garde les plus récentes (celle-ci incluse), on ferme les plus anciennes
+            for vieille in autres[limite - 1:]:
+                vieille.revoked_at = utcnow()
+            if any(a.revoked_at for a in autres[limite - 1:]):
+                db.session.commit()
+    except Exception:                       # une règle illisible ne bloque jamais la connexion
+        db.session.rollback()
     return token
 
 

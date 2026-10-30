@@ -55,6 +55,38 @@
               </div>
               <button class="btn btn-primary" type="submit">{{ icon('save') }} Enregistrer</button>
             </form>
+
+            <hr class="sep" style="margin:1.2rem 0">
+
+            <h3 class="card-title" style="font-size:.98rem">{{ icon('key', 17) }} Sessions et appareils</h3>
+            <p class="text-xs text-muted mb-1">
+              Chaque personne possède sa propre session : plusieurs comptes (et plusieurs appareils)
+              fonctionnent en même temps sans jamais se déconnecter mutuellement.
+            </p>
+            <form method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="section" value="general">
+              <div class="field">
+                <label for="max_devices">Appareils simultanés par compte</label>
+                <div class="row" style="gap:.5rem;align-items:center">
+                  <select id="max_devices" name="max_devices" style="max-width:280px">
+                    <option value="0" {{ 'selected' if values.max_devices == 0 }}>Illimité (recommandé)</option>
+                    <option value="1" {{ 'selected' if values.max_devices == 1 }}>1 appareil à la fois</option>
+                    <option value="2" {{ 'selected' if values.max_devices == 2 }}>2 appareils</option>
+                    <option value="3" {{ 'selected' if values.max_devices == 3 }}>3 appareils</option>
+                    <option value="5" {{ 'selected' if values.max_devices == 5 }}>5 appareils</option>
+                    <option value="10" {{ 'selected' if values.max_devices == 10 }}>10 appareils</option>
+                  </select>
+                  <span class="badge badge-info">{{ values.max_devices_label }}</span>
+                </div>
+                <span class="hint">
+                  Au-delà de la limite, seuls les appareils les plus anciens du compte concerné sont
+                  fermés — jamais ceux des autres personnes. <strong>Illimité</strong> convient à une
+                  classe où l'élève peut passer du téléphone à l'ordinateur.
+                </span>
+              </div>
+              <button class="btn btn-outline btn-sm" type="submit">{{ icon('save', 15) }} Appliquer la règle</button>
+            </form>
           </div>
         </section>
 

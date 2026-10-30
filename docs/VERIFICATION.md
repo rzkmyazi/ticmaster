@@ -748,6 +748,31 @@ PythonAnywhere**, pas seulement en local.
 - `pytest -q` → **89 tests réussis** (6 nouveaux).
 - `tools/verify.py` → **246** contrôles en local, **248** sur PythonAnywhere et sur Render (0 échec).
 
+
+---
+
+## 23. Mise à jour du 30/10/2026 — Connexions simultanées (vague 14)
+
+| Contrôle | Résultat |
+|---|---|
+| Deux comptes connectés en même temps (deux navigateurs distincts) | ✔ |
+| Le premier reste connecté après la connexion du second | ✔ |
+| Même compte sur deux appareils, les deux sessions vivantes | ✔ |
+| 30 connexions simultanées depuis la même adresse IP | 30 / 30 ✔ |
+| 13 erreurs de mot de passe sur un compte → les autres comptes se connectent | ✔ |
+| Limite par IP : seuls les échecs comptent (40 / 10 min) | ✔ |
+| Compte visé verrouillé après 8 erreurs, puis « Déverrouiller » par l'administrateur | ✔ |
+| Règle d'appareils : illimité / 1 / 2 / 3 / 5 / 10, appliquée au seul compte concerné | ✔ |
+| Révocation individuelle d'une session : un appareil tombe, l'autre continue | ✔ |
+| Session courante et sessions des super administrateurs protégées | ✔ |
+| Page `/admin/sessions` : appareil, dernière activité, IP, état, recherche, filtre | ✔ |
+| API `/admin/api/presence` : compteurs + appareils, **aucun jeton** | ✔ |
+| Carte « Qui est connecté maintenant » : rafraîchissement toutes les 20 s | ✔ |
+| Accès refusé à un élève (403) | ✔ |
+
+- `pytest -q` → **94 tests réussis** (5 nouveaux).
+- `tools/verify.py` → **258** contrôles en local, **260** sur PythonAnywhere et sur Render (0 échec).
+
 ---
 
 *Rapport généré automatiquement à partir des sorties de `pytest` et `tools/verify.py`.*

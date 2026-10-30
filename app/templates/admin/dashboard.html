@@ -9,13 +9,53 @@
 <div class="stats-grid mb-2">
   <div class="stat"><span class="stat-label">Utilisateurs</span><div class="stat-value">{{ stats.users }}</div>
     <div class="stat-foot">dont {{ stats.admins }} administrateur(s)</div>{{ icon('users', 'stat-icon') }}</div>
-  <div class="stat"><span class="stat-label">En ligne</span><div class="stat-value">{{ stats.online }}</div>
-    <div class="stat-foot">actifs maintenant</div>{{ icon('activity', 'stat-icon') }}</div>
+  <a class="stat stat--link" href="{{ url_for('admin.sessions') }}">
+    <span class="stat-label">En ligne</span>
+    <div class="stat-value" data-presence-count>{{ stats.online }}</div>
+    <div class="stat-foot"><span data-presence-sessions>{{ stats.online_sessions }}</span> session(s) · voir qui</div>
+    {{ icon('activity', 'stat-icon') }}
+  </a>
   <div class="stat"><span class="stat-label">Moyenne générale</span><div class="stat-value">{{ stats.average }}<small>%</small></div>
     <div class="stat-foot">{{ stats.attempts }} évaluations</div>{{ icon('chart', 'stat-icon') }}</div>
   <div class="stat"><span class="stat-label">Éliminations</span><div class="stat-value">{{ stats.eliminated }}</div>
     <div class="stat-foot">examens surveillés</div>{{ icon('ban', 'stat-icon') }}</div>
 </div>
+
+<section class="card mb-2" id="presence-card">
+  <div class="card-head">
+    <h2 class="card-title">{{ icon('activity') }} Qui est connecté maintenant</h2>
+    <div class="row" style="gap:.5rem;align-items:center">
+      <span class="badge badge-success" data-presence-badge>
+        {{ stats.online }} en ligne
+      </span>
+      <a class="text-sm" href="{{ url_for('admin.sessions') }}">Toutes les sessions →</a>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="presence-list" data-presence-list>
+      {% for ligne in connectes %}
+      <div class="presence-item">
+        {{ avatar(ligne.user, 'sm', true) }}
+        <div class="presence-main">
+          <strong>{{ ligne.user.full_name or ligne.user.username }}</strong>
+          <small>
+            {{ ligne.device }}{% if ligne.devices > 1 %} · {{ ligne.devices }} appareils{% endif %}
+          </small>
+        </div>
+        <span class="presence-when">{{ time_ago(ligne.last_seen) }}</span>
+      </div>
+      {% else %}
+      <p class="text-sm text-muted" style="margin:0" data-presence-empty>
+        Personne n'est connecté pour le moment.
+      </p>
+      {% endfor %}
+    </div>
+    <p class="text-xs text-muted mt-2">
+      {{ icon('info', 14) }} Actualisation automatique toutes les 20 secondes.
+      Chaque personne garde sa propre session : une nouvelle connexion ne ferme jamais celle d'un autre.
+    </p>
+  </div>
+</section>
 
 {% if current_user.is_super_admin %}
 <div class="card card--callout mb-2">

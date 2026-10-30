@@ -180,6 +180,14 @@
           <button class="btn btn-ghost btn-block" type="submit">{{ icon('shield') }} Révoquer les sessions</button>
         </form>
 
+        {% if user.is_locked() %}
+        <form method="post" action="{{ url_for('admin.user_status', user_id=user.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="unlock">
+          <button class="btn btn-info btn-block" type="submit">{{ icon('key') }} Déverrouiller le compte</button>
+        </form>
+        {% endif %}
+
         {% if user.status == 'active' %}
         <form method="post" action="{{ url_for('admin.user_status', user_id=user.id) }}"
               data-confirm="Suspendre le compte de {{ user.display_name }} ? Il sera déconnecté immédiatement et ne pourra plus se connecter jusqu'à sa réactivation."

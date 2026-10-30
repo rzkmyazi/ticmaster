@@ -101,14 +101,18 @@ def attempt_login(identifier: str, password: str, remember: bool = False) -> dic
     identifier = (identifier or "").strip()
     password = password or ""
 
-    # --- 1. Limitation par adresse IP (anti-force brute distribué) ---
+    # --- 1. Anti-force brute par adresse IP ---
+    # Seules les *erreurs* comptent : une classe entière derrière le même routeur
+    # peut donc se connecter en même temps, même après plusieurs fautes de frappe.
+    # Un mot de passe correct n'est jamais bloqué par cette limite.
     ip_key = f"login:ip:{client_ip()}"
     window = current_app.config.get("LOGIN_IP_WINDOW_MINUTES", 10) * 60
-    if limiter.hit(ip_key, current_app.config.get("LOGIN_IP_MAX_ATTEMPTS", 12), window):
+    ip_limit = current_app.config.get("LOGIN_IP_MAX_ATTEMPTS", 40)
+    if limiter.blocked(ip_key, ip_limit, window):
         log_audit("auth.rate_limited", target=identifier[:60], details=f"ip={client_ip()}")
         return {
             "status": "limited",
-            "message": "Trop de tentatives de connexion depuis cet appareil. Patientez quelques minutes.",
+            "message": "Trop d'échecs de connexion depuis cet appareil. Patientez quelques minutes.",
         }
 
     if not identifier or not password:
@@ -118,6 +122,7 @@ def attempt_login(identifier: str, password: str, remember: bool = False) -> dic
 
     if not user:
         verify_password(_DUMMY_HASH, password)  # temps constant
+        limiter.hit(ip_key, ip_limit, window)
         log_audit("auth.failed", target=identifier[:60], details="compte inconnu")
         return {"status": "error", "error": GENERIC_ERROR}
 
@@ -137,6 +142,8 @@ def attempt_login(identifier: str, password: str, remember: bool = False) -> dic
         if ok:
             break
     if not ok:
+        # seule une erreur alimente le compteur de l'adresse IP
+        limiter.hit(ip_key, ip_limit, window)
         user.failed_attempts = (user.failed_attempts or 0) + 1
         if user.failed_attempts >= current_app.config.get("LOGIN_MAX_ATTEMPTS", 5):
             user.locked_until = utcnow() + timedelta(

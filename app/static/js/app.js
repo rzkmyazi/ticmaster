@@ -887,6 +887,95 @@
   }
 
   /* Actions inline remplacées par des attributs (CSP sans « unsafe-inline ») */
+  /* ---------- Présence : qui est connecté, en direct ---------- */
+  function initPresence() {
+    var compteurs = $$("[data-presence-count]");
+    var sessionsEls = $$("[data-presence-sessions]");
+    var badge = $("[data-presence-badge]");
+    var liste = $("[data-presence-list]");
+    if (!compteurs.length && !liste.length) return;
+
+    var url = document.body.getAttribute("data-presence-url") || "/admin/api/presence";
+    var dernier = 0;
+
+    function peindre(data) {
+      if (!data || !data.ok) return;
+      var c = data.counts || {};
+      compteurs.forEach(function (el) { el.textContent = c.online_users || 0; });
+      sessionsEls.forEach(function (el) { el.textContent = c.online_sessions || 0; });
+      if (badge) {
+        badge.textContent = (c.online_users || 0) + " en ligne";
+        badge.classList.toggle("badge-neutral", !c.online_users);
+        badge.classList.toggle("badge-success", !!c.online_users);
+      }
+
+      // Sur la page Sessions : on marque les lignes encore actives
+      (data.sessions || []).forEach(function (row) {
+        var ligne = document.querySelector('[data-session-row="' + row.id + '"]');
+        if (ligne) ligne.setAttribute("data-session-online", row.online ? "true" : "false");
+      });
+
+      if (!liste) return;
+      var cle = JSON.stringify((data.sessions || []).map(function (row) {
+        return row.user_id + row.device + row.online;
+      }));
+      if (cle === dernier) return;          // rien n'a changé : on ne touche pas au DOM
+      dernier = cle;
+
+      if (!data.sessions || !data.sessions.length) {
+        liste.innerHTML = '<p class="text-sm text-muted" style="margin:0">' +
+          "Personne n'est connecté pour le moment.</p>";
+        return;
+      }
+      var vus = {};
+      liste.innerHTML = "";
+      data.sessions.forEach(function (row) {
+        if (vus[row.user_id]) return;       // une ligne par personne
+        vus[row.user_id] = true;
+        var item = document.createElement("div");
+        item.className = "presence-item";
+
+        var pastille = document.createElement("span");
+        pastille.className = "avatar avatar-sm";
+        pastille.style.setProperty("--hue", (row.user_id * 47) % 360);
+        var initiales = document.createElement("span");
+        initiales.className = "avatar-initials";
+        initiales.textContent = row.initials || "?";
+        pastille.appendChild(initiales);
+
+        var corps = document.createElement("div");
+        corps.className = "presence-main";
+        var nom = document.createElement("strong");
+        nom.textContent = row.name;
+        var info = document.createElement("small");
+        info.textContent = row.device;
+        corps.appendChild(nom);
+        corps.appendChild(info);
+
+        var quand = document.createElement("span");
+        quand.className = "presence-when";
+        quand.textContent = row.online ? "à l'instant" : "";
+
+        item.appendChild(pastille);
+        item.appendChild(corps);
+        item.appendChild(quand);
+        liste.appendChild(item);
+      });
+    }
+
+    function rafraichir() {
+      if (document.hidden) return;
+      fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(peindre)
+        .catch(function () {});
+    }
+
+    rafraichir();
+    window.setInterval(rafraichir, 20000);
+    on(document, "visibilitychange", function () { if (!document.hidden) rafraichir(); });
+  }
+
   /* ---------- Politique de mot de passe (liste cochée en direct) ---------- */
   function initPasswordPolicy() {
     $$("[data-password-policy]").forEach(function (input) {
@@ -960,6 +1049,7 @@
     initInlineActions();
     initPasswordPolicy();
     initErrorFocus();
+    initPresence();
 
     $$("[data-theme-toggle]").forEach(function (btn) {
       on(btn, "click", function () { TIC.theme.toggle(); });

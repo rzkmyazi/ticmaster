@@ -2,46 +2,151 @@
 
 
 {% block title %}Sessions{% endblock %}
-{% block page_title %}Sessions actives{% endblock %}
-{% block page_subtitle %}<p class="page-sub">{{ active_count }} session(s) valide(s)</p>{% endblock %}
+{% block page_title %}Utilisateurs connectés{% endblock %}
+{% block page_subtitle %}
+<p class="page-sub">
+  <span data-presence-count>{{ counts.online_users }}</span> personne(s) en ligne ·
+  <span data-presence-sessions>{{ counts.online_sessions }}</span> session(s) active(s) ·
+  {{ counts.open_sessions }} session(s) ouverte(s) au total
+</p>
+{% endblock %}
 
 {% block content %}
+<div class="stats-grid mb-2">
+  <div class="stat">
+    <span class="stat-label">En ligne maintenant</span>
+    <div class="stat-value" data-presence-count>{{ counts.online_users }}</div>
+    <div class="stat-foot">actif dans les {{ (counts.window // 60) or 1 }} dernière(s) minute(s)</div>
+    {{ icon('activity', 'stat-icon') }}
+  </div>
+  <div class="stat">
+    <span class="stat-label">Sessions actives</span>
+    <div class="stat-value" data-presence-sessions>{{ counts.online_sessions }}</div>
+    <div class="stat-foot">chaque appareil = une session</div>
+    {{ icon('key', 'stat-icon') }}
+  </div>
+  <div class="stat">
+    <span class="stat-label">Sessions ouvertes</span>
+    <div class="stat-value">{{ counts.open_sessions }}</div>
+    <div class="stat-foot">valides, y compris inactives</div>
+    {{ icon('shield', 'stat-icon') }}
+  </div>
+  <div class="stat">
+    <span class="stat-label">Comptes actifs</span>
+    <div class="stat-value">{{ counts.accounts }}</div>
+    <div class="stat-foot">peuvent se connecter</div>
+    {{ icon('users', 'stat-icon') }}
+  </div>
+</div>
+
 <section class="card">
   <div class="card-head">
     <h2 class="card-title">{{ icon('shield') }} Sessions</h2>
-    <span class="text-xs text-muted">Les jetons ne sont jamais stockés en clair (SHA-256)</span>
+    <span class="text-xs text-muted">
+      Mise à jour automatique · les jetons ne sont jamais stockés en clair (SHA-256)
+    </span>
   </div>
-  <div class="table-wrap">
-    <table class="data">
-      <thead><tr><th>Utilisateur</th><th>Créée</th><th>Dernière activité</th><th>Expire</th><th>IP</th><th>État</th><th></th></tr></thead>
-      <tbody>
-        {% for session in sessions %}
-        <tr>
-          <td>
-            <div class="cell-user">
-              {% if session.user %}{{ avatar(session.user, 'sm', session.user.is_online()) }}{% endif %}
-              <div><strong>{{ session.user.full_name or session.user.username if session.user else '—' }}</strong><small>@{{ session.user.username if session.user else '' }}</small></div>
-            </div>
-          </td>
-          <td class="text-xs">{{ fmt_dt(session.created_at) }}</td>
-          <td class="text-xs">{{ time_ago(session.last_seen_at) }}</td>
-          <td class="text-xs">{{ fmt_dt(session.expires_at) }}</td>
-          <td class="text-xs mono">{{ session.ip or '—' }}</td>
-          <td>{% if session.is_valid %}<span class="badge badge-success">Valide</span>{% else %}<span class="badge badge-neutral">Close</span>{% endif %}</td>
-          <td class="row-actions">
-            {% if session.is_valid %}
-            <form method="post" action="{{ url_for('admin.session_revoke', session_id=session.id) }}" data-confirm="Révoquer cette session ?">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button class="btn btn-sm btn-ghost" type="submit">{{ icon('logout') }} Révoquer</button>
-            </form>
-            {% endif %}
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="7"><div class="empty"><div class="empty-icon">{{ icon('shield') }}</div><h3>Aucune session</h3></div></td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+
+  <div class="card-body">
+    <form method="get" class="filter-bar mb-2">
+      <div class="quick-search" style="flex:1;min-width:200px">
+        {{ icon('search', 18) }}
+        <label class="sr-only" for="q">Rechercher une personne</label>
+        <input id="q" type="search" name="q" value="{{ q }}" placeholder="Nom ou identifiant…">
+      </div>
+      <label class="sr-only" for="filtre">Filtre</label>
+      <select id="filtre" name="filtre" data-auto-submit>
+        <option value="" {{ 'selected' if not filtre }}>Toutes les sessions</option>
+        <option value="ouvertes" {{ 'selected' if filtre == 'ouvertes' }}>Sessions ouvertes seulement</option>
+      </select>
+      <button class="btn btn-outline btn-sm" type="submit">{{ icon('filter', 15) }} Filtrer</button>
+    </form>
+
+    <div class="table-wrap">
+      <table class="data data--cards">
+        <thead>
+          <tr>
+            <th>Utilisateur</th>
+            <th>Appareil</th>
+            <th class="col-opt">Connexion</th>
+            <th>Dernière activité</th>
+            <th class="col-opt">Expire</th>
+            <th class="col-opt">Adresse IP</th>
+            <th>État</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for session in sessions %}
+          <tr data-session-row="{{ session.id }}"
+              data-session-online="{{ 'true' if session.is_online else 'false' }}"{% if not session.is_valid %} class="is-muted"{% endif %}>
+            <td data-label="Utilisateur">
+              <div class="cell-user">
+                {% if session.user %}{{ avatar(session.user, 'sm', session.is_online) }}{% endif %}
+                <div>
+                  <strong>{{ session.user.full_name or session.user.username if session.user else 'Compte supprimé' }}</strong>
+                  <small>@{{ session.user.username if session.user else '—' }}
+                    {% if session.user_id == current_user.id %} · vous{% endif %}</small>
+                </div>
+              </div>
+            </td>
+            <td class="text-xs" data-label="Appareil">
+              <span class="device-chip device-chip--{{ session.device_kind }}">
+                {{ icon('cpu', 14) }} {{ session.device }}
+              </span>
+            </td>
+            <td class="text-xs col-opt" data-label="Connexion">{{ fmt_dt(session.created_at) }}</td>
+            <td class="text-xs" data-label="Dernière activité">
+              <span class="presence-dot{{ ' is-online' if session.is_online }}"></span>
+              {{ time_ago(session.last_seen_at) }}
+            </td>
+            <td class="text-xs col-opt" data-label="Expire">{{ fmt_dt(session.expires_at) }}</td>
+            <td class="text-xs mono col-opt" data-label="Adresse IP">{{ session.ip or '—' }}</td>
+            <td data-label="État">
+              {% if session.is_valid %}
+                {% if session.is_online %}
+                <span class="badge badge-success">En ligne</span>
+                {% else %}
+                <span class="badge badge-neutral">Ouverte</span>
+                {% endif %}
+              {% else %}
+              <span class="badge badge-neutral">Fermée</span>
+              {% endif %}
+            </td>
+            <td class="row-actions" data-label="Action">
+              {% if session.can_revoke %}
+              <form method="post" action="{{ url_for('admin.session_revoke', session_id=session.id) }}"
+                    data-confirm="Fermer cette session ? Cet appareil devra se reconnecter.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-ghost" type="submit">{{ icon('logout', 15) }} Fermer</button>
+              </form>
+              {% elif session.user_id == current_user.id %}
+              <span class="text-xs text-muted">session courante</span>
+              {% else %}
+              <span class="text-xs text-muted">protégée</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8">
+              <div class="empty">
+                <div class="empty-icon">{{ icon('shield') }}</div>
+                <h3>Aucune session</h3>
+                <p>Personne n'est connecté pour le moment.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-xs text-muted mt-2">
+      {{ icon('info', 14) }}
+      Fermer une session ne supprime aucun travail : cours, résultats et messages restent enregistrés.
+      La personne devra simplement se reconnecter sur cet appareil.
+    </p>
   </div>
 </section>
 {% endblock %}

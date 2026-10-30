@@ -54,9 +54,11 @@ class Config:
     AUTH_REMEMBER_HOURS = int(os.environ.get("AUTH_REMEMBER_HOURS", str(24 * 30)))
 
     # --- Anti brute-force -------------------------------------------------
-    LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "5"))
+    LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "8"))
     LOGIN_LOCK_MINUTES = int(os.environ.get("LOGIN_LOCK_MINUTES", "15"))
-    LOGIN_IP_MAX_ATTEMPTS = int(os.environ.get("LOGIN_IP_MAX_ATTEMPTS", "12"))
+    # Seules les connexions *échouées* comptent (une classe derrière une même
+    # adresse IP doit pouvoir se connecter normalement).
+    LOGIN_IP_MAX_ATTEMPTS = int(os.environ.get("LOGIN_IP_MAX_ATTEMPTS", "40"))
     LOGIN_IP_WINDOW_MINUTES = int(os.environ.get("LOGIN_IP_WINDOW_MINUTES", "10"))
 
     # --- Uploads ----------------------------------------------------------

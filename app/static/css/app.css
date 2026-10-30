@@ -2551,3 +2551,75 @@ body.confirm-open { overflow: hidden; }
 }
 .login-first svg { flex: 0 0 auto; margin-top: .15rem; color: var(--accent); }
 [data-theme="light"] .login-first { background: rgba(14, 116, 224, .06); }
+
+/* ---------- 34. Utilisateurs connectés : présence, appareils, sessions ---------- */
+.presence-list { display: grid; gap: .5rem; }
+.presence-item {
+  display: flex; align-items: center; gap: .65rem;
+  padding: .55rem .7rem; border-radius: var(--radius);
+  border: 1px solid var(--line); background: var(--surface-2);
+}
+.presence-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.presence-main strong { font-size: .88rem; font-weight: 600; }
+.presence-main small {
+  font-size: .72rem; color: var(--text-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.presence-when { font-size: .7rem; color: var(--text-muted, var(--text-2)); white-space: nowrap; }
+
+.presence-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: #f87171; margin-right: .3rem; vertical-align: middle;
+}
+.presence-dot.is-online { background: #34d399; box-shadow: 0 0 0 3px rgba(52, 211, 153, .18); }
+
+.device-chip {
+  display: inline-flex; align-items: center; gap: .28rem;
+  padding: .16rem .5rem; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface-2);
+  font-size: .72rem; color: var(--text-2); white-space: nowrap;
+}
+.device-chip--mobile { border-color: rgba(56, 189, 248, .45); color: var(--accent); }
+.device-chip--tablet { border-color: rgba(167, 139, 250, .45); }
+
+.stat--link { text-decoration: none; color: inherit; transition: transform .15s var(--ease), border-color .15s var(--ease); }
+.stat--link:hover { transform: translateY(-2px); border-color: var(--accent); }
+
+tr.is-muted { opacity: .55; }
+
+@media (max-width: 560px) {
+  .presence-item { padding: .5rem .6rem; }
+  .device-chip { font-size: .68rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stat--link { transition: none; }
+}
+
+@media (max-width: 760px) {
+  .data .col-opt { display: none; }          /* mobile : on garde l'essentiel */
+  .data td .cell-user small { font-size: .68rem; }
+}
+
+/* Tableau des sessions en fiches sur mobile (aucun défilement horizontal) */
+@media (max-width: 760px) {
+  .data--cards thead { display: none; }
+  .data--cards, .data--cards tbody, .data--cards tr, .data--cards td { display: block; width: 100%; }
+  .data--cards tr {
+    border: 1px solid var(--line); border-radius: var(--radius);
+    margin-bottom: .6rem; padding: .35rem .15rem; background: var(--surface-2);
+  }
+  .data--cards td {
+    border: 0; padding: .3rem .8rem; text-align: left;
+    display: flex; align-items: center; justify-content: space-between; gap: .8rem;
+  }
+  .data--cards td::before {
+    content: attr(data-label); font-size: .68rem; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--text-2); flex: 0 0 45%;
+  }
+  .data--cards td:first-child { padding-bottom: .45rem; }
+  .data--cards td:first-child::before { content: none; }
+  .data--cards td.row-actions::before { content: none; }
+  .data--cards td.row-actions { padding-top: .1rem; }
+  .data--cards td.row-actions form { width: 100%; }
+  .data--cards td.row-actions .btn { width: 100%; justify-content: center; }
+}

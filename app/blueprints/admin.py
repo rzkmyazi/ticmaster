@@ -66,8 +66,26 @@ def dashboard():
     ).scalar()
     stats["average"] = round(avg) if avg else 0
 
-    online_threshold = now - timedelta(seconds=current_app.config.get("PRESENCE_ONLINE_SECONDS", 120))
-    stats["online"] = User.query.filter(User.last_seen_at >= online_threshold).count()
+    from ..presence import counts as presence_counts, device_label, online_sessions, online_users
+
+    voir_en_ligne = presence_counts()
+    stats["online"] = voir_en_ligne["online_users"]
+    stats["online_sessions"] = voir_en_ligne["online_sessions"]
+    stats["open_sessions"] = voir_en_ligne["open_sessions"]
+    stats["window"] = voir_en_ligne["window"]
+
+    connectes = []
+    for personne in online_users(limit=8):
+        appareils = sorted({
+            device_label(row.user_agent) for row in online_sessions(limit=300)
+            if row.user_id == personne.id
+        })
+        connectes.append({
+            "user": personne,
+            "device": " · ".join(appareils[:2]) if appareils else "—",
+            "devices": len(appareils),
+            "last_seen": personne.last_seen_at,
+        })
 
     recent_attempts = (
         Attempt.query.order_by(Attempt.started_at.desc()).limit(8).all()
@@ -111,6 +129,7 @@ def dashboard():
         pending_requests=pending_requests, pending_battles=pending_battles,
         module_stats=module_stats, signups=signups, max_signup=max_signup,
         individual_notes=individual_notes, note20=note20, mention_for=mention_for,
+        connectes=connectes,
     )
 
 
@@ -429,6 +448,18 @@ def user_status(user_id: int):
         abort(403)
 
     action = request.form.get("action")
+
+    # Déverrouillage : après plusieurs fautes de frappe, on libère le compte
+    # sans changer son mot de passe.
+    if action == "unlock":
+        user.failed_attempts = 0
+        user.locked_until = None
+        db.session.commit()
+        log_audit("user.unlocked", target=user.username)
+        flash(f"Compte de {user.display_name or user.username} déverrouillé : "
+              f"la personne peut se reconnecter tout de suite.", "success")
+        return redirect(url_for("admin.user_detail", user_id=user.id))
+
     mapping = {
         "suspend": (STATUS_SUSPENDED, "Compte suspendu."),
         "activate": (STATUS_ACTIVE, "Compte réactivé."),
@@ -1116,25 +1147,96 @@ def audit():
     )
 
 
+def _can_revoke_session(actor: User, row: AuthSession) -> bool:
+    """Un administrateur ne ferme jamais la session d'un super administrateur.
+
+    Personne ne peut non plus fermer sa propre session depuis cette page
+    (la déconnexion normale existe pour cela).
+    """
+    if row.user_id == actor.id:
+        return False
+    if row.user and row.user.is_super_admin and not actor.is_super_admin:
+        return False
+    return True
+
+
 @bp.route("/sessions")
-@super_admin_required
+@admin_required
 def sessions():
-    rows = (
-        AuthSession.query.order_by(AuthSession.last_seen_at.desc()).limit(200).all()
+    """Qui est connecté, depuis quel appareil, et depuis quand."""
+    from ..presence import counts, device_kind, device_label, online_threshold
+
+    filtre = (request.args.get("filtre") or "").strip()
+    q = (request.args.get("q") or "").strip()
+    seuil = online_threshold()
+
+    query = AuthSession.query.order_by(AuthSession.last_seen_at.desc())
+    if filtre == "ouvertes":
+        query = query.filter(AuthSession.revoked_at.is_(None))
+    if q:
+        like = f"%{q.lower()}%"
+        query = query.join(User, User.id == AuthSession.user_id).filter(
+            db.or_(func.lower(User.username).like(like),
+                   func.lower(User.full_name).like(like))
+        )
+    rows = query.limit(300).all()
+
+    for row in rows:
+        row.device = device_label(row.user_agent)
+        row.device_kind = device_kind(row.user_agent)
+        row.is_online = bool(row.is_valid and row.last_seen_at and row.last_seen_at >= seuil)
+        row.can_revoke = _can_revoke_session(g.user, row) and row.is_valid
+
+    en_ligne = [row for row in rows if row.is_online]
+    ouvertes = [row for row in rows if row.is_valid]
+
+    return render_template(
+        "admin/sessions.html",
+        sessions=rows,
+        online=len({row.user_id for row in en_ligne}),
+        online_sessions=len(en_ligne),
+        active_count=len(ouvertes),
+        counts=counts(),
+        filtre=filtre,
+        q=q,
     )
-    active = [r for r in rows if r.is_valid]
-    return render_template("admin/sessions.html", sessions=rows, active_count=len(active))
 
 
 @bp.route("/sessions/<int:session_id>/revoquer", methods=["POST"])
-@super_admin_required
+@admin_required
 def session_revoke(session_id: int):
     row = db.session.get(AuthSession, session_id) or abort(404)
+    if not _can_revoke_session(g.user, row):
+        abort(403)
     revoke_session(row)
     db.session.commit()
     log_audit("session.revoked", target=str(session_id), details=row.user.username if row.user else "")
-    flash("Session révoquée.", "success")
+    flash("Session fermée : cet appareil devra se reconnecter.", "success")
     return redirect(url_for("admin.sessions"))
+
+
+@bp.route("/utilisateurs/<int:user_id>/deconnecter", methods=["POST"])
+@admin_required
+def user_sign_out_everywhere(user_id: int):
+    """Ferme toutes les sessions d'un compte (l'utilisateur reste actif)."""
+    user = db.session.get(User, user_id) or abort(404)
+    if user.is_super_admin and not g.user.is_super_admin:
+        abort(403)
+    nombre = revoke_all_sessions(user, except_current=(user.id == g.user.id))
+    log_audit("user.signed_out_everywhere", target=user.username, details=str(nombre))
+    flash(f"{nombre} session(s) fermée(s) pour {user.full_name or user.username}. "
+          f"Le compte reste actif : la personne peut se reconnecter.", "success")
+    return redirect(request.referrer or url_for("admin.users"))
+
+
+@bp.route("/api/presence")
+@admin_required
+def api_presence():
+    """Photo en direct des connexions (rafraîchie par le tableau de bord)."""
+    from ..presence import snapshot
+    data = snapshot()
+    data["ok"] = True
+    return jsonify(data)
 
 
 @bp.route("/demandes")
@@ -1411,6 +1513,14 @@ def settings():
                 flash("Message de mise à jour enregistré (maintenance inactive).", "info")
             return redirect(url_for("admin.settings", onglet="maintenance"))
 
+        # Nombre d'appareils simultanés autorisés par compte
+        if "max_devices" in request.form:
+            from ..settings_service import set_max_devices
+            brut = (request.form.get("max_devices") or "0").strip()
+            valeur = int(brut) if brut.isdigit() else 0
+            set_max_devices(valeur)
+            log_audit("settings.max_devices", details=str(valeur))
+
         for key in ("site_tagline", "support_email", "welcome_message"):
             if key in request.form:
                 Setting.set(key, (request.form.get(key) or "").strip()[:1000])
@@ -1439,6 +1549,9 @@ def settings():
         "maintenance_return_at": Setting.get("maintenance_return_at", ""),
         "maintenance_since": maintenance.state()["since"],
     }
+    from ..settings_service import max_devices, max_devices_label
+    values["max_devices"] = max_devices()
+    values["max_devices_label"] = max_devices_label()
     return render_template(
         "admin/settings.html", values=values, onglet=request.args.get("onglet", "general")
     )

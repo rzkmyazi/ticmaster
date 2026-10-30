@@ -1142,6 +1142,84 @@ def main() -> int:
        'type="file"' in page and 'name="photo"' in page and "gallery" in page.lower() or
        ('type="file"' in page and 'name="photo"' in page))
 
+    # ------------------------------------- connexions simultanées (vague 14)
+    print("▸ Connexions simultanées et surveillance des sessions")
+    android = ("Mozilla/5.0 (Linux; Android 13; SM-A125F) AppleWebKit/537.36 "
+               "(KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36")
+    iphone = ("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 "
+              "(KHTML, like Gecko) Version/17.0 Mobile Safari/604.1")
+
+    profil = sa.get(BASE + "/admin/parametres?onglet=general", timeout=30).text
+    ok("réglage « appareils simultanés par compte » dans les paramètres",
+       'name="max_devices"' in profil and "Illimité" in profil)
+
+    presence = sa.get(BASE + "/admin/api/presence", timeout=20)
+    data = presence.json() if presence.status_code == 200 else {}
+    ok("API de présence réservée à l'administration",
+       presence.status_code == 200 and data.get("ok") is True,
+       str(presence.status_code))
+    ok("compteurs de présence exposés",
+       isinstance(data.get("counts"), dict) and "online_users" in data["counts"]
+       and "online_sessions" in data["counts"], str(data.get("counts")))
+    ok("appareils lisibles (jamais le jeton)",
+       all("device" in s_ for s_ in (data.get("sessions") or [{}])[:3])
+       and "token" not in presence.text.lower())
+
+    ok("page « Utilisateurs connectés » accessible",
+       sa.get(BASE + "/admin/sessions").status_code == 200)
+    ok("page des sessions interdite à un élève",
+       u.get(BASE + "/admin/sessions").status_code in (403, 302))
+
+    # deux appareils, deux sessions vivantes ; une seule est fermée à la demande
+    pair = f"verif.jumeau{''.join(random.choice(string.ascii_lowercase) for _ in range(4))}"
+    if _provision(sa, pair, "Vérification Jumeau", "user", "Jumeau2026!"):
+        PROVISIONED.append(pair)
+        tel1 = requests.Session()
+        tel2 = requests.Session()
+        for tel, agent in ((tel1, android), (tel2, iphone)):
+            tel.headers["User-Agent"] = agent
+            jeton = csrf(tel, "/auth/connexion")
+            tel.post(BASE + "/auth/connexion", headers={"User-Agent": agent},
+                     data={"csrf_token": jeton, "identifier": pair, "password": "Jumeau2026!"},
+                     allow_redirects=False)
+        ok("même compte connecté sur deux appareils",
+           tel1.get(BASE + "/espace", allow_redirects=False).status_code == 200
+           and tel2.get(BASE + "/espace", allow_redirects=False).status_code == 200)
+
+        listing = sa.get(BASE + "/admin/sessions?q=" + pair, timeout=30).text
+        ok("les deux appareils sont listés avec leur libellé",
+           "Android · Chrome" in listing and "iPhone · Safari" in listing)
+        ids = re.findall(r'/admin/sessions/(\d+)/revoquer', listing)
+        ok("chaque session possède son bouton de fermeture", len(ids) >= 2, f"{len(ids)} session(s)")
+        if len(ids) >= 2:
+            jeton = re.search(r'name="csrf_token" value="([^"]+)"', listing).group(1)
+            sa.post(BASE + f"/admin/sessions/{ids[0]}/revoquer",
+                    data={"csrf_token": jeton}, allow_redirects=True)
+            restantes = (tel1.get(BASE + "/espace", allow_redirects=False).status_code,
+                         tel2.get(BASE + "/espace", allow_redirects=False).status_code)
+            ok("révocation individuelle : un seul appareil est fermé",
+               sorted(restantes) == [200, 302], str(restantes))
+
+    # une série de fautes de frappe ne doit jamais bloquer les autres comptes
+    sot = f"verif.faute{''.join(random.choice(string.ascii_lowercase) for _ in range(4))}"
+    if _provision(sa, sot, "Vérification Faute", "user", "Faute2026!"):
+        PROVISIONED.append(sot)
+        for _ in range(12):
+            faux = requests.Session()
+            jeton = csrf(faux, "/auth/connexion")
+            faux.post(BASE + "/auth/connexion",
+                      data={"csrf_token": jeton, "identifier": sot, "password": "Mauvais!2026"},
+                      allow_redirects=True)
+        voisin = requests.Session()
+        jeton = csrf(voisin, "/auth/connexion")
+        reponse = voisin.post(BASE + "/auth/connexion",
+                              data={"csrf_token": jeton, "identifier": USER[0],
+                                    "password": USER[1]}, allow_redirects=False)
+        ok("12 erreurs d'un élève ne bloquent pas les autres comptes",
+           reponse.status_code == 302, str(reponse.status_code))
+        ok("la limite par adresse IP ne renvoie pas 429 à une classe",
+           voisin.get(BASE + "/espace", allow_redirects=False).status_code == 200)
+
     # ------------------------------------- actions de la fiche d'un élève
     print("▸ Fiche élève : réinitialiser, suspendre, supprimer")
     css = requests.get(BASE + "/static/css/app.css", timeout=30).text
