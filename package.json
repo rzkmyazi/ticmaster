@@ -1,0 +1,20 @@
+{
+  "name": "ticmaster-netlify",
+  "private": true,
+  "type": "module",
+  "scripts": {},
+  "dependencies": {
+    "@netlify/blobs": "^11.1.8",
+    "@netlify/database": "^2.0.3",
+    "@netlify/functions": "^6.1.1",
+    "drizzle-orm": "^1.0.0-beta.22",
+    "hash-wasm": "^4.12.0",
+    "nunjucks": "^3.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/nunjucks": "^3.2.6",
+    "drizzle-kit": "^1.0.0-beta.22",
+    "typescript": "^7.0.2"
+  }
+}
