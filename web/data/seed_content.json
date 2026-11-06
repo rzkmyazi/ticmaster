@@ -1,0 +1,1177 @@
+{
+ "categories": [
+  [
+   "Fondamentaux",
+   "Decouverte de l'informatique et des TIC",
+   "chip"
+  ],
+  [
+   "Bureautique",
+   "Traitement de texte, tableurs, presentations",
+   "grid"
+  ],
+  [
+   "Internet & Web",
+   "Navigation, communication, services en ligne",
+   "globe"
+  ],
+  [
+   "Sécurité & Réseaux",
+   "Protection des donnees et infrastructures",
+   "shield"
+  ],
+  [
+   "Développement",
+   "Programmation et creation de sites web",
+   "code"
+  ],
+  [
+   "Intelligence Artificielle",
+   "IA, donnees et usages responsables",
+   "sparkles"
+  ]
+ ],
+ "modules": [
+  {
+   "title": "Introduction aux TIC",
+   "category": "Fondamentaux",
+   "level": "débutant",
+   "estimated_minutes": 90,
+   "summary": "Comprendre ce que sont les Technologies de l'Information et de la Communication et leur impact sur la société.",
+   "description": "Ce module d'ouverture présente les concepts de base : information, numérique, matériel, logiciel, réseaux et usages citoyens des TIC.",
+   "lessons": [
+    [
+     "Qu'est-ce que les TIC ?",
+     "## Définition\n\nLes **Technologies de l'Information et de la Communication** (TIC) désignent l'ensemble des outils et techniques permettant de **produire, stocker, traiter, transmettre et diffuser** de l'information sous forme numérique.\n\nOn distingue trois grandes familles :\n\n- **Le matériel** : ordinateurs, téléphones, tablettes, serveurs, routeurs, capteurs.\n- **Les logiciels** : systèmes d'exploitation, applications bureautiques, navigateurs, services en ligne.\n- **Les réseaux** : Internet, réseaux mobiles, réseaux locaux d'entreprise.\n\n## Pourquoi c'est important\n\nUne photographie prise avec un téléphone est une **donnée numérique**. Cette même photo peut être :\n\n1. stockée dans la mémoire du téléphone (stockage) ;\n2. retouchée avec une application (traitement) ;\n3. envoyée par messagerie (transmission) ;\n4. publiée sur un réseau social (diffusion).\n\n> Le numérique transforme l'information en une ressource que l'on peut copier, partager et analyser à très grande vitesse.\n\n## Les usages concrets au quotidien\n\n- **Éducation** : cours en ligne, exercices interactifs, bibliothèques numériques.\n- **Santé** : dossiers médicaux informatisés, téléconsultation.\n- **Administration** : démarches en ligne, paiement des taxes, état civil.\n- **Économie** : mobile money, commerce en ligne, télétravail.\n\n## Les limites à connaître\n\nLes TIC ne sont pas neutres : elles demandent de l'**électricité**, une **connexion**, des **compétences** et une vraie **vigilance sur la vie privée**. Un bon usage suppose donc de comprendre à la fois les possibilités et les risques.\n"
+    ],
+    [
+     "Le vocabulaire essentiel du numérique",
+     "## Les mots à maîtriser\n\n- **Donnée** : une valeur brute (un nombre, une date, une photo).\n- **Information** : une donnée interprétée dans un contexte.\n- **Numérique** : information codée en 0 et 1 (binaire).\n- **Bit** : plus petite unité d'information (0 ou 1). Un **octet** (byte) = 8 bits.\n- **Application** : programme conçu pour accomplir une tâche.\n- **Réseau** : ensemble d'équipements reliés entre eux pour échanger des données.\n\n## Les unités de mesure\n\n| Unité | Valeur approximative |\n|---|---|\n| 1 Ko (kilooctet) | 1 000 octets |\n| 1 Mo (mégaoctet) | 1 000 000 octets |\n| 1 Go (gigaoctet) | 1 000 000 000 octets |\n| 1 To (téraoctet) | 1 000 000 000 000 octets |\n\nUne page de texte ≈ 3 Ko. Une photo de téléphone ≈ 4 Mo. Un film ≈ 2 Go.\n\n## Analogie utile\n\nPensez à une **bibliothèque** :\n\n- le **disque dur** est le bâtiment (stockage) ;\n- les **fichiers** sont les livres ;\n- le **système d'exploitation** est le bibliothécaire qui sait où ranger et retrouver chaque livre ;\n- le **réseau** est le service de livraison entre bibliothèques.\n\n## À retenir\n\nComprendre ces mots, c'est pouvoir lire une fiche technique, choisir un forfait Internet ou expliquer un problème technique avec précision.\n"
+    ],
+    [
+     "Les métiers et les usages citoyens",
+     "## Des métiers variés\n\nLes TIC génèrent des emplois très différents :\n\n- **Développeur web** : crée des sites et applications.\n- **Administrateur réseau** : assure le bon fonctionnement des connexions.\n- **Technicien support** : aide les utilisateurs au quotidien.\n- **Analyste données** : transforme les chiffres en décisions.\n- **Spécialiste cybersécurité** : protège les systèmes.\n- **Formateur / médiateur numérique** : accompagnement aux usages.\n\n## Citoyenneté numérique\n\nÊtre citoyen numérique, c'est :\n\n1. **Vérifier l'information** avant de la partager (sources fiables).\n2. **Respecter les autres** : pas de harcèlement, pas d'insultes en ligne.\n3. **Protéger ses données personnelles** (mot de passe fort, réglages de confidentialité).\n4. **Respecter le droit d'auteur** : ne pas publier une œuvre sans autorisation.\n5. **Signaler les contenus dangereux** ou illégaux.\n\n## Le harcèlement en ligne\n\nLe cyberharcèlement est puni par la loi dans la plupart des pays. Quelques réflexes :\n\n- ne pas répondre ;\n- conserver les preuves (captures d'écran) ;\n- bloquer et signaler à la plateforme ;\n- parler à un adulte de confiance ou à une autorité compétente.\n\n> La technologie ne remplace pas le jugement humain : c'est vous qui décidez de ce que vous publiez et de ce que vous croyez.\n"
+    ]
+   ],
+   "exercise": {
+    "title": "Quiz — Bases des TIC",
+    "description": "Vérifiez votre compréhension des notions fondamentales.",
+    "questions": [
+     [
+      "Que désigne l'acronyme TIC ?",
+      [
+       "Technologies de l'Information et de la Communication",
+       "Traitement Informatique des Communications",
+       "Techniques Intégrées de Cryptographie",
+       "Transmission Internet de Contenus"
+      ],
+      1,
+      "TIC = Technologies de l'Information et de la Communication."
+     ],
+     [
+      "Combien de bits contient un octet ?",
+      [
+       "4",
+       "8",
+       "16",
+       "32"
+      ],
+      2,
+      "Un octet (byte) regroupe 8 bits."
+     ],
+     [
+      "Laquelle de ces propositions est une donnée numérique ?",
+      [
+       "Une photo prise avec un téléphone",
+       "Une idée non écrite",
+       "Un souvenir",
+       "Un sentiment"
+      ],
+      1,
+      "Une photo est codée en 0 et 1 : c'est une donnée numérique."
+     ],
+     [
+      "Le réseau mondial qui relie des milliards d'appareils s'appelle :",
+      [
+       "Le Bluetooth",
+       "Un intranet",
+       "Internet",
+       "Le Wi-Fi"
+      ],
+      3,
+      "Internet est le réseau des réseaux, à l'échelle mondiale."
+     ]
+    ]
+   }
+  },
+  {
+   "title": "Informatique et composants d'un ordinateur",
+   "category": "Fondamentaux",
+   "level": "débutant",
+   "estimated_minutes": 100,
+   "summary": "Identifier le matériel, comprendre le rôle du processeur, de la mémoire et du stockage.",
+   "description": "Découverte de l'architecture matérielle d'un ordinateur et des périphériques, avec des repères pour choisir un équipement.",
+   "lessons": [
+    [
+     "Les composants internes",
+     "## L'architecture de base\n\nUn ordinateur repose sur le schéma **entrée → traitement → sortie**, complété par le stockage.\n\n### Les composants essentiels\n\n- **Carte mère** : la plaque qui relie tous les composants.\n- **Processeur (CPU)** : exécute les instructions. Sa vitesse se mesure en GHz ; ses cœurs déterminent sa capacité à travailler en parallèle.\n- **Mémoire vive (RAM)** : mémoire de travail très rapide, vidée à l'extinction. 8 Go est un minimum confortable aujourd'hui, 16 Go pour le montage vidéo.\n- **Stockage** : disque dur (HDD, mécanique, lent mais économique) ou SSD (électronique, très rapide).\n- **Alimentation** : fournit le courant électrique.\n- **Carte graphique (GPU)** : affichage, jeux, calculs d'images et d'intelligence artificielle.\n\n## Analogie du bureau\n\n- Le **CPU** est le rédacteur.\n- La **RAM** est la surface du bureau : plus elle est grande, plus on peut poser de documents en même temps.\n- Le **stockage** est l'armoire : on y range tout, même quand on éteint.\n- Le **GPU** est une équipe de dessinateurs travaillant en parallèle.\n\n## Attention à l'électricité\n\nUn ordinateur doit être branché sur une prise stable ; un **onduleur** protège contre les coupures brusques, qui peuvent corrompre des fichiers.\n"
+    ],
+    [
+     "Périphériques et connectique",
+     "## Les périphériques\n\n**Entrée** : clavier, souris, scanner, webcam, microphone, capteur d'empreinte.\n**Sortie** : écran, imprimante, haut-parleurs, casque.\n**Entrée/sortie** : écran tactile, clé USB, carte réseau, disque externe.\n\n## Les ports et connexions\n\n- **USB-A / USB-C** : périphériques, charge, transfert de données.\n- **HDMI / DisplayPort** : écrans et projecteurs.\n- **Jack 3,5 mm** : audio filaire.\n- **Ethernet RJ45** : réseau filaire, plus stable que le Wi-Fi.\n- **Bluetooth / Wi-Fi** : connexions sans fil.\n\n## Bien choisir son matériel\n\n| Usage | RAM conseillée | Stockage |\n|---|---|---|\n| Navigation, bureautique | 8 Go | 256 Go SSD |\n| Études, programmation | 8–16 Go | 512 Go SSD |\n| Montage vidéo, 3D | 16–32 Go | 1 To SSD |\n\n> Un SSD améliore souvent plus le confort quotidien qu'un processeur plus puissant : le disque est le premier facteur de lenteur sur un ordinateur ancien.\n\n## Entretien de base\n\n- Nettoyer la poussière (surtout les ventilateurs).\n- Éviter les chocs et les boissons près du clavier.\n- Sauvegarder régulièrement sur un support externe.\n"
+    ],
+    [
+     "Le logiciel et le système d'exploitation",
+     "## Matériel et logiciel\n\nLe **matériel** (hardware) est physique ; le **logiciel** (software) est immatériel. Sans système d'exploitation, le matériel ne peut rien faire d'utile pour l'utilisateur.\n\n## Les catégories de logiciels\n\n- **Systèmes d'exploitation** : Windows, macOS, Linux, Android, iOS.\n- **Logiciels applicatifs** : traitement de texte, tableur, navigateur.\n- **Logiciels libres / propriétaires** : la différence porte sur la liberté d'étudier, modifier et redistribuer le code.\n- **Logiciels malveillants** : virus, chevaux de Troie, rançongiciels — ce ne sont pas des \"outils\".\n\n## Licences\n\nUne licence définit ce que vous pouvez faire avec un logiciel : usage personnel, nombre de machines, revente interdite, etc. Utiliser un logiciel craqué, c'est s'exposer à des malwares et à des sanctions légales.\n\n## Mises à jour\n\nUne mise à jour corrige des bugs **et des failles de sécurité**. Repousser systématiquement les mises à jour revient à laisser une porte ouverte.\n"
+    ]
+   ],
+   "exercise": {
+    "title": "Quiz — Matériel et logiciel",
+    "description": "Testez vos connaissances sur les composants et le rôle du système.",
+    "questions": [
+     [
+      "Quel composant perd son contenu lorsque l'ordinateur s'éteint ?",
+      [
+       "Le SSD",
+       "La mémoire vive (RAM)",
+       "Le disque dur",
+       "La carte mère"
+      ],
+      2,
+      "La RAM est volatile : elle se vide à l'extinction."
+     ],
+     [
+      "Quel périphérique est à la fois d'entrée et de sortie ?",
+      [
+       "L'imprimante",
+       "L'écran tactile",
+       "Le scanner",
+       "Le clavier"
+      ],
+      2,
+      "Un écran tactile reçoit le toucher (entrée) et affiche (sortie)."
+     ],
+     [
+      "Pourquoi installer les mises à jour de sécurité ?",
+      [
+       "Pour occuper de l'espace disque",
+       "Pour corriger des failles exploitées par les attaquants",
+       "Pour ralentir l'ordinateur",
+       "Cela ne sert à rien"
+      ],
+      2,
+      "Les mises à jour colmatent des vulnérabilités connues."
+     ],
+     [
+      "Quel port réseau filaire est le plus courant ?",
+      [
+       "HDMI",
+       "USB-C",
+       "RJ45",
+       "Jack 3,5 mm"
+      ],
+      3,
+      "Le connecteur RJ45 sert au câble Ethernet."
+     ]
+    ]
+   }
+  },
+  {
+   "title": "Systèmes d'exploitation",
+   "category": "Fondamentaux",
+   "level": "débutant",
+   "estimated_minutes": 80,
+   "summary": "Gérer fichiers, dossiers, comptes utilisateurs et bonnes pratiques de maintenance.",
+   "description": "Le système d'exploitation (OS) fait le lien entre l'utilisateur, les applications et le matériel.",
+   "lessons": [
+    [
+     "Rôle du système d'exploitation",
+     "## Définition\n\nLe **système d'exploitation** est le logiciel principal de l'ordinateur. Il démarre la machine, gère le matériel et permet aux applications de fonctionner.\n\n## Ses missions\n\n1. **Gérer les fichiers** (créer, déplacer, supprimer).\n2. **Gérer les processus** (programmes en cours d'exécution).\n3. **Gérer les utilisateurs et droits** (comptes, mots de passe).\n4. **Gérer le matériel** grâce aux pilotes (drivers).\n5. **Assurer la sécurité de base** (isolation des applications, permissions).\n\n## Les grands systèmes\n\n- **Windows** : très répandu dans les bureaux et les écoles.\n- **macOS** : environnement Apple, réputé pour la stabilité.\n- **Linux** : libre, utilisé massivement sur les serveurs ; distributions : Ubuntu, Debian, Fedora.\n- **Android / iOS** : systèmes mobiles.\n\n> Un serveur qui héberge un site web tourne presque toujours sous Linux.\n"
+    ],
+    [
+     "Fichiers, dossiers et organisation",
+     "## Arborescence\n\nLes fichiers sont rangés dans une **arborescence** : un dossier racine contient des dossiers, qui contiennent des fichiers.\n\n- Windows : `C:\\Utilisateurs\\Nom\\Documents`\n- Linux / macOS : `/home/nom/Documents`\n\n## Nommer proprement ses fichiers\n\n- Éviter les espaces et les caractères spéciaux (`/ \\ : * ? \" < > |`).\n- Utiliser un format cohérent : `2026-03-rapport-tic.pdf`.\n- Une **extension** indique le type : `.docx`, `.xlsx`, `.pdf`, `.jpg`, `.mp4`.\n\n## Bonnes pratiques de rangement\n\n```\nDocuments/\n  Cours-TIC/\n    01-Introduction/\n      notes.md\n      exercices.pdf\n    02-Reseaux/\n```\n\n## Sauvegarde : la règle 3-2-1\n\n- **3** copies de la donnée,\n- sur **2** supports différents,\n- dont **1** hors du site (cloud ou disque dans un autre lieu).\n\nUn fichier unique sur un seul ordinateur n'est pas sauvegardé : il est simplement en sursis.\n\n## Corbeille et effacement\n\nSupprimer un fichier le place souvent dans la corbeille. Vider la corbeille le rend difficilement récupérable. Sur un SSD, la récupération est encore plus incertaine.\n"
+    ],
+    [
+     "Comptes utilisateurs et maintenance",
+     "## Comptes et privilèges\n\nUn ordinateur peut avoir plusieurs comptes :\n\n- **Administrateur** : peut installer des logiciels et modifier le système.\n- **Utilisateur standard** : usage quotidien, droits limités.\n\nBonne pratique : travailler avec un compte standard et n'utiliser l'administrateur que pour installer. Une erreur ou un malware aura alors moins d'impact.\n\n## Le mot de passe de session\n\nChoisissez un mot de passe long (une phrase de passe) et activez le verrouillage automatique après quelques minutes d'inactivité.\n\n## Maintenance régulière\n\n- Désinstaller les logiciels inutiles.\n- Surveiller l'espace disque (garder au moins 15 % libre).\n- Mettre à jour l'OS et les applications.\n- Analyser avec un antivirus à jour.\n- Redémarrer régulièrement (les mises à jour s'appliquent souvent au démarrage).\n\n## Dépannage simple\n\n1. Lire le message d'erreur.\n2. Redémarrer.\n3. Vérifier les mises à jour.\n4. Chercher l'erreur exacte sur un site de support fiable.\n5. Sauvegarder avant toute manipulation sensible.\n"
+    ]
+   ],
+   "exercise": {
+    "title": "Quiz — Systèmes d'exploitation",
+    "description": "Organisation des fichiers, comptes et maintenance.",
+    "questions": [
+     [
+      "Quel système d'exploitation est le plus utilisé sur les serveurs web ?",
+      [
+       "Windows 11",
+       "Linux",
+       "Android",
+       "iOS"
+      ],
+      2,
+      "La majorité des serveurs tournent sous Linux."
+     ],
+     [
+      "La règle de sauvegarde 3-2-1 signifie :",
+      [
+       "3 fichiers, 2 dossiers, 1 clé USB",
+       "3 copies, 2 supports, 1 hors site",
+       "3 sauvegardes par jour pendant 2 semaines",
+       "3 utilisateurs, 2 administrateurs, 1 invité"
+      ],
+      2,
+      "Trois copies sur deux supports dont une externalisée."
+     ],
+     [
+      "Pourquoi travailler avec un compte utilisateur standard ?",
+      [
+       "Pour aller plus vite",
+       "Pour limiter l'impact d'une erreur ou d'un malware",
+       "Pour avoir plus d'espace disque",
+       "Pour désactiver l'antivirus"
+      ],
+      2,
+      "Les droits limités réduisent la surface d'attaque."
+     ],
+     [
+      "Que faut-il faire avant une manipulation risquée du système ?",
+      [
+       "Éteindre brutalement la machine",
+       "Sauvegarder ses données",
+       "Supprimer les pilotes",
+       "Rien de particulier"
+      ],
+      2,
+      "La sauvegarde est le premier réflexe."
+     ]
+    ]
+   }
+  },
+  {
+   "title": "Traitement de texte",
+   "category": "Bureautique",
+   "level": "débutant",
+   "estimated_minutes": 90,
+   "summary": "Rédiger, mettre en forme et exporter des documents professionnels.",
+   "description": "Maîtriser les styles, la mise en page, les tableaux et l'export PDF avec Word, LibreOffice ou Google Docs.",
+   "lessons": [
+    [
+     "De la saisie à la mise en forme",
+     "## Les bases\n\nUn traitement de texte sert à **rédiger** et **mettre en forme** des documents : lettre, rapport, mémoire, CV.\n\n### Raccourcis indispensables\n\n| Action | Windows/Linux | macOS |\n|---|---|---|\n| Copier | Ctrl+C | Cmd+C |\n| Coller | Ctrl+V | Cmd+V |\n| Annuler | Ctrl+Z | Cmd+Z |\n| Rétablir | Ctrl+Y | Cmd+Shift+Z |\n| Rechercher | Ctrl+F | Cmd+F |\n| Enregistrer | Ctrl+S | Cmd+S |\n| Mot en gras | Ctrl+B | Cmd+B |\n\n## Les styles plutôt que le \"manuel\"\n\nAu lieu de mettre chaque titre en 18 pt gras, utilisez les **styles** (Titre 1, Titre 2, Normal). Avantages :\n\n- cohérence visuelle ;\n- sommaire automatique ;\n- modification globale instantanée ;\n- accessibilité (lecteurs d'écran).\n\n## Structurer un document\n\n1. Page de titre.\n2. Sommaire.\n3. Introduction.\n4. Développement en parties et sous-parties.\n5. Conclusion.\n6. Bibliographie / annexes.\n\n> Règle d'or : **le fond d'abord, la forme ensuite**. On écrit, puis on met en forme.\n"
+    ],
+    [
+     "Mise en page et objets",
+     "## Réglages de page\n\n- **Marges** : 2 à 2,5 cm pour un document classique.\n- **Orientation** : portrait (texte) ou paysage (tableaux larges).\n- **En-tête / pied de page** : titre, numéro de page, date.\n- **Numérotation** automatique : indispensable au-delà de 3 pages.\n\n## Tableaux\n\nUn tableau sert à comparer des données. Trois règles :\n\n1. une seule idée par colonne ;\n2. des entêtes clairs ;\n3. des unités précisées (FCFA, %, kg).\n\n## Images et légendes\n\nInsérez des images de bonne qualité (au moins 150 dpi pour l'impression) et ajoutez une **légende** (« Figure 1 : ... »). Attention aux droits d'auteur : citez la source.\n\n## Vérification orthographique\n\nActivez la correction automatique, puis **relisez à voix haute**. Les correcteurs ne détectent pas les homophones (« a » / « à », « ou » / « où »).\n\n## Export et compatibilité\n\n- **PDF** : pour diffuser sans modifier la mise en page.\n- **DOCX** : pour permettre la modification.\n- Vérifiez le rendu du PDF avant envoi : polices, sauts de page, images.\n"
+    ],
+    [
+     "Documents professionnels et accessibilité",
+     "## Une lettre administrative\n\nStructure attendue :\n\n```\nExpéditeur (nom, adresse, contact)\nDestinataire\nLieu et date\nObjet : ...\nMadame, Monsieur,\n\nCorps de la lettre...\n\nFormule de politesse.\nSignature\n```\n\n## Un CV lisible\n\n- Une page, deux au maximum.\n- Un titre clair (« Développeur web junior »).\n- Des expériences en **verbes d'action** : « conçu », « administré », « formé ».\n- Des compétences vérifiables.\n- Pas de photo obligatoire, pas d'informations discriminantes (âge, situation familiale).\n\n## Accessibilité\n\n- Contraste suffisant entre texte et fond.\n- Police d'au moins 11–12 pt.\n- Pas d'information portée uniquement par la couleur.\n- Titres hiérarchisés pour les lecteurs d'écran.\n- Texte alternatif sur les images.\n\n## Enregistrer et nommer\n\nUn nom de fichier professionnel : `2026-04-CV-Nom-Prenom.pdf`. Évitez `document final v3 vrai final.docx`.\n"
+    ]
+   ],
+   "exercise": {
+    "title": "Quiz — Traitement de texte",
+    "description": "Styles, mise en page et bonnes pratiques rédactionnelles.",
+    "questions": [
+     [
+      "Pourquoi utiliser les styles de titres plutôt que la mise en forme manuelle ?",
+      [
+       "Pour colorer le texte",
+       "Pour générer un sommaire automatique et garder la cohérence",
+       "Pour imprimer plus vite",
+       "Pour compresser le fichier"
+      ],
+      2,
+      "Les styles permettent sommaire automatique et cohérence globale."
+     ],
+     [
+      "Quel format privilégier pour diffuser un document non modifiable ?",
+      [
+       "DOCX",
+       "TXT",
+       "PDF",
+       "CSV"
+      ],
+      3,
+      "Le PDF fige la mise en page."
+     ],
+     [
+      "Quel raccourci enregistre un document sous Windows ?",
+      [
+       "Ctrl+P",
+       "Ctrl+S",
+       "Ctrl+E",
+       "Ctrl+O"
+      ],
+      2,
+      "Ctrl+S = Save (enregistrer)."
+     ],
+     [
+      "Un bon document accessible doit notamment :",
+      [
+       "Utiliser uniquement des images",
+       "Hiérarchiser les titres et soigner les contrastes",
+       "Éviter les tableaux",
+       "Utiliser une police de 8 pt"
+      ],
+      2,
+      "La hiérarchie des titres et le contraste sont essentiels."
+     ]
+    ]
+   }
+  },
+  {
+   "title": "Tableurs et présentations",
+   "category": "Bureautique",
+   "level": "intermédiaire",
+   "estimated_minutes": 120,
+   "summary": "Calculer avec Excel/LibreOffice Calc et concevoir des présentations efficaces.",
+   "description": "Formules, fonctions, graphiques, tableaux croisés et règles de conception de diaporamas.",
+   "lessons": [
+    [
+     "Formules et fonctions essentielles",
+     "## La cellule, unité de base\n\nUne feuille de calcul est une grille de cellules identifiées par une **colonne** et une **ligne** : `A1`, `B12`, `C3`.\n\nUne formule commence toujours par `=` et peut contenir :\n\n- des nombres : `=5+3`\n- des références : `=A1+B1`\n- des fonctions : `=SOMME(A1:A10)`\n\n## Les fonctions à connaître\n\n| Fonction | Rôle | Exemple |\n|---|---|---|\n| `SOMME` | additionner | `=SOMME(B2:B20)` |\n| `MOYENNE` | moyenne | `=MOYENNE(C2:C20)` |\n| `MAX` / `MIN` | extrêmes | `=MAX(D2:D50)` |\n| `SI` | condition | `=SI(E2>=10;\"Admis\";\"Ajourné\")` |\n| `NB.SI` | compter selon condition | `=NB.SI(B2:B50;\"F\")` |\n| `RECHERCHEV` | croiser des tables | `=RECHERCHEV(A2;$H$2:$I$20;2;FAUX)` |\n\n## Références relatives et absolues\n\n- `A1` est **relative** : recopiée vers le bas, elle devient `A2`.\n- `$A$1` est **absolue** : elle ne bouge jamais.\n\nLe symbole `$` verrouille la référence. C'est indispensable dans les recherches et les barèmes.\n\n## Les erreurs fréquentes\n\n- `####` : colonne trop étroite.\n- `#DIV/0!` : division par zéro.\n- `#VALEUR!` : type de donnée incompatible.\n- `#N/A` : valeur non trouvée dans une recherche.\n"
+    ],
+    [
+     "Graphiques et tableaux croisés",
+     "## Choisir le bon graphique\n\n- **Courbe** : évolution dans le temps.\n- **Barres / colonnes** : comparaison de catégories.\n- **Camembert** : répartition (peu de catégories, total = 100 %).\n- **Nuage de points** : relation entre deux variables.\n\n> Un graphique mal choisi désinforme, même avec des données exactes.\n\n## Les 5 règles d'un graphique lisible\n\n1. Un titre explicite.\n2. Des axes nommés avec leurs unités.\n3. Une échelle qui ne trompe pas (commencer à zéro pour des barres).\n4. Pas plus de 5–6 couleurs.\n5. La source des données.\n\n## Tableau croisé dynamique (TCD)\n\nLe TCD agrège automatiquement des milliers de lignes :\n\n- **Lignes** : la catégorie à analyser (ex. classe).\n- **Colonnes** : la seconde dimension (ex. sexe).\n- **Valeurs** : ce que l'on mesure (ex. moyenne des notes).\n\nExemple : moyenne des notes par classe et par matière, en trois clics.\n\n## Nettoyage des données\n\nAvant tout calcul : une seule ligne d'entête, pas de cellules fusionnées, pas de lignes vides, une seule information par colonne.\n"
+    ],
+    [
+     "Présentations qui convainquent",
+     "## Concevoir avant de projeter\n\nUn diaporama **soutient** un discours, il ne le remplace pas.\n\n## Règles de conception\n\n- 1 idée par diapositive.\n- 6 lignes maximum, 6 mots par ligne (règle 6×6, indicative).\n- Police lisible (24 pt minimum pour le corps).\n- Contraste élevé, fond sobre.\n- Une image vaut mieux qu'un paragraphe.\n\n## Structure type (10 minutes)\n\n1. Accroche / problème.\n2. Objectif.\n3. Méthode.\n4. Résultats.\n5. Conclusion et appel à l'action.\n\n## Erreurs classiques\n\n- Lire ses diapositives mot pour mot.\n- Surcharger de texte.\n- Animations gadget.\n- Orthographe non relue.\n- Diapositives de secours oubliées pour les questions.\n\n## Accessibilité et partage\n\nExportez en PDF pour éviter les problèmes de polices. Ajoutez un texte alternatif aux images. Vérifiez le rendu sur un vidéoprojecteur ou un téléphone avant la présentation.\n"
+    ]
+   ],
+   "exercise": {
+    "title": "Quiz — Tableurs et présentations",
+    "description": "Formules, graphiques et conception de diaporamas.",
+    "questions": [
+     [
+      "Que signifie la référence `$B$2` dans une formule ?",
+      [
+       "Une référence relative",
+       "Une référence absolue",
+       "Une erreur de syntaxe",
+       "Une cellule vide"
+      ],
+      2,
+      "Les symboles $ verrouillent la ligne et la colonne."
+     ],
+     [
+      "Quelle fonction affiche une valeur selon une condition ?",
+      [
+       "SOMME",
+       "SI",
+       "MOYENNE",
+       "MAX"
+      ],
+      2,
+      "La fonction SI teste une condition."
+     ],
+     [
+      "Quel graphique montre une évolution dans le temps ?",
+      [
+       "Camembert",
+       "Courbe",
+       "Nuage de points",
+       "Diagramme en secteurs"
+      ],
+      2,
+      "La courbe est adaptée aux séries temporelles."
+     ],
+     [
+      "Combien d'idées principales par diapositive ?",
+      [
+       "Une",
+       "Trois",
+       "Cinq",
+       "Autant que possible"
+      ],
+      1,
+      "Une idée par diapositive."
+     ]
+    ]
+   }
+  },
+  {
+   "title": "Internet et navigation Web",
+   "category": "Internet & Web",
+   "level": "débutant",
+   "estimated_minutes": 90,
+   "summary": "Comprendre le Web, évaluer la fiabilité des sources et naviguer en sécurité.",
+   "description": "Fonctionnement d'Internet, URL, moteurs de recherche, Wi-Fi et vérification de l'information.",
+   "lessons": [
+    [
+     "Comment fonctionne le Web",
+     "## Internet et le Web\n\n**Internet** est l'infrastructure mondiale de réseaux. Le **Web** est l'un des services qui circulent sur Internet (avec la messagerie, la visioconférence, etc.).\n\n## Le modèle client-serveur\n\n1. Vous saisissez une adresse dans le navigateur (**client**).\n2. Une requête **HTTP/HTTPS** part vers un serveur identifié par son nom de domaine.\n3. Le **DNS** traduit ce nom en adresse IP (comme un annuaire).\n4. Le serveur répond avec une page (HTML, CSS, images).\n5. Le navigateur affiche la page.\n\n## Décoder une URL\n\n```\nhttps://ticmaster.example/cours/reseaux?page=2\n└─┬─┘   └──────┬──────┘└────┬────┘└────┬────┘\nprotocole    domaine       chemin    paramètre\n```\n\n- **https** : version chiffrée de HTTP (le « s » = secure).\n- Le **domaine** se lit de droite à gauche : `.example` (TLD), puis `ticmaster`.\n\n## Le cadenas\n\nUn cadenas signifie que la connexion est **chiffrée**, pas que le site est honnête. Un site d'arnaque peut aussi avoir un certificat valide.\n"
+    ],
+    [
+     "Rechercher et vérifier l'information",
+     "## Bien formuler une recherche\n\n- Utilisez des mots-clés précis, pas une phrase entière.\n- Ajoutez des guillemets pour une expression exacte : `\"sécurité informatique\"`.\n- Utilisez `site:` pour restreindre : `site:gov.mg taxes`.\n- `-` pour exclure un mot : `javadoc -achat`.\n\n## La méthode de vérification en 4 temps\n\n1. **Qui ?** Qui est l'auteur ? Un organisme reconnu, un expert, un anonyme ?\n2. **Quand ?** La date est-elle récente ? Une information de 2015 peut être obsolète.\n3. **Où ?** Sur quel site est-elle publiée ? Site officiel, presse reconnue, blog ?\n4. **Comment ?** Les sources sont-elles citées ? Le ton est-il sensationnaliste ?\n\n## Croiser les sources\n\nUne information solide apparaît dans **au moins deux sources indépendantes**. Les images peuvent être sorties de leur contexte : utilisez une recherche d'image inversée.\n\n## Reconnaître une arnaque\n\n- Promesse d'argent facile.\n- Urgence (« votre compte sera supprimé dans 24 h »).\n- Fautes d'orthographe et adresse bizarre (`secu-verification.xyz`).\n- Demande de mot de passe par message.\n\n> Règle simple : **aucun service sérieux ne demande votre mot de passe par e-mail**.\n"
+    ],
+    [
+     "Connexions et équipements",
+     "## Wi-Fi\n\n- Utilisez le protocole **WPA2/WPA3** et un mot de passe long.\n- Évitez les réseaux publics non chiffrés pour les opérations sensibles ; si nécessaire, activez un **VPN**.\n- Désactivez le partage automatique de fichiers sur les réseaux publics.\n\n## Données mobiles\n\nAttention aux quotas : la vidéo en haute définition consomme rapidement le forfait. Téléchargez en Wi-Fi, limitez les mises à jour automatiques en données mobiles.\n\n## Navigateurs\n\n- Mettez-le à jour (les failles sont corrigées).\n- Utilisez des extensions minimales et vérifiées.\n- Activez le bloqueur de suivi et le mode HTTPS uniquement.\n- Vérifiez les permissions des sites (caméra, micro, notifications).\n\n## Vie privée\n\nEffacez régulièrement cookies et cache, mais retenez que cela ne vous rend pas anonyme. Les empreintes de navigateur (fingerprinting) existent aussi.\n"
+    ]
+   ],
+   "exercise": {
+    "title": "Quiz — Internet et navigation",
+    "description": "Fonctionnement du Web et esprit critique.",
+    "questions": [
+     [
+      "Que signifie le « s » dans HTTPS ?",
+      [
+       "Standard",
+       "Secure (chiffré)",
+       "Server",
+       "Simple"
+      ],
+      2,
+      "HTTPS = HTTP chiffré via TLS."
+     ],
+     [
+      "À quoi sert le DNS ?",
+      [
+       "À chiffrer les mots de passe",
+       "À traduire un nom de domaine en adresse IP",
+       "À bloquer les publicités",
+       "À télécharger des fichiers"
+      ],
+      2,
+      "Le DNS est l'annuaire du Web."
+     ],
+     [
+      "Le cadenas dans le navigateur garantit que :",
+      [
+       "Le site est honnête",
+       "La connexion est chiffrée",
+       "Le site est rapide",
+       "Le site est public"
+      ],
+      2,
+      "Il certifie le chiffrement, pas l'honnêteté du site."
+     ],
+     [
+      "Quelle pratique renforce la fiabilité d'une information ?",
+      [
+       "La partager vite",
+       "Croiser plusieurs sources indépendantes",
+       "Se fier au nombre de likes",
+       "Lire uniquement le titre"
+      ],
+      2,
+      "Le recoupement de sources est la base de la vérification."
+     ]
+    ]
+   }
+  },
+  {
+   "title": "Courrier électronique et communication",
+   "category": "Internet & Web",
+   "level": "débutant",
+   "estimated_minutes": 80,
+   "summary": "Écrire des e-mails professionnels et se protéger du phishing.",
+   "description": "Bonnes pratiques de rédaction, signature, pièces jointes, hameçonnage et outils collaboratifs.",
+   "lessons": [
+    [
+     "Rédiger un e-mail professionnel",
+     "## Structure\n\n- **Objet** : court et explicite (« Demande de relevé — L1 Informatique »).\n- **Formule d'appel** : « Bonjour Madame », « Bonjour Monsieur », « Bonjour l'équipe ».\n- **Corps** : une idée principale, des phrases courtes, une demande claire.\n- **Formule de politesse** et **signature**.\n\n## Les 6 règles\n\n1. Un objet précis.\n2. Un destinataire unique (ou une liste justifiée).\n3. Un message court : au-delà de 10 lignes, structurer avec des listes.\n4. Pas de majuscules (cela signifie crier).\n5. Relire avant d'envoyer.\n6. Vérifier les pièces jointes **avant** de cliquer sur Envoyer.\n\n## Le bouton « Répondre à tous »\n\nNe l'utilisez que si tous les destinataires ont besoin de la réponse. C'est l'erreur professionnelle la plus fréquente.\n\n## Signature\n\n```\nNom Prénom\nFonction — Organisation\nTéléphone | Site web\n```\n\nÉvitez les citations longues, les images lourdes et les couleurs flashy.\n"
+    ],
+    [
+     "Pièces jointes, stockage et outils collaboratifs",
+     "## Pièces jointes\n\n- Taille raisonnable (souvent 10–25 Mo maximum par message).\n- Formats universels : PDF pour la lecture, DOCX/XLSX pour l'édition.\n- Nommez clairement : `2026-05-rapport-stage-NomPrenom.pdf`.\n- Un gros fichier se partage par lien (WeTransfer, Drive, OneDrive, Nextcloud).\n\n## Le cloud\n\nLe stockage en ligne synchronise un dossier entre appareils. Points de vigilance :\n\n- vérifiez qui a accès au lien (public ou restreint) ;\n- activez la double authentification sur le compte ;\n- les données sensibles doivent être chiffrées ou rester en local ;\n- lisez la politique de confidentialité si les données sont personnelles.\n\n## Travail collaboratif\n\n- Un seul document partagé plutôt que 12 copies par e-mail.\n- Un nom de fichier avec une dernière date de mise à jour.\n- Des commentaires plutôt que des modifications silencieuses.\n- Gérer les droits : lecteur, commentateur, éditeur.\n"
+    ],
+    [
+     "Phishing et sécurité des comptes",
+     "## Reconnaître un message frauduleux\n\nSignaux d'alerte :\n\n- expéditeur inconnu ou adresse légèrement modifiée (`support@banque-secure.net`) ;\n- urgence et menace ;\n- lien dont l'adresse réelle ne correspond pas au texte affiché ;\n- pièce jointe inattendue (`.zip`, `.exe`, `.html`) ;\n- demande d'informations confidentielles.\n\n## Que faire ?\n\n1. **Ne cliquez pas.**\n2. Vérifiez l'expéditeur en affichant l'adresse complète.\n3. Contactez l'organisme par un autre canal (téléphone officiel).\n4. Signalez le message comme hameçonnage.\n5. Si vous avez cliqué : changez le mot de passe depuis un appareil sain et prévenez l'administrateur.\n\n## Protéger sa boîte\n\n- Mot de passe unique et long.\n- **Double authentification** (2FA) activée.\n- Ne jamais réutiliser un mot de passe.\n- Verrouillage de session sur les appareils partagés.\n"
+    ]
+   ],
+   "exercise": {
+    "title": "Quiz — E-mail et communication",
+    "description": "Rédaction professionnelle et lutte contre le phishing.",
+    "questions": [
+     [
+      "Quel objet d'e-mail est le plus professionnel ?",
+      [
+       "URGENT !!!",
+       "Demande de relevé de notes — L1 Informatique",
+       "bonjour",
+       "Question"
+      ],
+      2,
+      "Un objet court, explicite et factuel."
+     ],
+     [
+      "Quel signe doit alerter dans un e-mail ?",
+      [
+       "Une signature complète",
+       "Une urgence soudaine avec menace",
+       "Un objet clair",
+       "Un message court"
+      ],
+      2,
+      "L'urgence est un levier classique d'arnaque."
+     ],
+     [
+      "Que faire d'un lien suspect reçu par e-mail ?",
+      [
+       "Cliquer pour voir",
+       "Ne pas cliquer et vérifier par un autre canal",
+       "Le transférer à tous ses contacts",
+       "Répondre avec son mot de passe"
+      ],
+      2,
+      "On vérifie par un canal officiel indépendant."
+     ],
+     [
+      "Quelle pratique protège le mieux une boîte e-mail ?",
+      [
+       "Le même mot de passe partout",
+       "La double authentification",
+       "Un mot de passe de 6 caractères",
+       "Désactiver les alertes"
+      ],
+      2,
+      "La 2FA bloque l'usage du mot de passe seul."
+     ]
+    ]
+   }
+  },
+  {
+   "title": "Sécurité informatique",
+   "category": "Sécurité & Réseaux",
+   "level": "intermédiaire",
+   "estimated_minutes": 110,
+   "summary": "Menaces, mots de passe, rançongiciels, sauvegardes et hygiène numérique.",
+   "description": "Module central : comprendre les attaques les plus courantes et appliquer les bonnes pratiques.",
+   "lessons": [
+    [
+     "Les principales menaces",
+     "## Panorama\n\n- **Virus / ver** : se propage et perturbe le fonctionnement.\n- **Cheval de Troie** : se cache dans un logiciel apparemment légitime.\n- **Rançongiciel (ransomware)** : chiffre vos fichiers et exige une rançon.\n- **Phishing** : trompe l'utilisateur pour voler des identifiants.\n- **Ingénierie sociale** : manipule la personne plutôt que la machine.\n- **Déni de service (DDoS)** : sature un service pour le rendre indisponible.\n- **Attaque par force brute** : teste des milliers de mots de passe.\n\n## Le facteur humain\n\nLa majorité des incidents commencent par un clic, un mot de passe faible ou une mise à jour repoussée. La sécurité est donc autant une **discipline humaine** qu'une technique.\n\n## Le triangle de la sécurité (CIA)\n\n- **Confidentialité** : seules les personnes autorisées accèdent à l'information.\n- **Intégrité** : l'information n'est pas modifiée sans autorisation.\n- **Disponibilité** : le service reste accessible.\n\nToute mesure de sécurité vise à protéger au moins l'un de ces trois piliers.\n"
+    ],
+    [
+     "Mots de passe et authentification",
+     "## Construire un mot de passe robuste\n\n- Longueur d'abord : **12 à 16 caractères minimum**.\n- Une **phrase de passe** est plus facile à retenir : `Kely-Manga-2026-Tana!`.\n- Jamais d'information personnelle (date de naissance, prénom).\n- Un mot de passe **différent par service**.\n\n## Le gestionnaire de mots de passe\n\nIl génère et mémorise des mots de passe uniques. Vous ne retenez qu'une seule phrase de passe maîtresse. C'est la recommandation professionnelle.\n\n## Double authentification (2FA)\n\nUn second facteur : code temporaire, application d'authentification, clé physique. Le SMS est acceptable mais vulnérable au détournement de carte SIM ; les applications (TOTP) sont préférables.\n\n## Hachage : ce que doit faire un site sérieux\n\nUn site ne doit jamais stocker votre mot de passe. Il stocke une **empreinte** calculée avec un algorithme lent comme **Argon2id** ou bcrypt, complété d'un « sel » aléatoire. Même en cas de fuite de la base, les mots de passe restent difficiles à retrouver.\n\n> Si un site vous envoie votre mot de passe en clair par e-mail, il ne le protège pas correctement.\n"
+    ],
+    [
+     "Réagir à un incident",
+     "## Les réflexes en cas d'infection\n\n1. **Déconnecter** l'appareil du réseau.\n2. Ne pas payer de rançon : cela finance les attaquants et ne garantit rien.\n3. Conserver les preuves (captures, messages).\n4. Signaler à l'administrateur ou au responsable sécurité.\n5. Restaurer depuis une **sauvegarde saine**.\n\n## En cas de compromission de compte\n\n1. Changer le mot de passe depuis un appareil non infecté.\n2. Révoquer les sessions actives.\n3. Vérifier les règles de transfert automatique dans la messagerie.\n4. Prévenir ses contacts si des messages frauduleux ont été envoyés.\n5. Activer la 2FA.\n\n## Sauvegardes\n\nLa sauvegarde est la seule défense vraiment efficace contre un rançongiciel. Une sauvegarde **déconnectée** (hors ligne) est indispensable : un disque toujours branché sera chiffré aussi.\n\nTestez la restauration au moins une fois : une sauvegarde jamais testée n'est pas une sauvegarde.\n"
+    ]
+   ],
+   "exercise": {
+    "title": "Quiz — Sécurité informatique",
+    "description": "Menaces, mots de passe et réaction aux incidents.",
+    "questions": [
+     [
+      "Quel algorithme est recommandé pour stocker les mots de passe ?",
+      [
+       "MD5",
+       "SHA-1",
+       "Argon2id",
+       "Base64"
+      ],
+      3,
+      "Argon2id est conçu pour être lent et coûteux à attaquer."
+     ],
+     [
+      "Que fait un rançongiciel ?",
+      [
+       "Il accélère l'ordinateur",
+       "Il chiffre les fichiers et réclame une rançon",
+       "Il sauvegarde les données",
+       "Il met à jour le système"
+      ],
+      2,
+      "Le ransomware chiffre les données et exige un paiement."
+     ],
+     [
+      "Quelle est la première action face à une infection ?",
+      [
+       "Payer la rançon",
+       "Déconnecter l'appareil du réseau",
+       "Éteindre et jeter le disque",
+       "Envoyer ses fichiers par e-mail"
+      ],
+      2,
+      "L'isolement limite la propagation."
+     ],
+     [
+      "Le principe de confidentialité garantit que :",
+      [
+       "Les données sont toujours disponibles",
+       "Seules les personnes autorisées accèdent aux données",
+       "Les données sont exactes",
+       "Le service est rapide"
+      ],
+      2,
+      "La confidentialité restreint l'accès aux personnes habilitées."
+     ],
+     [
+      "Une sauvegarde efficace contre un ransomware doit être :",
+      [
+       "Toujours connectée",
+       "Déconnectée et testée",
+       "Sur le même disque",
+       "Chiffrée par le malware"
+      ],
+      2,
+      "Une copie hors ligne est indispensable."
+     ]
+    ]
+   }
+  },
+  {
+   "title": "Réseaux informatiques",
+   "category": "Sécurité & Réseaux",
+   "level": "intermédiaire",
+   "estimated_minutes": 100,
+   "summary": "Adresses IP, LAN/WAN, routeurs, modèles et organisation d'un réseau d'établissement.",
+   "description": "Comprendre comment les machines communiquent, se repèrent et se sécurisent.",
+   "lessons": [
+    [
+     "Adresses IP et masques",
+     "## Identifiants réseau\n\nChaque machine possède une **adresse IP**.\n\n- **IPv4** : quatre nombres de 0 à 255 (`192.168.1.10`).\n- **IPv6** : format long hexadécimal, conçu pour l'épuisement des adresses IPv4.\n\n## Adresses privées\n\nRéservées aux réseaux locaux :\n\n- `10.0.0.0` – `10.255.255.255`\n- `172.16.0.0` – `172.31.255.255`\n- `192.168.0.0` – `192.168.255.255`\n\nUn routeur fait la traduction entre ces adresses privées et Internet grâce au **NAT**.\n\n## Masque de sous-réseau\n\n`255.255.255.0` (= /24) signifie que les 3 premiers nombres identifient le réseau et le dernier identifie la machine.\n\nExemple : `192.168.1.10/24` et `192.168.1.25/24` sont dans le même réseau ; `192.168.2.10/24` n'y est pas.\n\n## DHCP et DNS\n\n- **DHCP** attribue automatiquement une IP.\n- **DNS** associe un nom à une IP.\n- **Passerelle** (gateway) est la sortie vers Internet.\n"
+    ],
+    [
+     "Types de réseaux et équipements",
+     "## Échelles\n\n- **PAN** : quelques mètres (Bluetooth).\n- **LAN** : un bâtiment (école, bureau).\n- **MAN** : une ville.\n- **WAN** : un pays ou le monde (Internet).\n\n## Équipements\n\n- **Switch** : relie les machines d'un même réseau local.\n- **Routeur** : relie des réseaux différents et choisit le chemin.\n- **Point d'accès Wi-Fi** : étend le réseau sans fil.\n- **Pare-feu (firewall)** : filtre le trafic entrant et sortant.\n- **Modem** : convertit le signal de l'opérateur.\n\n## Topologies\n\n- **Étoile** : toutes les machines passent par un switch central (la plus courante).\n- **Maillage** : redondance, coût élevé.\n- **Bus** : ancienne, peu fiable.\n\n## Câblage\n\nLe câble **Ethernet catégorie 5e/6** supporte 1 Gbit/s sur 100 m. Pour de longues distances, la fibre optique est nécessaire.\n"
+    ],
+    [
+     "Sécuriser et diagnostiquer un réseau",
+     "## Segments et VLAN\n\nSéparer les usages limite la propagation d'une attaque :\n\n- réseau administratif ;\n- réseau des étudiants ;\n- réseau des invités ;\n- réseau des caméras / objets connectés.\n\n## Wi-Fi sécurisé\n\n- WPA2 ou WPA3, jamais WEP.\n- Mot de passe long, différent de celui de l'administration du routeur.\n- Désactiver WPS (vulnérable).\n- SSID invité isolé, sans accès aux ressources internes.\n\n## Diagnostic de base\n\n```\nipconfig        (Windows) → adresse IP, passerelle\nip a            (Linux)   → interfaces réseau\nping 8.8.8.8    → test de connectivité\nping example.com → test DNS\ntracert / traceroute → chemin suivi\nnslookup example.com → résolution DNS\n```\n\n## Interpréter\n\n- `ping` par IP fonctionne mais pas par nom → problème DNS.\n- Aucun ping, même par IP → câble, Wi-Fi, passerelle ou pare-feu.\n- Connexion lente sur tous les postes → saturation de la bande passante.\n"
+    ]
+   ],
+   "exercise": {
+    "title": "Quiz — Réseaux",
+    "description": "Adresses, équipements et diagnostics.",
+    "questions": [
+     [
+      "Quelle adresse est privée ?",
+      [
+       "8.8.8.8",
+       "192.168.1.20",
+       "41.207.10.5",
+       "142.250.75.14"
+      ],
+      2,
+      "192.168.x.x fait partie des plages privées."
+     ],
+     [
+      "Quel équipement relie deux réseaux différents ?",
+      [
+       "Le switch",
+       "Le routeur",
+       "Le répéteur",
+       "Le hub"
+      ],
+      2,
+      "Le routeur interconnecte des réseaux."
+     ],
+     [
+      "À quoi sert le DHCP ?",
+      [
+       "Traduire les noms en IP",
+       "Attribuer automatiquement des adresses IP",
+       "Chiffrer le trafic",
+       "Bloquer les virus"
+      ],
+      2,
+      "DHCP distribue la configuration réseau."
+     ],
+     [
+      "Un ping par IP fonctionne mais le nom du site est introuvable :",
+      [
+       "Le câble est débranché",
+       "Le DNS est mal configuré",
+       "Le routeur est éteint",
+       "Le site est payant"
+      ],
+      2,
+      "La résolution de noms est en cause."
+     ]
+    ]
+   }
+  },
+  {
+   "title": "Programmation et développement Web",
+   "category": "Développement",
+   "level": "intermédiaire",
+   "estimated_minutes": 150,
+   "summary": "Premiers pas en HTML, CSS, JavaScript et Python, et logique algorithmique.",
+   "description": "Construire une page web, comprendre la logique de programmation et les bases d'une API sécurisée.",
+   "lessons": [
+    [
+     "Algorithmique et langages",
+     "## Qu'est-ce qu'un algorithme ?\n\nUne suite finie d'instructions qui transforme des **entrées** en **résultats**. Exemple : calculer une moyenne.\n\n```\ndébut\n  lire les notes\n  somme ← 0\n  pour chaque note :\n      somme ← somme + note\n  moyenne ← somme / nombre_de_notes\n  afficher moyenne\nfin\n```\n\n## Les structures de contrôle\n\n- **Séquence** : instructions les unes après les autres.\n- **Condition** : `si ... alors ... sinon ...`\n- **Boucle** : `répéter ...`, `pour i de 1 à 10`.\n\n## Variables et types\n\nUne variable est une boîte nommée contenant une valeur : entier, décimal, texte, booléen.\n\n## Langages\n\n- **Python** : lisible, idéal pour débuter, puissant pour les données et le serveur.\n- **JavaScript** : le langage du navigateur, indispensable pour l'interactivité.\n- **HTML/CSS** : structure et style d'une page (ce ne sont pas des langages de programmation au sens strict).\n\n> Une erreur de syntaxe est une faute de frappe pour l'ordinateur : lire le message d'erreur, c'est déjà résoudre la moitié du problème.\n"
+    ],
+    [
+     "HTML, CSS et le Web",
+     "## HTML : la structure\n\n```html\n<!doctype html>\n<html lang=\"fr\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>Ma page</title>\n</head>\n<body>\n  <header><h1>TIC MASTER</h1></header>\n  <main>\n    <p>Bienvenue sur la plateforme.</p>\n    <a href=\"https://example.org\">Un lien</a>\n  </main>\n</body>\n</html>\n```\n\nBalises à connaître : `h1`–`h6` (titres), `p` (paragraphe), `ul`/`li` (listes), `a` (lien), `img` (image avec `alt`), `form`, `input`, `button`, `table`.\n\n## CSS : la présentation\n\n```css\n:root { --bleu: #0b2a6f; }\nbody { font-family: system-ui, sans-serif; margin: 0; }\nh1 { color: var(--bleu); }\n.bouton { padding: .6rem 1rem; border-radius: 8px; background: #2563eb; color: #fff; }\n```\n\n## Responsive design\n\n- Balise `viewport` dans l'entête.\n- Unités relatives (`rem`, `%`, `vw`).\n- **Flexbox** et **Grid** pour les mises en page.\n- Points de rupture : 480 px (mobile), 768 px (tablette), 1024 px (ordinateur).\n\n## Bonnes pratiques\n\nSéparer HTML, CSS et JS. Valider le code. Tester sur un vrai téléphone.\n"
+    ],
+    [
+     "JavaScript, serveur et API sécurisée",
+     "## JavaScript côté navigateur\n\n```javascript\nconst bouton = document.querySelector(\"#envoyer\");\nbouton.addEventListener(\"click\", async () => {\n  const reponse = await fetch(\"/api/messages\", {\n    method: \"POST\",\n    headers: { \"Content-Type\": \"application/json\", \"X-CSRF-Token\": jeton },\n    body: JSON.stringify({ body: \"Bonjour\" })\n  });\n  const data = await reponse.json();\n  console.log(data);\n});\n```\n\n## Le serveur\n\nUn serveur reçoit des requêtes et renvoie des réponses. Avec Python, **Flask** permet de démarrer en quelques lignes :\n\n```python\nfrom flask import Flask, jsonify\napp = Flask(__name__)\n\n@app.get(\"/api/sante\")\ndef sante():\n    return jsonify({\"status\": \"ok\"})\n```\n\n## Une API, c'est un contrat\n\n- **GET** : lire une ressource.\n- **POST** : créer.\n- **PUT/PATCH** : modifier.\n- **DELETE** : supprimer.\n\n## Sécurité côté serveur\n\nNe faites **jamais** confiance au navigateur :\n\n1. Valider et filtrer toutes les entrées.\n2. Vérifier les permissions à chaque requête.\n3. Utiliser des requêtes paramétrées (anti-injection SQL).\n4. Échapper les sorties HTML (anti-XSS).\n5. Protéger les actions par un jeton CSRF.\n6. Limiter le nombre de tentatives de connexion.\n\n> Masquer un bouton dans l'interface n'est pas une sécurité : l'API doit refuser l'action.\n"
+    ]
+   ],
+   "exercise": {
+    "title": "Quiz — Programmation web",
+    "description": "Algorithmique, HTML/CSS et sécurité applicative.",
+    "questions": [
+     [
+      "Quelle balise HTML définit le titre principal d'une page ?",
+      [
+       "<title>",
+       "<h1>",
+       "<header>",
+       "<strong>"
+      ],
+      2,
+      "<h1> est le titre de niveau 1."
+     ],
+     [
+      "En CSS, quelle propriété rend une mise en page flexible en une dimension ?",
+      [
+       "display: flex",
+       "color",
+       "margin",
+       "font-size"
+      ],
+      1,
+      "Flexbox gère une dimension."
+     ],
+     [
+      "Quelle méthode HTTP sert à créer une ressource ?",
+      [
+       "GET",
+       "POST",
+       "DELETE",
+       "HEAD"
+      ],
+      2,
+      "POST crée une ressource."
+     ],
+     [
+      "Pourquoi le contrôle des permissions doit-il être fait côté serveur ?",
+      [
+       "Parce que c'est plus joli",
+       "Parce que le navigateur peut être contourné par l'utilisateur",
+       "Pour économiser la batterie",
+       "Pour accélérer le CSS"
+      ],
+      2,
+      "Le client est contrôlé par l'utilisateur : seule la vérification serveur protège."
+     ],
+     [
+      "Quelle pratique protège contre l'injection SQL ?",
+      [
+       "Concaténer les chaînes",
+       "Utiliser des requêtes paramétrées",
+       "Désactiver les logs",
+       "Chiffrer le HTML"
+      ],
+      2,
+      "Les requêtes paramétrées séparent code et données."
+     ]
+    ]
+   }
+  },
+  {
+   "title": "Intelligence artificielle",
+   "category": "Intelligence Artificielle",
+   "level": "intermédiaire",
+   "estimated_minutes": 100,
+   "summary": "Comprendre les principes de l'IA, ses usages, ses limites et l'éthique associée.",
+   "description": "De la donnée à la décision : apprendre ce qu'un modèle apprend, ce qu'il ne comprend pas et comment l'utiliser de façon responsable.",
+   "lessons": [
+    [
+     "Qu'est-ce que l'intelligence artificielle ?",
+     "## Définition\n\nL'**intelligence artificielle** regroupe les techniques permettant à une machine d'accomplir des tâches qui requièrent habituellement l'intelligence humaine : reconnaître une image, traduire, résumer, prédire.\n\n## Apprentissage supervisé\n\nOn fournit des **exemples étiquetés** :\n\n- entrée : photo de feuille ; étiquette : « manguier » ou « riz » ;\n- le modèle ajuste ses paramètres pour réduire ses erreurs ;\n- il généralise ensuite sur de nouvelles photos.\n\n## Les autres familles\n\n- **Apprentissage non supervisé** : regrouper des données sans étiquettes (segmentation clients).\n- **Apprentissage par renforcement** : apprendre par essais et récompenses.\n- **IA générative** : produire du texte, des images, du code à partir de motifs appris.\n\n## Ce que l'IA n'est pas\n\nUn modèle n'a pas de compréhension du monde ni d'intention. Il calcule des probabilités sur des motifs. Il peut donc produire des réponses **plausibles mais fausses** (\"hallucinations\").\n"
+    ],
+    [
+     "Données, biais et qualité",
+     "## La donnée est le carburant\n\nSans données de qualité, pas de modèle fiable. Trois problèmes fréquents :\n\n1. **Données insuffisantes** : le modèle ne généralise pas.\n2. **Données biaisées** : si les exemples ne représentent qu'une partie de la population, les décisions seront injustes.\n3. **Données erronées ou obsolètes** : le modèle apprend des erreurs.\n\n## Biais réel\n\nUn système de recrutement entraîné sur des embauches passées reproduira les déséquilibres passés. Ce n'est pas la machine qui est sexiste : ce sont les données.\n\n## Protection des données personnelles\n\n- Minimiser la collecte.\n- Anonymiser si possible.\n- Informer les personnes.\n- Respecter la réglementation locale sur la protection des données.\n\n## Évaluer un modèle\n\n- **Précision** : proportion de bonnes réponses.\n- **Rappel** : capacité à retrouver tous les cas positifs.\n- **Robustesse** : comportement face aux cas inattendus.\n\n> Une exactitude de 95 % ne signifie rien si les 5 % d'erreurs concernent les décisions les plus graves.\n"
+    ],
+    [
+     "Usages responsables et prompt engineering",
+     "## Bien écrire une consigne (prompt)\n\nUn bon prompt précise :\n\n- le **rôle** attendu (« Tu es un professeur de TIC ») ;\n- le **contexte** (« pour des débutants à Antananarivo ») ;\n- la **tâche** (« explique la différence entre RAM et stockage ») ;\n- le **format** (« en 5 puces, avec un exemple ») ;\n- les **contraintes** (« sans jargon, en français »).\n\n## Vérifier systématiquement\n\n- Les faits, les chiffres et les sources.\n- Le code exécuté avant de l'utiliser.\n- Les références (les modèles inventent parfois des citations).\n\n## Usages utiles en éducation\n\n- reformuler une notion difficile ;\n- générer des exercices supplémentaires ;\n- corriger l'orthographe ;\n- traduire ;\n- expliquer une erreur de code.\n\n## Usages à éviter\n\n- Faire rédiger à sa place un devoir évalué.\n- Publier des données personnelles dans un outil grand public.\n- Décider seul d'une orientation ou d'une sanction sur la base d'un score automatique.\n\n## Transparence\n\nIndiquez quand une IA a été utilisée. L'utilisateur a le droit de savoir à qui il parle, et un humain reste responsable de la décision finale.\n"
+    ]
+   ],
+   "exercise": {
+    "title": "Quiz — Intelligence artificielle",
+    "description": "Principes, biais et usage responsable.",
+    "questions": [
+     [
+      "En apprentissage supervisé, le modèle apprend à partir de :",
+      [
+       "Données sans étiquettes",
+       "Exemples étiquetés",
+       "Règles écrites à la main",
+       "Hasard pur"
+      ],
+      2,
+      "L'apprentissage supervisé s'appuie sur des exemples étiquetés."
+     ],
+     [
+      "Un « biais » dans un modèle vient souvent :",
+      [
+       "De la vitesse du processeur",
+       "Des données d'entraînement déséquilibrées",
+       "De la couleur de l'interface",
+       "Du nombre de câbles"
+      ],
+      2,
+      "Les données reflètent et amplifient les déséquilibres."
+     ],
+     [
+      "Une « hallucination » d'IA désigne :",
+      [
+       "Une image floue",
+       "Une réponse plausible mais fausse",
+       "Un bug d'affichage",
+       "Une panne réseau"
+      ],
+      2,
+      "Le modèle génère une information inventée mais crédible."
+     ],
+     [
+      "Quel est le bon réflexe face à une réponse d'IA ?",
+      [
+       "La publier telle quelle",
+       "Vérifier les faits et les sources",
+       "La traduire en anglais",
+       "L'ignorer toujours"
+      ],
+      2,
+      "La vérification humaine reste indispensable."
+     ]
+    ]
+   }
+  },
+  {
+   "title": "Exercices pratiques et évaluations",
+   "category": "Fondamentaux",
+   "level": "intermédiaire",
+   "estimated_minutes": 120,
+   "summary": "Mettre en pratique : ateliers bureautiques, recherche d'information, sécurité et mini-projet.",
+   "description": "Ce module propose des travaux pratiques corrigés qui mobilisent l'ensemble du programme.",
+   "lessons": [
+    [
+     "Atelier 1 — Dossier professionnel",
+     "## Objectif\n\nProduire un dossier complet de 2 à 3 pages sur un thème TIC de votre choix, en respectant une charte de mise en forme.\n\n## Consignes\n\n1. **Choisir un thème** : « La sécurité des données personnelles », « L'usage du mobile money », « L'IA dans l'éducation »...\n2. **Structure imposée** : page de titre, sommaire automatique, introduction (10 lignes), deux parties, conclusion, sources.\n3. **Mise en forme** : styles de titres, police 12 pt, interligne 1,15, marges 2,5 cm, numérotation des pages.\n4. **Contenu** : au moins 3 sources citées, 1 tableau et 1 illustration légendée.\n5. **Export** : PDF + DOCX.\n\n## Grille d'évaluation (20 points)\n\n| Critère | Points |\n|---|---|\n| Respect de la structure | 4 |\n| Qualité de la mise en forme | 4 |\n| Pertinence du contenu | 6 |\n| Sources citées et vérifiables | 3 |\n| Orthographe et lisibilité | 3 |\n\n## Conseil\n\nÉcrivez d'abord tout le texte au brouillon, sans mise en forme. La mise en page vient toujours après.\n"
+    ],
+    [
+     "Atelier 2 — Tableau de bord de notes",
+     "## Objectif\n\nCréer un classeur qui calcule automatiquement les moyennes d'une classe.\n\n## Données d'exemple\n\n| Nom | Devoir 1 | Devoir 2 | Examen |\n|---|---|---|---|\n| Rakoto | 12 | 15 | 13 |\n| Rasoa | 8 | 11 | 9 |\n| Andry | 16 | 14 | 17 |\n| Hery | 6 | 9 | 8 |\n\n## Travail demandé\n\n1. Calculer la moyenne de chaque étudiant : `=(B2*0,3)+(C2*0,3)+(D2*0,4)`.\n2. Afficher « Admis » si la moyenne ≥ 10, sinon « Ajourné » avec `SI`.\n3. Calculer la moyenne de la classe, la note maximale et minimale.\n4. Compter le nombre d'admis avec `NB.SI`.\n5. Créer un graphique en colonnes comparant les étudiants.\n6. Mettre en forme conditionnelle : rouge sous 10, vert au-dessus de 15.\n\n## Pièges à éviter\n\n- Les cellules fusionnées.\n- Les pourcentages tapés en texte (« 30 % » au lieu de 0,3).\n- Les formules recopiées sans vérifier les `$`.\n\n## Livrable\n\nUn fichier `.xlsx` nommé `notes-classe-2026.xlsx`, avec une feuille « Saisie » et une feuille « Synthèse ».\n"
+    ],
+    [
+     "Atelier 3 — Audit de sécurité personnel",
+     "## Objectif\n\nAuditer vos propres pratiques numériques et produire un plan d'action.\n\n## Grille d'auto-évaluation\n\n| Question | Oui / Non |\n|---|---|\n| Mes mots de passe sont-ils uniques par service ? | |\n| Ai-je activé la double authentification ? | |\n| Mes sauvegardes sont-elles testées et hors ligne ? | |\n| Mon système est-il à jour ? | |\n| Suis-je capable de reconnaître un phishing ? | |\n| Mes réseaux sociaux sont-ils restreints ? | |\n| Ai-je vérifié les permissions de mes applications mobiles ? | |\n\n## Travail demandé\n\n1. Remplir honnêtement la grille.\n2. Identifier les 3 faiblesses les plus importantes.\n3. Proposer une action corrective mesurable pour chacune, avec une date.\n4. Rédiger un court rapport (1 page) avec un tableau avant/après.\n\n## Exemple de plan d'action\n\n| Faiblesse | Action | Échéance |\n|---|---|---|\n| Mots de passe réutilisés | Installer un gestionnaire de mots de passe | Semaine 1 |\n| Pas de 2FA | Activer la 2FA sur la messagerie | Semaine 1 |\n| Aucune sauvegarde | Disque externe + copie mensuelle | Semaine 2 |\n\n> La sécurité n'est pas un état, c'est une habitude. Un petit pas chaque semaine vaut mieux qu'une réforme intenable.\n"
+    ]
+   ],
+   "exercise": {
+    "title": "Évaluation pratique — Méthode",
+    "description": "Vérifiez votre maîtrise de la démarche de projet.",
+    "questions": [
+     [
+      "Dans l'atelier de dossier professionnel, quelle est la première étape ?",
+      [
+       "Choisir la police",
+       "Rédiger le contenu au brouillon",
+       "Insérer des images",
+       "Créer le sommaire"
+      ],
+      2,
+      "Le fond d'abord, la forme ensuite."
+     ],
+     [
+      "Quelle formule calcule une moyenne pondérée ?",
+      [
+       "=SOMME(B2:D2)",
+       "=(B2*0,3)+(C2*0,3)+(D2*0,4)",
+       "=MOYENNE(B2)",
+       "=SI(B2>10)"
+      ],
+      2,
+      "Chaque note est multipliée par son coefficient."
+     ],
+     [
+      "Que signifie tester une sauvegarde ?",
+      [
+       "Compter les fichiers",
+       "Restaurer réellement des données pour vérifier",
+       "Acheter un disque",
+       "La chiffrer"
+      ],
+      2,
+      "Seule une restauration réelle prouve l'efficacité."
+     ],
+     [
+      "Un plan d'action de sécurité doit être :",
+      [
+       "Vague et long",
+       "Mesurable avec une échéance",
+       "Secret",
+       "Sans priorité"
+      ],
+      2,
+      "Une action mesurable et datée est suivie et évaluée."
+     ]
+    ]
+   }
+  }
+ ],
+ "exams": [
+  {
+   "title": "Examen trimestriel T1 — Fondamentaux des TIC",
+   "term": "T1",
+   "duration_minutes": 20,
+   "pass_score": 50,
+   "description": "Modules 1 à 3 : introduction aux TIC, composants, systèmes d'exploitation.",
+   "questions": [
+    [
+     "Quel est le rôle principal du système d'exploitation ?",
+     [
+      "Créer des sites web",
+      "Gérer le matériel et les applications",
+      "Compresser les fichiers",
+      "Chiffrer le disque"
+     ],
+     2,
+     "L'OS fait le lien entre matériel, logiciels et utilisateur."
+    ],
+    [
+     "La RAM est une mémoire :",
+     [
+      "Permanente",
+      "Volatile",
+      "Optique",
+      "Externe"
+     ],
+     2,
+     "Elle perd son contenu à l'extinction."
+    ],
+    [
+     "Un SSD se distingue du disque dur par :",
+     [
+      "Sa capacité toujours plus faible",
+      "L'absence de pièces mécaniques",
+      "Son prix plus élevé uniquement",
+      "Son incompatibilité avec Windows"
+     ],
+     2,
+     "Le SSD est électronique, donc plus rapide."
+    ],
+    [
+     "TIC signifie :",
+     [
+      "Technologies de l'Information et de la Communication",
+      "Technique Informatique de Codage",
+      "Transfert Intégral de Connaissances",
+      "Traitement Intelligent des Communications"
+     ],
+     1,
+     "Définition de référence."
+    ],
+    [
+     "Lequel n'est PAS un système d'exploitation ?",
+     [
+      "Linux",
+      "Windows",
+      "macOS",
+      "Firefox"
+     ],
+     4,
+     "Firefox est un navigateur."
+    ],
+    [
+     "Un octet vaut :",
+     [
+      "2 bits",
+      "4 bits",
+      "8 bits",
+      "16 bits"
+     ],
+     3,
+     "1 octet = 8 bits."
+    ]
+   ]
+  },
+  {
+   "title": "Examen trimestriel T2 — Bureautique et Internet",
+   "term": "T2",
+   "duration_minutes": 20,
+   "pass_score": 50,
+   "description": "Modules 4 à 6 : traitement de texte, tableurs et présentations, Internet.",
+   "questions": [
+    [
+     "Pourquoi utiliser les styles dans un traitement de texte ?",
+     [
+      "Pour imprimer en couleur",
+      "Pour la cohérence et le sommaire automatique",
+      "Pour réduire la taille du fichier",
+      "Pour partager en ligne"
+     ],
+     2,
+     "Les styles structurent le document."
+    ],
+    [
+     "Dans un tableur, `$A$1` est une référence :",
+     [
+      "Relative",
+      "Absolue",
+      "Erronée",
+      "Circulaire"
+     ],
+     2,
+     "Les $ verrouillent la référence."
+    ],
+    [
+     "Quel graphique compare des catégories ?",
+     [
+      "Courbe",
+      "Barres/colonnes",
+      "Nuage de points",
+      "Radar"
+     ],
+     2,
+     "Les barres comparent des catégories."
+    ],
+    [
+     "HTTPS garantit :",
+     [
+      "L'honnêteté du site",
+      "Le chiffrement de la connexion",
+      "La gratuité",
+      "L'absence de virus"
+     ],
+     2,
+     "HTTPS chiffre les échanges."
+    ],
+    [
+     "Le DNS sert à :",
+     [
+      "Chiffrer les e-mails",
+      "Traduire un nom de domaine en adresse IP",
+      "Bloquer les publicités",
+      "Accélérer le Wi-Fi"
+     ],
+     2,
+     "C'est l'annuaire d'Internet."
+    ],
+    [
+     "Une règle de présentation efficace est :",
+     [
+      "Une idée par diapositive",
+      "10 polices différentes",
+      "Un maximum de texte",
+      "Lire ses notes mot à mot"
+     ],
+     1,
+     "Une idée par diapositive."
+    ]
+   ]
+  },
+  {
+   "title": "Examen trimestriel T3 — Sécurité, réseaux, IA et développement",
+   "term": "T3",
+   "duration_minutes": 25,
+   "pass_score": 50,
+   "description": "Modules 7 à 11 : sécurité, réseaux, programmation web, intelligence artificielle.",
+   "questions": [
+    [
+     "Argon2id est utilisé pour :",
+     [
+      "Compresser les images",
+      "Hacher les mots de passe",
+      "Router les paquets",
+      "Afficher les pages"
+     ],
+     2,
+     "C'est un algorithme de hachage lent et salé."
+    ],
+    [
+     "Une adresse IP privée commence par :",
+     [
+      "8.8",
+      "192.168",
+      "142.250",
+      "41.207"
+     ],
+     2,
+     "192.168.0.0/16 est une plage privée."
+    ],
+    [
+     "Quelle méthode HTTP crée une ressource ?",
+     [
+      "GET",
+      "POST",
+      "HEAD",
+      "TRACE"
+     ],
+     2,
+     "POST crée."
+    ],
+    [
+     "Le CSRF protège contre :",
+     [
+      "Les requêtes forgées depuis un autre site",
+      "Les coupures de courant",
+      "Les virus USB",
+      "Le spam téléphonique"
+     ],
+     1,
+     "Le jeton CSRF empêche la soumission forgée."
+    ],
+    [
+     "Un modèle d'IA qui invente une réponse crédible commet :",
+     [
+      "Une hallucination",
+      "Une injection SQL",
+      "Un déni de service",
+      "Un timeout"
+     ],
+     1,
+     "On parle d'hallucination."
+    ],
+    [
+     "La règle 3-2-1 concerne :",
+     [
+      "Le Wi-Fi",
+      "Les sauvegardes",
+      "Les mots de passe",
+      "Les câbles réseau"
+     ],
+     2,
+     "Trois copies, deux supports, une hors site."
+    ],
+    [
+     "Quel est le premier réflexe en cas de phishing reçu ?",
+     [
+      "Cliquer pour vérifier",
+      "Ne pas cliquer et signaler",
+      "Répondre avec ses identifiants",
+      "Transférer à tout le monde"
+     ],
+     2,
+     "On ne clique pas et on signale."
+    ]
+   ]
+  }
+ ],
+ "announcements": [
+  [
+   "Bienvenue sur TIC MASTER",
+   "La plateforme de formation aux TIC est ouverte. Votre compte a été créé par l'administration : pensez à modifier votre mot de passe lors de votre première connexion. Bon apprentissage !",
+   true
+  ],
+  [
+   "Calendrier des examens trimestriels",
+   "Les examens T1, T2 et T3 sont disponibles dans l'onglet « Examen trimestriel ». Attention : quitter l'onglet pendant un examen est considéré comme une tentative de fraude et entraîne l'élimination immédiate.",
+   true
+  ],
+  [
+   "Règles de sécurité",
+   "Ne partagez jamais votre mot de passe. Toute demande d'identifiants par message est frauduleuse : signalez-la à l'administrateur via la messagerie interne.",
+   true
+  ]
+ ]
+}

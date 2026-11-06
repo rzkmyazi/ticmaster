@@ -36,3 +36,6 @@ Thumbs.db
 # Aperçus HTML générés localement (design, non versionnés)
 apercus/
 apercu-maintenance.html
+
+# Node
+node_modules/
